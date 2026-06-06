@@ -2,9 +2,9 @@
 
 Criacao, direcao, propriedade e creditos: **Caio Multiversando**.
 
-Versão observada no projeto: `0.9.0`.
+Versão observada no projeto: `0.10.0`.
 
-Download da versão desktop observada: https://www.mediafire.com/file/u3874g8uxtyhwp7/dist-desktop_0.9.0.zip/file
+Download da versão desktop observada: gere o executável local em `dist-desktop` e publique o pacote `0.10.0` no canal de distribuição escolhido.
 
 Este documento explica o html2apk em dois modos:
 

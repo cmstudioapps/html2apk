@@ -3764,7 +3764,7 @@ async function init() {
       elements.iconPreview.src = iconPreviewPath(state.defaultIconPath);
     }
   } catch {
-    elements.appVersion.textContent = "v0.7.0";
+    elements.appVersion.textContent = "v0.10.0";
   }
 
   setTimeout(finishBoot, 1800);
