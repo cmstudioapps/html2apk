@@ -9,8 +9,13 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.WallpaperManager;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothServerSocket;
+import android.bluetooth.BluetoothSocket;
 import android.content.ActivityNotFoundException;
 import android.content.BroadcastReceiver;
+import android.content.ContentValues;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
@@ -47,9 +52,12 @@ import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.provider.Settings;
 import android.provider.MediaStore;
+import android.provider.DocumentsContract;
 import android.provider.OpenableColumns;
 import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
+import android.speech.RecognizerIntent;
+import android.speech.tts.TextToSpeech;
 import android.util.Base64;
 import android.view.View;
 import android.view.Window;
@@ -68,19 +76,29 @@ import org.apache.cordova.CordovaWebView;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import com.google.mlkit.vision.common.InputImage;
+import com.google.mlkit.vision.text.Text;
+import com.google.mlkit.vision.text.TextRecognition;
+import com.google.mlkit.vision.text.TextRecognizer;
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.security.KeyStore;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Executor;
@@ -99,11 +117,13 @@ public class Html2ApkBridge extends CordovaPlugin {
     private static final int REQUEST_CAMERA = 7312;
     private static final int REQUEST_RECORD_AUDIO = 7313;
     private static final int REQUEST_LOCATION = 7314;
+    private static final int REQUEST_BLUETOOTH = 7315;
     private static final int REQUEST_PICK_FILE = 7411;
     private static final int REQUEST_SAVE_FILE = 7412;
     private static final int REQUEST_PICK_FOLDER = 7413;
     private static final int REQUEST_CAPTURE_PHOTO = 7414;
     private static final int REQUEST_CAPTURE_VIDEO = 7415;
+    private static final int REQUEST_SPEECH_RECOGNITION = 7416;
     private static final String PREFS_NAME = "html2apk_bridge";
     private static final String PREF_PERMISSION_PREFIX = "permission_requested_";
     private static final String STORED_FILES_DIR = "html2apk-files";
@@ -113,6 +133,7 @@ public class Html2ApkBridge extends CordovaPlugin {
     private static final String SECURE_VALUE_PREFIX = "value:";
     private static final String SECURE_IV_PREFIX = "iv:";
     private static final String SECURE_TYPE_PREFIX = "type:";
+    private static final UUID BLUETOOTH_UUID = UUID.fromString("00001101-0000-1000-8000-00805f9b34fb");
     private static Html2ApkBridge activeBridge;
 
     private CallbackContext notificationPermissionCallback;
@@ -128,13 +149,23 @@ public class Html2ApkBridge extends CordovaPlugin {
     private CallbackContext pendingLocationCallback;
     private CallbackContext biometricCallback;
     private CallbackContext pendingDownloadCallback;
+    private CallbackContext speechRecognitionCallback;
+    private CallbackContext pendingSpeakCallback;
+    private CallbackContext bluetoothDiscoveryCallback;
+    private CallbackContext pendingBluetoothCallback;
     private JSONObject pendingSaveFile;
     private JSONObject pendingMediaCaptureOptions;
     private JSONObject pendingLocationOptions;
     private JSONObject pendingNotificationOptions;
     private JSONObject pendingDownloadOptions;
+    private JSONObject pendingSpeakOptions;
+    private JSONObject pendingBluetoothPayload;
     private JSONObject initialNotification;
     private JSONObject initialLink;
+    private JSONObject initialShare;
+    private String pendingSpeakText;
+    private String pendingBluetoothAction;
+    private String pendingBluetoothDeviceId;
     private File pendingMediaCaptureFile;
     private Uri pendingMediaCaptureUri;
     private String pendingMediaCaptureKind;
@@ -149,7 +180,18 @@ public class Html2ApkBridge extends CordovaPlugin {
     private File micRecordingFile;
     private long micRecordingStartedAt;
     private BroadcastReceiver systemReceiver;
+    private BroadcastReceiver bluetoothDiscoveryReceiver;
     private CancellationSignal biometricCancellationSignal;
+    private TextToSpeech textToSpeech;
+    private boolean textToSpeechReady;
+    private boolean bluetoothServerRunning;
+    private BluetoothServerSocket bluetoothServerSocket;
+    private BluetoothSocket bluetoothSocket;
+    private OutputStream bluetoothOutputStream;
+    private Thread bluetoothServerThread;
+    private Thread bluetoothReadThread;
+    private Handler bluetoothDiscoveryTimeout;
+    private final Map<String, JSONObject> bluetoothDiscoveredDevices = new HashMap<String, JSONObject>();
     private final Map<String, LocationListener> locationListeners = new HashMap<String, LocationListener>();
 
     @Override
@@ -158,6 +200,7 @@ public class Html2ApkBridge extends CordovaPlugin {
         activeBridge = this;
         handleNotificationIntent(cordova.getActivity().getIntent(), false);
         handleLinkIntent(cordova.getActivity().getIntent(), false);
+        handleSharedIntent(cordova.getActivity().getIntent(), false);
         registerSystemReceiver();
         startFloatingModeIfNeeded();
     }
@@ -166,6 +209,7 @@ public class Html2ApkBridge extends CordovaPlugin {
     public void onNewIntent(Intent intent) {
         handleNotificationIntent(intent, true);
         handleLinkIntent(intent, true);
+        handleSharedIntent(intent, true);
     }
 
     @Override
@@ -187,6 +231,8 @@ public class Html2ApkBridge extends CordovaPlugin {
         stopMicRecorderSilently();
         stopAllLocationWatches();
         cancelBiometricPrompt();
+        shutdownTextToSpeech();
+        shutdownBluetooth();
         unregisterSystemReceiver();
         dispatchEvent("app:fechado", baseEvent("app:fechado"));
         if (activeBridge == this) {
@@ -326,8 +372,52 @@ public class Html2ApkBridge extends CordovaPlugin {
             }
 
             if ("share".equals(action)) {
-                share(args.optJSONObject(0));
-                callbackContext.success();
+                callbackContext.success(share(args.optJSONObject(0)));
+                return true;
+            }
+
+            if ("shareCurrentApp".equals(action)) {
+                callbackContext.success(shareCurrentApp(args.optJSONObject(0)));
+                return true;
+            }
+
+            if ("scanBluetooth".equals(action)) {
+                scanBluetooth(args.optJSONObject(0), callbackContext);
+                return true;
+            }
+
+            if ("connectBluetooth".equals(action)) {
+                connectBluetooth(args.optString(0, ""), callbackContext);
+                return true;
+            }
+
+            if ("sendBluetooth".equals(action)) {
+                sendBluetooth(args.opt(0), callbackContext);
+                return true;
+            }
+
+            if ("startBluetoothServer".equals(action)) {
+                startBluetoothServerWithPermission(callbackContext);
+                return true;
+            }
+
+            if ("ocr".equals(action)) {
+                runOcr(args.optJSONObject(0), callbackContext);
+                return true;
+            }
+
+            if ("speakText".equals(action)) {
+                speakText(args.optString(0, ""), args.optJSONObject(1), callbackContext);
+                return true;
+            }
+
+            if ("stopSpeaking".equals(action)) {
+                callbackContext.success(stopSpeaking());
+                return true;
+            }
+
+            if ("recognizeSpeech".equals(action)) {
+                recognizeSpeech(args.optJSONObject(0), callbackContext);
                 return true;
             }
 
@@ -556,6 +646,12 @@ public class Html2ApkBridge extends CordovaPlugin {
                 return true;
             }
 
+            if ("getInitialShare".equals(action)) {
+                callbackContext.success(initialShare == null ? new JSONObject() : initialShare);
+                initialShare = null;
+                return true;
+            }
+
             if ("authenticateBiometric".equals(action)) {
                 authenticateBiometric(args.optJSONObject(0), callbackContext);
                 return true;
@@ -758,6 +854,11 @@ public class Html2ApkBridge extends CordovaPlugin {
             return;
         }
 
+        if (requestCode == REQUEST_BLUETOOTH) {
+            continuePendingBluetoothAfterPermission(grantResults);
+            return;
+        }
+
         if (requestCode != REQUEST_POST_NOTIFICATIONS) {
             return;
         }
@@ -851,6 +952,11 @@ public class Html2ApkBridge extends CordovaPlugin {
 
         if (requestCode == REQUEST_PICK_FOLDER) {
             handlePickFolderResult(resultCode, intent);
+            return;
+        }
+
+        if (requestCode == REQUEST_SPEECH_RECOGNITION) {
+            handleSpeechRecognitionResult(resultCode, intent);
             return;
         }
 
@@ -1751,12 +1857,14 @@ public class Html2ApkBridge extends CordovaPlugin {
         return text == null ? "" : text.toString();
     }
 
-    private void share(JSONObject options) {
+    private JSONObject share(JSONObject options) throws Exception {
         JSONObject safeOptions = options == null ? new JSONObject() : options;
         String text = safeOptions.optString("texto", safeOptions.optString("text", ""));
         String url = safeOptions.optString("url", "");
         String title = safeOptions.optString("titulo", safeOptions.optString("title", "Compartilhar"));
         StringBuilder content = new StringBuilder();
+        ArrayList<Uri> streams = shareStreamsFromOptions(safeOptions);
+        String mimeType = shareMimeType(safeOptions, streams);
         if (text.length() > 0) {
             content.append(text);
         }
@@ -1767,11 +1875,1064 @@ public class Html2ApkBridge extends CordovaPlugin {
             content.append(url);
         }
 
-        Intent intent = new Intent(Intent.ACTION_SEND);
-        intent.setType(safeOptions.optString("mimeType", "text/plain"));
-        intent.putExtra(Intent.EXTRA_TEXT, content.toString());
+        Intent intent = new Intent(streams.size() > 1 ? Intent.ACTION_SEND_MULTIPLE : Intent.ACTION_SEND);
+        intent.setType(mimeType);
+        if (content.length() > 0) {
+            intent.putExtra(Intent.EXTRA_TEXT, content.toString());
+        }
         intent.putExtra(Intent.EXTRA_TITLE, title);
+        if (streams.size() == 1) {
+            intent.putExtra(Intent.EXTRA_STREAM, streams.get(0));
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        } else if (streams.size() > 1) {
+            intent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, streams);
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        }
         cordova.getActivity().startActivity(Intent.createChooser(intent, title));
+
+        JSONObject result = new JSONObject();
+        result.put("ok", true);
+        result.put("shared", true);
+        result.put("compartilhado", true);
+        result.put("items", streams.size());
+        result.put("itens", streams.size());
+        result.put("mimeType", mimeType);
+        return result;
+    }
+
+    private ArrayList<Uri> shareStreamsFromOptions(JSONObject options) throws Exception {
+        ArrayList<Uri> streams = new ArrayList<Uri>();
+        appendShareValue(streams, options.opt("arquivo"));
+        appendShareValue(streams, options.opt("file"));
+        appendShareValue(streams, options.opt("anexo"));
+        appendShareValue(streams, options.opt("attachment"));
+        appendShareValue(streams, options.opt("uri"));
+        appendShareValue(streams, options.opt("uris"));
+        appendShareValue(streams, options.opt("arquivos"));
+        appendShareValue(streams, options.opt("files"));
+        appendShareValue(streams, options.opt("anexos"));
+        appendShareValue(streams, options.opt("attachments"));
+        return streams;
+    }
+
+    private void appendShareValue(ArrayList<Uri> streams, Object value) throws Exception {
+        if (value == null || value == JSONObject.NULL) {
+            return;
+        }
+        if (value instanceof JSONArray) {
+            JSONArray array = (JSONArray) value;
+            for (int index = 0; index < array.length(); index += 1) {
+                appendShareValue(streams, array.opt(index));
+            }
+            return;
+        }
+        if (value instanceof JSONObject) {
+            Uri uri = uriFromFileLikeObject((JSONObject) value);
+            if (uri != null) {
+                streams.add(uri);
+            }
+            return;
+        }
+        Uri uri = uriFromFileLikeString(String.valueOf(value));
+        if (uri != null) {
+            streams.add(uri);
+        }
+    }
+
+    private Uri uriFromFileLikeObject(JSONObject object) throws Exception {
+        String uriText = object.optString("uri",
+            object.optString("contentUri",
+                object.optString("url", "")));
+        if (uriText.length() > 0 && (uriText.startsWith("content://") || uriText.startsWith("file://"))) {
+            return Uri.parse(uriText);
+        }
+
+        String pathText = object.optString("caminho", object.optString("path", ""));
+        if (pathText.length() > 0) {
+            File file = new File(pathText);
+            if (file.exists() && file.isFile()) {
+                return fileProviderUri(file);
+            }
+        }
+
+        String name = object.optString("nome",
+            object.optString("name",
+                object.optString("fileName",
+                    object.optString("nomeArquivo", ""))));
+        if (name.length() > 0) {
+            File stored = storedFile(name);
+            if (stored.exists() && stored.isFile()) {
+                return fileProviderUri(stored);
+            }
+        }
+        return null;
+    }
+
+    private Uri uriFromFileLikeString(String value) throws Exception {
+        String text = value == null ? "" : value.trim();
+        if (text.length() == 0) {
+            return null;
+        }
+        if (text.startsWith("content://") || text.startsWith("file://")) {
+            return Uri.parse(text);
+        }
+        try {
+            File stored = storedFile(text);
+            if (stored.exists() && stored.isFile()) {
+                return fileProviderUri(stored);
+            }
+        } catch (Exception ignored) {
+        }
+        File file = new File(text);
+        if (file.exists() && file.isFile()) {
+            return fileProviderUri(file);
+        }
+        return null;
+    }
+
+    private String shareMimeType(JSONObject options, ArrayList<Uri> streams) {
+        String explicit = options.optString("mimeType", options.optString("tipoMime", ""));
+        if (explicit.length() > 0) {
+            return explicit;
+        }
+        if (streams.size() == 0) {
+            return "text/plain";
+        }
+        if (streams.size() > 1) {
+            return "*/*";
+        }
+        String resolved = context().getContentResolver().getType(streams.get(0));
+        return resolved == null || resolved.length() == 0 ? "*/*" : resolved;
+    }
+
+    private void scanBluetooth(JSONObject options, CallbackContext callbackContext) {
+        JSONObject safeOptions = options == null ? new JSONObject() : options;
+        if (!hasBluetoothPermission(true)) {
+            requestBluetoothPermission("scan", "", safeOptions, callbackContext, true);
+            return;
+        }
+        if (bluetoothDiscoveryCallback != null) {
+            rejectBusyCallback(callbackContext, "Bluetooth discovery");
+            return;
+        }
+
+        try {
+            final BluetoothAdapter adapter = bluetoothAdapter();
+            if (!adapter.isEnabled()) {
+                callbackContext.error("Bluetooth is disabled.");
+                return;
+            }
+
+            bluetoothDiscoveredDevices.clear();
+            addBondedBluetoothDevices(adapter);
+            registerBluetoothDiscoveryReceiver();
+            bluetoothDiscoveryCallback = callbackContext;
+
+            long timeoutMs = Math.max(3000, safeOptions.optLong("timeoutMs", safeOptions.optLong("tempoMs", 12000)));
+            bluetoothDiscoveryTimeout = new Handler(Looper.getMainLooper());
+            bluetoothDiscoveryTimeout.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    finishBluetoothDiscovery();
+                }
+            }, timeoutMs);
+
+            try {
+                if (adapter.isDiscovering()) {
+                    adapter.cancelDiscovery();
+                }
+            } catch (Exception ignored) {
+            }
+
+            if (!adapter.startDiscovery()) {
+                finishBluetoothDiscovery();
+            }
+        } catch (Exception error) {
+            bluetoothDiscoveryCallback = null;
+            unregisterBluetoothDiscoveryReceiver();
+            callbackContext.error(error.getMessage());
+        }
+    }
+
+    private void connectBluetooth(final String deviceId, final CallbackContext callbackContext) {
+        final String address = deviceId == null ? "" : deviceId.trim();
+        if (address.length() == 0) {
+            callbackContext.error("Bluetooth device id is required.");
+            return;
+        }
+        if (!hasBluetoothPermission(false)) {
+            requestBluetoothPermission("connect", address, new JSONObject(), callbackContext, false);
+            return;
+        }
+
+        cordova.getThreadPool().execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    BluetoothAdapter adapter = bluetoothAdapter();
+                    if (!adapter.isEnabled()) {
+                        callbackContext.error("Bluetooth is disabled.");
+                        return;
+                    }
+                    try {
+                        adapter.cancelDiscovery();
+                    } catch (Exception ignored) {
+                    }
+                    BluetoothDevice device = adapter.getRemoteDevice(address);
+                    BluetoothSocket socket = device.createRfcommSocketToServiceRecord(BLUETOOTH_UUID);
+                    socket.connect();
+                    JSONObject info = bindBluetoothSocket(socket, false);
+                    callbackContext.success(info);
+                } catch (Exception error) {
+                    callbackContext.error(error.getMessage());
+                }
+            }
+        });
+    }
+
+    private void sendBluetooth(Object data, final CallbackContext callbackContext) {
+        if (!hasBluetoothPermission(false)) {
+            JSONObject pending = new JSONObject();
+            try {
+                pending.put("dados", data == null ? JSONObject.NULL : data);
+            } catch (Exception ignored) {
+            }
+            requestBluetoothPermission("send", "", pending, callbackContext, false);
+            return;
+        }
+
+        final Object payload = data == null ? JSONObject.NULL : data;
+        cordova.getThreadPool().execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    OutputStream output;
+                    synchronized (Html2ApkBridge.this) {
+                        output = bluetoothOutputStream;
+                    }
+                    if (output == null) {
+                        callbackContext.error("Bluetooth is not connected.");
+                        return;
+                    }
+
+                    JSONObject message = new JSONObject();
+                    message.put("dados", payload);
+                    message.put("data", payload);
+                    message.put("timestamp", System.currentTimeMillis());
+                    byte[] bytes = (message.toString() + "\n").getBytes("UTF-8");
+                    synchronized (Html2ApkBridge.this) {
+                        output.write(bytes);
+                        output.flush();
+                    }
+
+                    JSONObject result = new JSONObject();
+                    result.put("ok", true);
+                    result.put("sent", true);
+                    result.put("enviado", true);
+                    result.put("bytes", bytes.length);
+                    callbackContext.success(result);
+                } catch (Exception error) {
+                    callbackContext.error(error.getMessage());
+                }
+            }
+        });
+    }
+
+    private void startBluetoothServerWithPermission(CallbackContext callbackContext) {
+        if (!hasBluetoothPermission(false)) {
+            requestBluetoothPermission("server", "", new JSONObject(), callbackContext, false);
+            return;
+        }
+        try {
+            callbackContext.success(startBluetoothServer());
+        } catch (Exception error) {
+            callbackContext.error(error.getMessage());
+        }
+    }
+
+    private JSONObject startBluetoothServer() throws Exception {
+        final BluetoothAdapter adapter = bluetoothAdapter();
+        if (!adapter.isEnabled()) {
+            throw new Exception("Bluetooth is disabled.");
+        }
+        synchronized (this) {
+            if (bluetoothServerRunning) {
+                return bluetoothServerStatus(true);
+            }
+            bluetoothServerSocket = adapter.listenUsingRfcommWithServiceRecord("html2apk", BLUETOOTH_UUID);
+            bluetoothServerRunning = true;
+        }
+
+        bluetoothServerThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (bluetoothServerRunning) {
+                    try {
+                        BluetoothServerSocket server;
+                        synchronized (Html2ApkBridge.this) {
+                            server = bluetoothServerSocket;
+                        }
+                        if (server == null) {
+                            return;
+                        }
+                        BluetoothSocket socket = server.accept();
+                        if (socket != null) {
+                            bindBluetoothSocket(socket, true);
+                        }
+                    } catch (Exception error) {
+                        if (bluetoothServerRunning) {
+                            dispatchBluetoothError(error.getMessage());
+                        }
+                        return;
+                    }
+                }
+            }
+        }, "html2apk-bluetooth-server");
+        bluetoothServerThread.start();
+        return bluetoothServerStatus(true);
+    }
+
+    private JSONObject bluetoothServerStatus(boolean started) throws Exception {
+        JSONObject result = new JSONObject();
+        result.put("ok", true);
+        result.put("started", started);
+        result.put("iniciado", started);
+        result.put("listening", bluetoothServerRunning);
+        result.put("escutando", bluetoothServerRunning);
+        result.put("uuid", BLUETOOTH_UUID.toString());
+        return result;
+    }
+
+    private BluetoothAdapter bluetoothAdapter() throws Exception {
+        BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
+        if (adapter == null) {
+            throw new Exception("Bluetooth is not available on this device.");
+        }
+        return adapter;
+    }
+
+    private boolean hasBluetoothPermission(boolean scan) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (ContextCompat.checkSelfPermission(context(), Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                return false;
+            }
+            return !scan || ContextCompat.checkSelfPermission(context(), Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED;
+        }
+        return !scan || Build.VERSION.SDK_INT < Build.VERSION_CODES.M
+            || ContextCompat.checkSelfPermission(context(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private String[] bluetoothPermissions(boolean scan) {
+        ArrayList<String> permissions = new ArrayList<String>();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            permissions.add(Manifest.permission.BLUETOOTH_CONNECT);
+            if (scan) {
+                permissions.add(Manifest.permission.BLUETOOTH_SCAN);
+            }
+        } else if (scan && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            permissions.add(Manifest.permission.ACCESS_FINE_LOCATION);
+        }
+        return permissions.toArray(new String[permissions.size()]);
+    }
+
+    private void requestBluetoothPermission(String action, String deviceId, JSONObject payload, CallbackContext callbackContext, boolean scan) {
+        String[] permissions = bluetoothPermissions(scan);
+        if (permissions.length == 0) {
+            callbackContext.error("Bluetooth permission is not available.");
+            return;
+        }
+        if (pendingBluetoothCallback != null) {
+            rejectBusyCallback(callbackContext, "Bluetooth permission");
+            return;
+        }
+        pendingBluetoothAction = action;
+        pendingBluetoothDeviceId = deviceId;
+        pendingBluetoothPayload = payload == null ? new JSONObject() : payload;
+        pendingBluetoothCallback = callbackContext;
+        for (String permission : permissions) {
+            rememberRuntimePermissionRequest(permission);
+        }
+        cordova.requestPermissions(this, REQUEST_BLUETOOTH, permissions);
+    }
+
+    private void continuePendingBluetoothAfterPermission(int[] grantResults) {
+        CallbackContext callback = pendingBluetoothCallback;
+        String action = pendingBluetoothAction;
+        String deviceId = pendingBluetoothDeviceId;
+        JSONObject payload = pendingBluetoothPayload == null ? new JSONObject() : pendingBluetoothPayload;
+        pendingBluetoothCallback = null;
+        pendingBluetoothAction = null;
+        pendingBluetoothDeviceId = null;
+        pendingBluetoothPayload = null;
+
+        if (callback == null) {
+            return;
+        }
+        for (int result : grantResults) {
+            if (result != PackageManager.PERMISSION_GRANTED) {
+                callback.error("Bluetooth permission is not granted.");
+                return;
+            }
+        }
+
+        if ("scan".equals(action)) {
+            scanBluetooth(payload, callback);
+        } else if ("connect".equals(action)) {
+            connectBluetooth(deviceId, callback);
+        } else if ("send".equals(action)) {
+            sendBluetooth(payload.opt("dados"), callback);
+        } else if ("server".equals(action)) {
+            startBluetoothServerWithPermission(callback);
+        } else {
+            callback.error("Unknown Bluetooth operation.");
+        }
+    }
+
+    private void registerBluetoothDiscoveryReceiver() {
+        unregisterBluetoothDiscoveryReceiver();
+        bluetoothDiscoveryReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context receiverContext, Intent intent) {
+                if (intent == null || intent.getAction() == null) {
+                    return;
+                }
+                try {
+                    if (BluetoothDevice.ACTION_FOUND.equals(intent.getAction())) {
+                        BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                        addBluetoothDevice(device);
+                    } else if (BluetoothAdapter.ACTION_DISCOVERY_FINISHED.equals(intent.getAction())) {
+                        finishBluetoothDiscovery();
+                    }
+                } catch (Exception ignored) {
+                }
+            }
+        };
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(BluetoothDevice.ACTION_FOUND);
+        filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
+        ContextCompat.registerReceiver(context(), bluetoothDiscoveryReceiver, filter, ContextCompat.RECEIVER_EXPORTED);
+    }
+
+    private void unregisterBluetoothDiscoveryReceiver() {
+        if (bluetoothDiscoveryReceiver == null) {
+            return;
+        }
+        try {
+            context().unregisterReceiver(bluetoothDiscoveryReceiver);
+        } catch (Exception ignored) {
+        }
+        bluetoothDiscoveryReceiver = null;
+    }
+
+    private void finishBluetoothDiscovery() {
+        CallbackContext callback = bluetoothDiscoveryCallback;
+        bluetoothDiscoveryCallback = null;
+        if (bluetoothDiscoveryTimeout != null) {
+            bluetoothDiscoveryTimeout.removeCallbacksAndMessages(null);
+            bluetoothDiscoveryTimeout = null;
+        }
+        try {
+            BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
+            if (adapter != null && adapter.isDiscovering()) {
+                adapter.cancelDiscovery();
+            }
+        } catch (Exception ignored) {
+        }
+        unregisterBluetoothDiscoveryReceiver();
+        if (callback != null) {
+            callback.success(bluetoothDeviceList());
+        }
+    }
+
+    private void addBondedBluetoothDevices(BluetoothAdapter adapter) {
+        try {
+            for (BluetoothDevice device : adapter.getBondedDevices()) {
+                addBluetoothDevice(device);
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void addBluetoothDevice(BluetoothDevice device) throws Exception {
+        if (device == null) {
+            return;
+        }
+        JSONObject info = bluetoothDeviceInfo(device);
+        String id = info.optString("id");
+        if (id.length() > 0) {
+            bluetoothDiscoveredDevices.put(id, info);
+        }
+    }
+
+    private JSONArray bluetoothDeviceList() {
+        JSONArray list = new JSONArray();
+        for (JSONObject item : bluetoothDiscoveredDevices.values()) {
+            list.put(item);
+        }
+        return list;
+    }
+
+    private JSONObject bluetoothDeviceInfo(BluetoothDevice device) throws Exception {
+        JSONObject info = new JSONObject();
+        String address = "";
+        String name = "";
+        int bondState = BluetoothDevice.BOND_NONE;
+        int type = BluetoothDevice.DEVICE_TYPE_UNKNOWN;
+        try {
+            address = device.getAddress();
+        } catch (Exception ignored) {
+        }
+        try {
+            name = device.getName();
+        } catch (Exception ignored) {
+        }
+        try {
+            bondState = device.getBondState();
+        } catch (Exception ignored) {
+        }
+        try {
+            type = device.getType();
+        } catch (Exception ignored) {
+        }
+        info.put("id", address);
+        info.put("idDispositivo", address);
+        info.put("address", address);
+        info.put("endereco", address);
+        info.put("name", name == null || name.length() == 0 ? address : name);
+        info.put("nome", info.optString("name"));
+        info.put("bonded", bondState == BluetoothDevice.BOND_BONDED);
+        info.put("pareado", info.optBoolean("bonded"));
+        info.put("type", type);
+        info.put("tipo", type);
+        return info;
+    }
+
+    private JSONObject bindBluetoothSocket(final BluetoothSocket socket, boolean incoming) throws Exception {
+        JSONObject device = bluetoothDeviceInfo(socket.getRemoteDevice());
+        device.put("connected", true);
+        device.put("conectado", true);
+        device.put("incoming", incoming);
+        device.put("entrada", incoming);
+        synchronized (this) {
+            closeBluetoothConnectionLocked();
+            bluetoothSocket = socket;
+            bluetoothOutputStream = socket.getOutputStream();
+        }
+        startBluetoothReadThread(socket, device);
+        dispatchEvent("bluetooth:conectado", device);
+        return device;
+    }
+
+    private void startBluetoothReadThread(final BluetoothSocket socket, final JSONObject device) {
+        bluetoothReadThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), "UTF-8"));
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        JSONObject detail = new JSONObject();
+                        Object data = parseBluetoothData(line);
+                        detail.put("dados", data);
+                        detail.put("data", data);
+                        detail.put("raw", line);
+                        detail.put("bruto", line);
+                        detail.put("device", device);
+                        detail.put("dispositivo", device);
+                        detail.put("timestamp", System.currentTimeMillis());
+                        dispatchEvent("bluetooth:dados", detail);
+                    }
+                } catch (Exception ignored) {
+                } finally {
+                    handleBluetoothDisconnected(socket, device);
+                }
+            }
+        }, "html2apk-bluetooth-read");
+        bluetoothReadThread.start();
+    }
+
+    private Object parseBluetoothData(String line) {
+        String text = line == null ? "" : line;
+        try {
+            JSONObject object = new JSONObject(text);
+            if (object.has("dados")) {
+                return object.opt("dados");
+            }
+            if (object.has("data")) {
+                return object.opt("data");
+            }
+            return object;
+        } catch (Exception ignored) {
+        }
+        try {
+            return new JSONArray(text);
+        } catch (Exception ignored) {
+        }
+        return text;
+    }
+
+    private void handleBluetoothDisconnected(BluetoothSocket socket, JSONObject device) {
+        boolean wasCurrent = false;
+        synchronized (this) {
+            if (socket == bluetoothSocket) {
+                closeBluetoothConnectionLocked();
+                wasCurrent = true;
+            }
+        }
+        if (wasCurrent) {
+            try {
+                JSONObject detail = device == null ? new JSONObject() : new JSONObject(device.toString());
+                detail.put("connected", false);
+                detail.put("conectado", false);
+                detail.put("timestamp", System.currentTimeMillis());
+                dispatchEvent("bluetooth:desconectado", detail);
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
+    private void dispatchBluetoothError(String message) {
+        try {
+            JSONObject detail = new JSONObject();
+            detail.put("message", message == null ? "" : message);
+            detail.put("mensagem", detail.optString("message"));
+            detail.put("timestamp", System.currentTimeMillis());
+            dispatchEvent("bluetooth:erro", detail);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void shutdownBluetooth() {
+        bluetoothServerRunning = false;
+        if (bluetoothDiscoveryCallback != null) {
+            bluetoothDiscoveryCallback = null;
+        }
+        if (bluetoothDiscoveryTimeout != null) {
+            bluetoothDiscoveryTimeout.removeCallbacksAndMessages(null);
+            bluetoothDiscoveryTimeout = null;
+        }
+        unregisterBluetoothDiscoveryReceiver();
+        try {
+            BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
+            if (adapter != null && adapter.isDiscovering()) {
+                adapter.cancelDiscovery();
+            }
+        } catch (Exception ignored) {
+        }
+        synchronized (this) {
+            closeBluetoothConnectionLocked();
+            if (bluetoothServerSocket != null) {
+                try {
+                    bluetoothServerSocket.close();
+                } catch (Exception ignored) {
+                }
+                bluetoothServerSocket = null;
+            }
+        }
+    }
+
+    private void closeBluetoothConnectionLocked() {
+        if (bluetoothOutputStream != null) {
+            try {
+                bluetoothOutputStream.close();
+            } catch (Exception ignored) {
+            }
+            bluetoothOutputStream = null;
+        }
+        if (bluetoothSocket != null) {
+            try {
+                bluetoothSocket.close();
+            } catch (Exception ignored) {
+            }
+            bluetoothSocket = null;
+        }
+    }
+
+    private void runOcr(JSONObject options, final CallbackContext callbackContext) {
+        final JSONObject safeOptions = options == null ? new JSONObject() : options;
+        cordova.getThreadPool().execute(new Runnable() {
+            @Override
+            public void run() {
+                final TextRecognizer recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
+                try {
+                    InputImage image = inputImageFromOptions(safeOptions);
+                    recognizer.process(image)
+                        .addOnSuccessListener(new com.google.android.gms.tasks.OnSuccessListener<Text>() {
+                            @Override
+                            public void onSuccess(Text text) {
+                                try {
+                                    callbackContext.success(ocrResult(text));
+                                } catch (Exception error) {
+                                    callbackContext.error(error.getMessage());
+                                } finally {
+                                    recognizer.close();
+                                }
+                            }
+                        })
+                        .addOnFailureListener(new com.google.android.gms.tasks.OnFailureListener() {
+                            @Override
+                            public void onFailure(Exception error) {
+                                recognizer.close();
+                                callbackContext.error(error.getMessage());
+                            }
+                        });
+                } catch (Exception error) {
+                    recognizer.close();
+                    callbackContext.error(error.getMessage());
+                }
+            }
+        });
+    }
+
+    private InputImage inputImageFromOptions(JSONObject options) throws Exception {
+        String uriText = options.optString("uri",
+            options.optString("contentUri",
+                options.optString("url", "")));
+        if (uriText.startsWith("content://") || uriText.startsWith("file://")) {
+            return InputImage.fromFilePath(context(), Uri.parse(uriText));
+        }
+
+        String pathText = options.optString("caminho", options.optString("path", ""));
+        if (pathText.length() > 0) {
+            return InputImage.fromFilePath(context(), Uri.fromFile(new File(pathText)));
+        }
+
+        String name = options.optString("nome",
+            options.optString("name",
+                options.optString("fileName",
+                    options.optString("nomeArquivo", ""))));
+        if (name.length() > 0) {
+            File file = storedFile(name);
+            if (file.exists() && file.isFile()) {
+                return InputImage.fromFilePath(context(), Uri.fromFile(file));
+            }
+        }
+
+        String base64 = options.optString("base64",
+            options.optString("dataUrl",
+                options.optString("data", "")));
+        if (base64.length() > 0) {
+            byte[] bytes = Base64.decode(stripDataUrlBase64(base64), Base64.DEFAULT);
+            Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+            if (bitmap == null) {
+                throw new Exception("Could not decode OCR image.");
+            }
+            return InputImage.fromBitmap(bitmap, 0);
+        }
+
+        throw new Exception("OCR image source is required.");
+    }
+
+    private JSONObject ocrResult(Text text) throws Exception {
+        JSONObject result = new JSONObject();
+        result.put("texto", text == null ? "" : text.getText());
+        result.put("text", result.optString("texto"));
+        result.put("offline", true);
+        result.put("local", true);
+        JSONArray blocks = new JSONArray();
+        if (text != null) {
+            for (Text.TextBlock block : text.getTextBlocks()) {
+                JSONObject blockJson = new JSONObject();
+                blockJson.put("texto", block.getText());
+                blockJson.put("text", block.getText());
+                blocks.put(blockJson);
+            }
+        }
+        result.put("blocks", blocks);
+        result.put("blocos", blocks);
+        return result;
+    }
+
+    private void speakText(final String text, final JSONObject options, final CallbackContext callbackContext) {
+        final JSONObject safeOptions = options == null ? new JSONObject() : options;
+        if (text == null || text.trim().length() == 0) {
+            callbackContext.error("Text is required.");
+            return;
+        }
+        if (textToSpeechReady && textToSpeech != null) {
+            speakWithReadyEngine(text, safeOptions, callbackContext);
+            return;
+        }
+        if (pendingSpeakCallback != null) {
+            rejectBusyCallback(callbackContext, "Text to speech");
+            return;
+        }
+
+        pendingSpeakText = text;
+        pendingSpeakOptions = safeOptions;
+        pendingSpeakCallback = callbackContext;
+        cordova.getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (textToSpeech == null) {
+                    textToSpeech = new TextToSpeech(context(), new TextToSpeech.OnInitListener() {
+                        @Override
+                        public void onInit(int status) {
+                            handleTextToSpeechReady(status);
+                        }
+                    });
+                }
+            }
+        });
+    }
+
+    private void handleTextToSpeechReady(int status) {
+        CallbackContext callback = pendingSpeakCallback;
+        String text = pendingSpeakText;
+        JSONObject options = pendingSpeakOptions == null ? new JSONObject() : pendingSpeakOptions;
+        pendingSpeakCallback = null;
+        pendingSpeakText = null;
+        pendingSpeakOptions = null;
+
+        if (callback == null) {
+            return;
+        }
+        if (status != TextToSpeech.SUCCESS || textToSpeech == null) {
+            callback.error("Text to speech is not available.");
+            return;
+        }
+
+        textToSpeechReady = true;
+        speakWithReadyEngine(text, options, callback);
+    }
+
+    private void speakWithReadyEngine(String text, JSONObject options, CallbackContext callbackContext) {
+        try {
+            Locale locale = localeFromOptions(options);
+            int languageResult = textToSpeech.setLanguage(locale);
+            if (languageResult == TextToSpeech.LANG_MISSING_DATA || languageResult == TextToSpeech.LANG_NOT_SUPPORTED) {
+                callbackContext.error("TTS language is not supported: " + locale.toLanguageTag());
+                return;
+            }
+            float speed = (float) Math.max(0.1, Math.min(3.0, options.optDouble("velocidade", options.optDouble("speed", options.optDouble("rate", 1.0)))));
+            float pitch = (float) Math.max(0.1, Math.min(3.0, options.optDouble("tom", options.optDouble("pitch", 1.0))));
+            textToSpeech.setSpeechRate(speed);
+            textToSpeech.setPitch(pitch);
+
+            String utteranceId = "html2apk-tts-" + System.currentTimeMillis();
+            int speakResult = textToSpeech.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId);
+            if (speakResult == TextToSpeech.ERROR) {
+                callbackContext.error("Text to speech failed.");
+                return;
+            }
+
+            JSONObject result = new JSONObject();
+            result.put("ok", true);
+            result.put("speaking", true);
+            result.put("falando", true);
+            result.put("idioma", locale.toLanguageTag());
+            result.put("language", locale.toLanguageTag());
+            result.put("velocidade", speed);
+            result.put("speed", speed);
+            callbackContext.success(result);
+        } catch (Exception error) {
+            callbackContext.error(error.getMessage());
+        }
+    }
+
+    private JSONObject stopSpeaking() throws Exception {
+        boolean stopped = false;
+        if (textToSpeech != null) {
+            textToSpeech.stop();
+            stopped = true;
+        }
+        JSONObject result = new JSONObject();
+        result.put("ok", true);
+        result.put("stopped", stopped);
+        result.put("parado", stopped);
+        return result;
+    }
+
+    private void shutdownTextToSpeech() {
+        if (textToSpeech == null) {
+            return;
+        }
+        try {
+            textToSpeech.stop();
+            textToSpeech.shutdown();
+        } catch (Exception ignored) {
+        }
+        textToSpeech = null;
+        textToSpeechReady = false;
+    }
+
+    private Locale localeFromOptions(JSONObject options) {
+        String language = options.optString("idioma",
+            options.optString("language",
+                options.optString("locale", "")));
+        if (language.length() == 0 || "auto".equalsIgnoreCase(language)) {
+            return Locale.getDefault();
+        }
+        return Locale.forLanguageTag(language.replace('_', '-'));
+    }
+
+    private void recognizeSpeech(JSONObject options, CallbackContext callbackContext) {
+        if (speechRecognitionCallback != null) {
+            rejectBusyCallback(callbackContext, "Speech recognition");
+            return;
+        }
+        JSONObject safeOptions = options == null ? new JSONObject() : options;
+        Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+        intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, Math.max(1, safeOptions.optInt("maxResultados", safeOptions.optInt("maxResults", 5))));
+        String prompt = safeOptions.optString("prompt", safeOptions.optString("titulo", safeOptions.optString("title", "")));
+        if (prompt.length() > 0) {
+            intent.putExtra(RecognizerIntent.EXTRA_PROMPT, prompt);
+        }
+        String language = safeOptions.optString("idioma", safeOptions.optString("language", ""));
+        if (language.length() > 0 && !"auto".equalsIgnoreCase(language)) {
+            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, language);
+        }
+        if (intent.resolveActivity(context().getPackageManager()) == null) {
+            callbackContext.error("Speech recognition is not available on this device.");
+            return;
+        }
+        speechRecognitionCallback = callbackContext;
+        cordova.startActivityForResult(this, intent, REQUEST_SPEECH_RECOGNITION);
+    }
+
+    private void handleSpeechRecognitionResult(int resultCode, Intent intent) {
+        CallbackContext callback = speechRecognitionCallback;
+        speechRecognitionCallback = null;
+        if (callback == null) {
+            return;
+        }
+        try {
+            JSONObject result = new JSONObject();
+            if (resultCode != Activity.RESULT_OK || intent == null) {
+                result.put("texto", "");
+                result.put("text", "");
+                result.put("canceled", true);
+                result.put("cancelado", true);
+                callback.success(result);
+                return;
+            }
+
+            ArrayList<String> matches = intent.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+            JSONArray items = new JSONArray();
+            if (matches != null) {
+                for (String match : matches) {
+                    items.put(match);
+                }
+            }
+            String first = matches != null && matches.size() > 0 ? matches.get(0) : "";
+            result.put("texto", first);
+            result.put("text", first);
+            result.put("resultados", items);
+            result.put("results", items);
+            result.put("canceled", false);
+            result.put("cancelado", false);
+
+            float[] confidence = intent.getFloatArrayExtra(RecognizerIntent.EXTRA_CONFIDENCE_SCORES);
+            if (confidence != null && confidence.length > 0) {
+                result.put("confidence", confidence[0]);
+                result.put("confianca", confidence[0]);
+            }
+            callback.success(result);
+        } catch (Exception error) {
+            callback.error(error.getMessage());
+        }
+    }
+
+    private JSONObject shareCurrentApp(JSONObject options) throws Exception {
+        JSONObject safeOptions = options == null ? new JSONObject() : options;
+        ApplicationInfo appInfo = context().getApplicationInfo();
+        File sourceFile = new File(appInfo.sourceDir);
+        if (!sourceFile.exists() || !sourceFile.isFile()) {
+            throw new Exception("Current APK file was not found.");
+        }
+
+        String appLabel = String.valueOf(context().getPackageManager().getApplicationLabel(appInfo));
+        if (appLabel == null || appLabel.trim().length() == 0) {
+            appLabel = context().getPackageName();
+        }
+
+        String fileName = safeOptions.optString("nome",
+            safeOptions.optString("name", sanitizeShareFileName(appLabel) + ".apk"));
+        if (!fileName.toLowerCase().endsWith(".apk")) {
+            fileName += ".apk";
+        }
+
+        File shareDir = new File(context().getCacheDir(), "html2apk-share");
+        if (!shareDir.exists() && !shareDir.mkdirs()) {
+            throw new Exception("Could not create share directory.");
+        }
+
+        File outputFile = new File(shareDir, sanitizeShareFileName(fileName));
+        copyFile(sourceFile, outputFile);
+
+        String title = safeOptions.optString("titulo",
+            safeOptions.optString("title", "Compartilhar app"));
+        String text = safeOptions.optString("texto",
+            safeOptions.optString("text", appLabel));
+        Uri uri = fileProviderUri(outputFile);
+
+        Intent intent = new Intent(Intent.ACTION_SEND);
+        intent.setType("application/vnd.android.package-archive");
+        intent.putExtra(Intent.EXTRA_STREAM, uri);
+        intent.putExtra(Intent.EXTRA_TITLE, title);
+        if (text.length() > 0) {
+            intent.putExtra(Intent.EXTRA_TEXT, text);
+        }
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        cordova.getActivity().startActivity(Intent.createChooser(intent, title));
+
+        JSONObject result = storedFileResult(outputFile, "application/vnd.android.package-archive", "apk");
+        String[] splitSourceDirs = appInfo.splitSourceDirs;
+        boolean hasSplits = splitSourceDirs != null && splitSourceDirs.length > 0;
+        result.put("shared", true);
+        result.put("compartilhado", true);
+        result.put("appName", appLabel);
+        result.put("appNome", appLabel);
+        result.put("packageName", context().getPackageName());
+        result.put("apkSource", sourceFile.getAbsolutePath());
+        result.put("origemApk", sourceFile.getAbsolutePath());
+        result.put("splitApks", hasSplits);
+        result.put("apkDividido", hasSplits);
+        result.put("installableAsSingleApk", !hasSplits);
+        result.put("instalavelComoApkUnico", !hasSplits);
+        if (hasSplits) {
+            JSONArray splits = new JSONArray();
+            for (String split : splitSourceDirs) {
+                splits.put(split);
+            }
+            result.put("splitSourceDirs", splits);
+            result.put("observacao", "O app usa split APKs; compartilhar apenas o APK base pode nao reinstalar todos os recursos.");
+            result.put("note", "This app uses split APKs; sharing only the base APK may not reinstall every feature.");
+        }
+        return result;
+    }
+
+    private String sanitizeShareFileName(String value) {
+        String cleaned = value == null ? "" : value.trim();
+        cleaned = cleaned.replaceAll("[\\\\/:*?\"<>|]+", "-");
+        cleaned = cleaned.replaceAll("\\s+", "-");
+        cleaned = cleaned.replaceAll("-+", "-");
+        cleaned = cleaned.replaceAll("(^-+|-+$)", "");
+        return cleaned.length() == 0 ? "app.apk" : cleaned;
+    }
+
+    private void copyFile(File sourceFile, File outputFile) throws Exception {
+        FileOutputStream outputStream = new FileOutputStream(outputFile);
+        try {
+            copyFileToStream(sourceFile, outputStream);
+        } finally {
+            outputStream.close();
+        }
+    }
+
+    private void copyFileToStream(File sourceFile, OutputStream outputStream) throws Exception {
+        InputStream inputStream = new FileInputStream(sourceFile);
+        try {
+            byte[] buffer = new byte[8192];
+            int read;
+            while ((read = inputStream.read(buffer)) != -1) {
+                outputStream.write(buffer, 0, read);
+            }
+            outputStream.flush();
+        } finally {
+            inputStream.close();
+        }
     }
 
     private void dial(String phone) throws Exception {
@@ -1818,16 +2979,53 @@ public class Html2ApkBridge extends CordovaPlugin {
 
         JSONObject safeOptions = options == null ? new JSONObject() : options;
         String kind = safeOptions.optString("tipo", safeOptions.optString("kind", "file"));
-        boolean multiple = safeOptions.optBoolean("multiplo", safeOptions.optBoolean("multiple", false));
+        boolean multiple = safeOptions.optBoolean("multiplo",
+            safeOptions.optBoolean("multiplas",
+                safeOptions.optBoolean("multiple",
+                    safeOptions.optBoolean("multiples", false))));
         String mimeType = mimeTypeForPicker(kind, safeOptions);
 
+        Intent intent = shouldUsePhotoPicker(kind, safeOptions)
+            ? photoPickerIntent(mimeType, multiple, safeOptions)
+            : documentPickerIntent(mimeType, multiple);
+
+        filePickerCallback = callbackContext;
+        cordova.startActivityForResult(this, intent, REQUEST_PICK_FILE);
+    }
+
+    private boolean shouldUsePhotoPicker(String kind, JSONObject options) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            return false;
+        }
+        if (options.optBoolean("saf", options.optBoolean("useSaf", false))) {
+            return false;
+        }
+        return "image".equals(kind) || "video".equals(kind) || "media".equals(kind);
+    }
+
+    private Intent photoPickerIntent(String mimeType, boolean multiple, JSONObject options) {
+        Intent intent = new Intent(MediaStore.ACTION_PICK_IMAGES);
+        if ("video/*".equals(mimeType)) {
+            intent.setType("video/*");
+        } else {
+            intent.setType("image/*");
+        }
+        if (multiple) {
+            int requestedMax = Math.max(2, options.optInt("maximo",
+                options.optInt("max",
+                    options.optInt("limit", 20))));
+            int maxAllowed = MediaStore.getPickImagesMaxLimit();
+            intent.putExtra(MediaStore.EXTRA_PICK_IMAGES_MAX, Math.max(2, Math.min(requestedMax, maxAllowed)));
+        }
+        return intent;
+    }
+
+    private Intent documentPickerIntent(String mimeType, boolean multiple) {
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType(mimeType);
         intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, multiple);
-
-        filePickerCallback = callbackContext;
-        cordova.startActivityForResult(this, intent, REQUEST_PICK_FILE);
+        return intent;
     }
 
     private String mimeTypeForPicker(String kind, JSONObject options) {
@@ -1903,9 +3101,12 @@ public class Html2ApkBridge extends CordovaPlugin {
             if (intent.getClipData() != null) {
                 ClipData clipData = intent.getClipData();
                 for (int index = 0; index < clipData.getItemCount(); index += 1) {
-                    items.put(fileInfo(clipData.getItemAt(index).getUri()));
+                    Uri uri = clipData.getItemAt(index).getUri();
+                    takeReadPermission(intent, uri);
+                    items.put(fileInfo(uri));
                 }
             } else if (intent.getData() != null) {
+                takeReadPermission(intent, intent.getData());
                 items.put(fileInfo(intent.getData()));
             }
             callback.success(items);
@@ -1926,12 +3127,59 @@ public class Html2ApkBridge extends CordovaPlugin {
         }
 
         try {
+            Uri uri = intent.getData();
+            takeTreePermission(intent, uri);
             JSONObject result = new JSONObject();
-            result.put("uri", intent.getData().toString());
+            result.put("uri", uri.toString());
+            result.put("name", folderDisplayName(uri));
+            result.put("nome", result.optString("name"));
             callback.success(result);
         } catch (Exception error) {
             callback.error(error.getMessage());
         }
+    }
+
+    private void takeReadPermission(Intent intent, Uri uri) {
+        if (intent == null || uri == null) {
+            return;
+        }
+        int flags = intent.getFlags() & (Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+        if ((flags & Intent.FLAG_GRANT_READ_URI_PERMISSION) == 0) {
+            return;
+        }
+        try {
+            context().getContentResolver().takePersistableUriPermission(uri, flags);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void takeTreePermission(Intent intent, Uri uri) {
+        if (intent == null || uri == null) {
+            return;
+        }
+        int flags = intent.getFlags() & (Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+        try {
+            context().getContentResolver().takePersistableUriPermission(uri, flags);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private String folderDisplayName(Uri uri) {
+        try {
+            String treeId = DocumentsContract.getTreeDocumentId(uri);
+            if (treeId != null && treeId.length() > 0) {
+                int colon = treeId.lastIndexOf(':');
+                String value = colon >= 0 ? treeId.substring(colon + 1) : treeId;
+                if (value.length() == 0) {
+                    return "Armazenamento";
+                }
+                int slash = value.lastIndexOf('/');
+                return slash >= 0 ? value.substring(slash + 1) : value;
+            }
+        } catch (Exception ignored) {
+        }
+        String segment = uri == null ? "" : uri.getLastPathSegment();
+        return segment == null || segment.length() == 0 ? "Pasta" : segment;
     }
 
     private void handleSaveFileResult(int resultCode, Intent intent) {
@@ -1961,7 +3209,9 @@ public class Html2ApkBridge extends CordovaPlugin {
     private JSONObject fileInfo(Uri uri) throws Exception {
         JSONObject result = new JSONObject();
         result.put("uri", uri.toString());
-        result.put("mimeType", context().getContentResolver().getType(uri));
+        String mimeType = context().getContentResolver().getType(uri);
+        String fallbackName = uri.getLastPathSegment();
+        result.put("mimeType", mimeType == null || mimeType.length() == 0 ? guessMimeType(fallbackName) : mimeType);
 
         Cursor cursor = context().getContentResolver().query(uri, null, null, null, null);
         if (cursor != null) {
@@ -1982,7 +3232,37 @@ public class Html2ApkBridge extends CordovaPlugin {
                 cursor.close();
             }
         }
+        if (!result.has("name")) {
+            result.put("name", fallbackName == null || fallbackName.length() == 0 ? "arquivo" : fallbackName);
+            result.put("nome", result.optString("name"));
+        }
+        if (!result.has("size")) {
+            result.put("size", 0);
+            result.put("tamanho", 0);
+        }
+        result.put("type", contentKind(result.optString("mimeType")));
+        result.put("tipo", result.optString("type"));
         return result;
+    }
+
+    private String contentKind(String mimeType) {
+        String lower = mimeType == null ? "" : mimeType.toLowerCase();
+        if (lower.startsWith("image/")) {
+            return "imagem";
+        }
+        if (lower.startsWith("video/")) {
+            return "video";
+        }
+        if (lower.startsWith("audio/")) {
+            return "audio";
+        }
+        if ("application/pdf".equals(lower)) {
+            return "pdf";
+        }
+        if (lower.startsWith("text/")) {
+            return "texto";
+        }
+        return "arquivo";
     }
 
     private void writePickedFile(Uri uri, JSONObject options) throws Exception {
@@ -2212,6 +3492,10 @@ public class Html2ApkBridge extends CordovaPlugin {
 
                     if (source.file != null && sameFile(source.file, file)) {
                         JSONObject result = storedFileInfo(new JSONObject().put("name", file.getName()));
+                        String mimeType = readStoredFileMeta(file).optString("mimeType", source.mimeType);
+                        if (mimeType == null || mimeType.length() == 0) {
+                            mimeType = guessMimeType(file.getName());
+                        }
                         result.put("downloaded", true);
                         result.put("baixado", true);
                         result.put("sourceType", source.type);
@@ -2224,6 +3508,7 @@ public class Html2ApkBridge extends CordovaPlugin {
                         result.put("permissaoNotificacaoConcedida", hasNotificationPermission());
                         result.put("notificationPermissionRequested", safeOptions.optBoolean("notificationPermissionRequested", false));
                         result.put("permissaoNotificacaoSolicitada", safeOptions.optBoolean("permissaoNotificacaoSolicitada", false));
+                        appendDownloadPublication(result, file, mimeType, safeOptions);
                         callbackContext.success(result);
                         return;
                     }
@@ -2240,7 +3525,7 @@ public class Html2ApkBridge extends CordovaPlugin {
                     outputStream = new FileOutputStream(file);
                     long size = 0;
                     int lastPercent = -1;
-                    long lastNotifyAt = 0;
+                    long lastNotifyAt = notificationShown ? System.currentTimeMillis() : 0;
                     byte[] buffer = new byte[8192];
                     int read;
                     while ((read = inputStream.read(buffer)) != -1) {
@@ -2249,7 +3534,9 @@ public class Html2ApkBridge extends CordovaPlugin {
                         if (notificationShown) {
                             int percent = source.totalBytes > 0 ? (int) Math.min(100, (size * 100) / source.totalBytes) : -1;
                             long now = System.currentTimeMillis();
-                            if (percent != lastPercent && (percent < 0 || percent - lastPercent >= 2 || now - lastNotifyAt > 700)) {
+                            boolean shouldUpdateKnownProgress = percent >= 0 && percent != lastPercent && (percent - lastPercent >= 2 || now - lastNotifyAt > 700);
+                            boolean shouldRefreshIndeterminateProgress = percent < 0 && now - lastNotifyAt > 900;
+                            if (shouldUpdateKnownProgress || shouldRefreshIndeterminateProgress) {
                                 notifyDownloadProgress(downloadNotificationId, notificationTitle, progressText, source.totalBytes, size, false, null);
                                 lastPercent = percent;
                                 lastNotifyAt = now;
@@ -2257,6 +3544,8 @@ public class Html2ApkBridge extends CordovaPlugin {
                         }
                     }
                     outputStream.getFD().sync();
+                    closeSilently(outputStream);
+                    outputStream = null;
 
                     String mimeType = source.mimeType;
                     if (mimeType == null || mimeType.length() == 0) {
@@ -2300,6 +3589,7 @@ public class Html2ApkBridge extends CordovaPlugin {
                     result.put("permissaoNotificacaoConcedida", notificationPermissionGranted);
                     result.put("notificationPermissionRequested", safeOptions.optBoolean("notificationPermissionRequested", false));
                     result.put("permissaoNotificacaoSolicitada", safeOptions.optBoolean("permissaoNotificacaoSolicitada", false));
+                    appendDownloadPublication(result, file, mimeType, safeOptions);
                     if (notificationShown) {
                         notifyDownloadProgress(downloadNotificationId, notificationTitle, downloadCompleteText(safeOptions, name), source.totalBytes, size, true, null);
                     }
@@ -2434,6 +3724,225 @@ public class Html2ApkBridge extends CordovaPlugin {
     private String downloadCompleteText(JSONObject options, String name) {
         return options.optString("textoConcluido",
             options.optString("completeText", "Download concluido: " + name));
+    }
+
+    private void appendDownloadPublication(JSONObject result, File file, String mimeType, JSONObject options) throws Exception {
+        boolean requested = shouldPublishDownloadToPublicMedia(options);
+        boolean galleryMime = isGalleryVisibleMime(mimeType);
+        result.put("publicRequested", requested);
+        result.put("publicoSolicitado", requested);
+        result.put("galleryRequested", requested);
+        result.put("galeriaSolicitada", requested);
+        if (!requested) {
+            result.put("publicPublished", false);
+            result.put("publicadoPublico", false);
+            result.put("galleryPublished", false);
+            result.put("publicadoGaleria", false);
+            result.put("visibleInGallery", false);
+            result.put("visivelNaGaleria", false);
+            if (galleryMime) {
+                result.put("galleryHint", "Use { galeria: true } to publish a copy to the Android gallery.");
+                result.put("dicaGaleria", "Use { galeria: true } para publicar uma copia na galeria do Android.");
+            }
+            return;
+        }
+
+        try {
+            JSONObject published = publishDownloadedFile(file, mimeType, options);
+            boolean visibleInGallery = published.optBoolean("visibleInGallery", false);
+            result.put("publicPublished", true);
+            result.put("publicadoPublico", true);
+            result.put("galleryPublished", visibleInGallery);
+            result.put("publicadoGaleria", visibleInGallery);
+            result.put("visibleInGallery", visibleInGallery);
+            result.put("visivelNaGaleria", visibleInGallery);
+            result.put("publicUri", published.optString("uri"));
+            result.put("uriPublica", published.optString("uri"));
+            result.put("galleryUri", published.optString("uri"));
+            result.put("uriGaleria", published.optString("uri"));
+            result.put("publicName", published.optString("name"));
+            result.put("nomePublico", published.optString("name"));
+            result.put("publicRelativePath", published.optString("relativePath"));
+            result.put("caminhoRelativoPublico", published.optString("relativePath"));
+        } catch (Exception error) {
+            result.put("publicPublished", false);
+            result.put("publicadoPublico", false);
+            result.put("galleryPublished", false);
+            result.put("publicadoGaleria", false);
+            result.put("visibleInGallery", false);
+            result.put("visivelNaGaleria", false);
+            result.put("publicError", error.getMessage());
+            result.put("erroPublicacao", error.getMessage());
+            if (shouldFailOnPublicMediaError(options)) {
+                throw error;
+            }
+        }
+    }
+
+    private boolean shouldPublishDownloadToPublicMedia(JSONObject options) {
+        return optBooleanAlias(options, false,
+            "galeria",
+            "gallery",
+            "mostrarNaGaleria",
+            "showInGallery",
+            "publico",
+            "public",
+            "salvarPublico",
+            "savePublic",
+            "publicar",
+            "publish");
+    }
+
+    private boolean shouldFailOnPublicMediaError(JSONObject options) {
+        return optBooleanAlias(options, false,
+            "falharAoPublicarGaleria",
+            "failOnGalleryError",
+            "falharAoSalvarPublico",
+            "failOnPublicError");
+    }
+
+    private boolean optBooleanAlias(JSONObject options, boolean defaultValue, String... keys) {
+        if (options == null) {
+            return defaultValue;
+        }
+        for (String key : keys) {
+            if (options.has(key)) {
+                return options.optBoolean(key, defaultValue);
+            }
+        }
+        return defaultValue;
+    }
+
+    private JSONObject publishDownloadedFile(File file, String mimeType, JSONObject options) throws Exception {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            throw new Exception("Public gallery/download publication requires Android 10 or newer.");
+        }
+
+        String safeMimeType = mimeType == null || mimeType.length() == 0 ? guessMimeType(file.getName()) : mimeType;
+        String publicName = downloadPublicName(options, file);
+        String relativePath = downloadPublicRelativePath(options, safeMimeType);
+        ContentValues values = new ContentValues();
+        values.put(MediaStore.MediaColumns.DISPLAY_NAME, publicName);
+        values.put(MediaStore.MediaColumns.MIME_TYPE, safeMimeType);
+        values.put(MediaStore.MediaColumns.RELATIVE_PATH, relativePath);
+        values.put(MediaStore.MediaColumns.IS_PENDING, 1);
+
+        Uri uri = context().getContentResolver().insert(downloadPublicCollection(safeMimeType), values);
+        if (uri == null) {
+            throw new Exception("Could not create public media entry.");
+        }
+
+        OutputStream outputStream = null;
+        try {
+            outputStream = context().getContentResolver().openOutputStream(uri);
+            if (outputStream == null) {
+                throw new Exception("Could not open public media output stream.");
+            }
+            copyFileToStream(file, outputStream);
+        } catch (Exception error) {
+            context().getContentResolver().delete(uri, null, null);
+            throw error;
+        } finally {
+            closeSilently(outputStream);
+        }
+
+        ContentValues publishedValues = new ContentValues();
+        publishedValues.put(MediaStore.MediaColumns.IS_PENDING, 0);
+        context().getContentResolver().update(uri, publishedValues, null, null);
+
+        JSONObject published = new JSONObject();
+        published.put("uri", uri.toString());
+        published.put("name", publicName);
+        published.put("relativePath", relativePath);
+        published.put("mimeType", safeMimeType);
+        published.put("visibleInGallery", isGalleryVisibleMime(safeMimeType));
+        return published;
+    }
+
+    private Uri downloadPublicCollection(String mimeType) throws Exception {
+        String lower = normalizedMimeType(mimeType);
+        if (lower.startsWith("image/")) {
+            return MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
+        }
+        if (lower.startsWith("video/")) {
+            return MediaStore.Video.Media.EXTERNAL_CONTENT_URI;
+        }
+        if (lower.startsWith("audio/")) {
+            return MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
+        }
+        return MediaStore.Downloads.EXTERNAL_CONTENT_URI;
+    }
+
+    private String downloadPublicName(JSONObject options, File file) throws Exception {
+        String name = options.optString("nomePublico",
+            options.optString("publicName",
+                options.optString("nomeGaleria",
+                    options.optString("galleryName", file.getName()))));
+        if (name == null || name.trim().length() == 0) {
+            name = file.getName();
+        }
+        return safeStoredFileName(name);
+    }
+
+    private String downloadPublicRelativePath(JSONObject options, String mimeType) {
+        String explicit = options.optString("caminhoRelativo",
+            options.optString("relativePath", ""));
+        String folder = options.optString("album",
+            options.optString("pastaGaleria",
+                options.optString("galleryFolder",
+                    options.optString("folder", "html2apk"))));
+        String fallback = downloadPublicBaseDirectory(mimeType) + "/" + sanitizePublicFolderName(folder);
+        if (explicit.length() == 0) {
+            return fallback;
+        }
+        return safePublicRelativePath(explicit, fallback);
+    }
+
+    private String downloadPublicBaseDirectory(String mimeType) {
+        String lower = normalizedMimeType(mimeType);
+        if (lower.startsWith("image/")) {
+            return Environment.DIRECTORY_PICTURES;
+        }
+        if (lower.startsWith("video/")) {
+            return Environment.DIRECTORY_MOVIES;
+        }
+        if (lower.startsWith("audio/")) {
+            return Environment.DIRECTORY_MUSIC;
+        }
+        return Environment.DIRECTORY_DOWNLOADS;
+    }
+
+    private String safePublicRelativePath(String value, String fallback) {
+        String cleaned = value == null ? "" : value.trim().replace('\\', '/');
+        while (cleaned.startsWith("/")) {
+            cleaned = cleaned.substring(1);
+        }
+        while (cleaned.endsWith("/")) {
+            cleaned = cleaned.substring(0, cleaned.length() - 1);
+        }
+        cleaned = cleaned.replaceAll("/{2,}", "/");
+        if (cleaned.length() == 0 || cleaned.indexOf("..") >= 0 || cleaned.indexOf(':') >= 0) {
+            return fallback;
+        }
+        return cleaned;
+    }
+
+    private String sanitizePublicFolderName(String value) {
+        String cleaned = value == null ? "" : value.trim();
+        cleaned = cleaned.replaceAll("[\\\\/:*?\"<>|]+", "-");
+        cleaned = cleaned.replaceAll("\\s+", "-");
+        cleaned = cleaned.replaceAll("-+", "-");
+        cleaned = cleaned.replaceAll("(^-+|-+$)", "");
+        return cleaned.length() == 0 ? "html2apk" : cleaned;
+    }
+
+    private boolean isGalleryVisibleMime(String mimeType) {
+        String lower = normalizedMimeType(mimeType);
+        return lower.startsWith("image/") || lower.startsWith("video/");
+    }
+
+    private String normalizedMimeType(String mimeType) {
+        return mimeType == null ? "" : mimeType.toLowerCase();
     }
 
     private boolean notifyDownloadProgress(int id, String title, String text, long totalBytes, long currentBytes, boolean done, Exception error) {
@@ -3925,6 +5434,120 @@ public class Html2ApkBridge extends CordovaPlugin {
         initialLink = detail;
         if (dispatchToJs) {
             dispatchEvent("link:aberto", detail);
+        }
+    }
+
+    private void handleSharedIntent(Intent intent, boolean dispatchToJs) {
+        JSONObject detail = parseSharedIntent(intent);
+        if (detail == null) {
+            return;
+        }
+
+        try {
+            initialShare = new JSONObject(detail.toString());
+        } catch (Exception ignored) {
+            initialShare = detail;
+        }
+        if (dispatchToJs) {
+            dispatchEvent("compartilhamento:recebido", detail);
+        }
+    }
+
+    private JSONObject parseSharedIntent(Intent intent) {
+        if (intent == null || intent.getAction() == null) {
+            return null;
+        }
+        String action = intent.getAction();
+        if (!Intent.ACTION_SEND.equals(action) && !Intent.ACTION_SEND_MULTIPLE.equals(action)) {
+            return null;
+        }
+
+        try {
+            JSONObject detail = new JSONObject();
+            JSONArray items = new JSONArray();
+            String text = intent.getStringExtra(Intent.EXTRA_TEXT);
+            String subject = intent.getStringExtra(Intent.EXTRA_SUBJECT);
+            String title = intent.getStringExtra(Intent.EXTRA_TITLE);
+            String mimeType = intent.getType();
+
+            detail.put("action", action);
+            detail.put("acao", action);
+            detail.put("mimeType", mimeType == null ? "" : mimeType);
+            detail.put("timestamp", System.currentTimeMillis());
+            if (text != null && text.length() > 0) {
+                detail.put("text", text);
+                detail.put("texto", text);
+            }
+            if (subject != null && subject.length() > 0) {
+                detail.put("subject", subject);
+                detail.put("assunto", subject);
+            }
+            if (title != null && title.length() > 0) {
+                detail.put("title", title);
+                detail.put("titulo", title);
+            }
+
+            if (Intent.ACTION_SEND_MULTIPLE.equals(action)) {
+                ArrayList<Uri> uris = intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM);
+                if (uris != null) {
+                    for (Uri uri : uris) {
+                        takeReadPermission(intent, uri);
+                        items.put(sharedUriInfo(uri));
+                    }
+                }
+            } else {
+                Uri uri = intent.getParcelableExtra(Intent.EXTRA_STREAM);
+                if (uri != null) {
+                    takeReadPermission(intent, uri);
+                    items.put(sharedUriInfo(uri));
+                }
+            }
+
+            detail.put("items", items);
+            detail.put("itens", items);
+            if (items.length() == 1) {
+                JSONObject first = items.optJSONObject(0);
+                copyJsonFields(first, detail);
+                String kind = first.optString("tipo", contentKind(mimeType));
+                detail.put("tipo", kind);
+                detail.put("type", first.optString("type", kind));
+                detail.put("tipoConteudo", kind);
+                detail.put("contentType", kind);
+            } else if (items.length() > 1) {
+                detail.put("tipo", "multiplos");
+                detail.put("type", "multiple");
+                detail.put("tipoConteudo", "multiplos");
+                detail.put("contentType", "multiple");
+            } else {
+                detail.put("tipo", "texto");
+                detail.put("type", "text");
+                detail.put("tipoConteudo", "texto");
+                detail.put("contentType", "text");
+            }
+            return detail;
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private JSONObject sharedUriInfo(Uri uri) throws Exception {
+        JSONObject info = fileInfo(uri);
+        String kind = contentKind(info.optString("mimeType"));
+        info.put("tipo", kind);
+        info.put("type", kind);
+        return info;
+    }
+
+    private void copyJsonFields(JSONObject source, JSONObject target) throws Exception {
+        if (source == null || target == null) {
+            return;
+        }
+        Iterator<String> keys = source.keys();
+        while (keys.hasNext()) {
+            String key = keys.next();
+            if (!target.has(key)) {
+                target.put(key, source.opt(key));
+            }
         }
     }
 

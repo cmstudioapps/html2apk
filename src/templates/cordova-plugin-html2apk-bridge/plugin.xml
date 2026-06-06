@@ -25,8 +25,13 @@
       <uses-permission android:name="android.permission.SET_WALLPAPER" />
       <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
       <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+      <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+      <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+      <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+      <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
       <uses-feature android:name="android.hardware.camera" android:required="false" />
       <uses-feature android:name="android.hardware.camera.flash" android:required="false" />
+      <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
       <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
       <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     </config-file>
@@ -52,6 +57,27 @@
       </receiver>
     </config-file>
 
+    <config-file target="AndroidManifest.xml" parent="/manifest/application/activity">
+      <intent-filter>
+        <action android:name="android.intent.action.SEND" />
+        <category android:name="android.intent.category.DEFAULT" />
+        <data android:mimeType="text/plain" />
+        <data android:mimeType="image/*" />
+        <data android:mimeType="video/*" />
+        <data android:mimeType="application/pdf" />
+        <data android:mimeType="*/*" />
+      </intent-filter>
+      <intent-filter>
+        <action android:name="android.intent.action.SEND_MULTIPLE" />
+        <category android:name="android.intent.category.DEFAULT" />
+        <data android:mimeType="text/plain" />
+        <data android:mimeType="image/*" />
+        <data android:mimeType="video/*" />
+        <data android:mimeType="application/pdf" />
+        <data android:mimeType="*/*" />
+      </intent-filter>
+    </config-file>
+
     <source-file src="src/android/Html2ApkBridge.java" target-dir="app/src/main/java/dev/html2apk/bridge" />
     <source-file src="src/android/FloatingIconService.java" target-dir="app/src/main/java/dev/html2apk/bridge" />
     <source-file src="src/android/NotificationReceiver.java" target-dir="app/src/main/java/dev/html2apk/bridge" />
@@ -60,5 +86,6 @@
     <source-file src="src/android/NotificationStore.java" target-dir="app/src/main/java/dev/html2apk/bridge" />
     <resource-file src="src/android/xml/html2apk_file_paths.xml" target="res/xml/html2apk_file_paths.xml" />
     <framework src="androidx.core:core:1.12.0" />
+    <framework src="com.google.mlkit:text-recognition:16.0.1" />
   </platform>
 </plugin>

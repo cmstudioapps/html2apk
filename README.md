@@ -417,6 +417,8 @@ Exemplos de aliases:
 | `escanearQRCode()` | `scanQRCode()` |
 | `escolherArquivo()` | `pickFile()` |
 | `escolherImagem()` | `pickImage()` |
+| `escolherImagens()` | `pickImages()` |
+| `escolherPasta()` | `pickFolder()` |
 | `salvarArquivo()` | `saveFile()` |
 | `lerArquivo()` | `readFile()` |
 | `listarArquivos()` | `listFiles()` |
@@ -430,6 +432,19 @@ Exemplos de aliases:
 | `infoPapelParede()` | `wallpaperInfo()` |
 | `abrirConfiguracaoPapelParede()` | `openWallpaperSettings()` |
 | `compartilhar()` | `share()` |
+| `compartilharApp()` / `share_me()` | `shareApp()` |
+| `aoReceberCompartilhamento()` | `onShareReceived()` |
+| `obterCompartilhamentoInicial()` | `getInitialShare()` |
+| `procurarBT()` | `scanBluetooth()` |
+| `conectarBT()` | `connectBluetooth()` |
+| `enviarBT()` | `sendBluetooth()` |
+| `aoConectarBT()` | `onBluetoothConnect()` |
+| `aoReceberDadosBT()` | `onBluetoothData()` |
+| `ocr()` | `recognizeText()` / `textFromImage()` |
+| `falar()` | `speak()` / `textToSpeech()` |
+| `pararFala()` | `stopSpeaking()` |
+| `ouvir()` | `recognizeSpeech()` / `speechToText()` |
+| `aguardar()` | `loading()` |
 | `copiarTexto()` | `copyText()` |
 | `lerTextoCopiado()` | `readText()` |
 | `abrirNoApp()` | `openInApp()` |
@@ -453,7 +468,7 @@ Exemplos de aliases:
 | `aoMinimizar()` | `onMinimize()` |
 | `obterLinkInicial()` | `getInitialLink()` |
 
-Os eventos tambem aceitam aliases em ingles em `onEvent()`: `app:ready`, `app:background`, `app:resumed`, `back:button`, `link:opened`, `network:changed`, `battery:changed`, `location:changed`, `notification:received` e `notification:clicked`.
+Os eventos tambem aceitam aliases em ingles em `onEvent()`: `app:ready`, `app:background`, `app:resumed`, `back:button`, `link:opened`, `share:received`, `sharing:received`, `bluetooth:connected`, `bluetooth:data`, `network:changed`, `battery:changed`, `location:changed`, `notification:received` e `notification:clicked`.
 
 Como tratar retornos:
 
@@ -470,6 +485,7 @@ No seu JavaScript do app:
 ```js
 toast("Mensagem");
 vibrar(250);
+await aguardar(5000);
 
 await notificar({
   titulo: "Pedido aprovado",
@@ -531,6 +547,14 @@ fullscreen(true);
 ```
 
 `notificar()` nao obriga clique, botao nem funcao. So `titulo` e `texto` ja geram uma notificacao normal. `aoClicar`, `acoes`/`actions` e `open` sao opcionais.
+
+`aguardar(ms)` e `loading(ms)` pausam o fluxo com Promise, sem travar a WebView:
+
+```js
+await toast("Comecando");
+await aguardar(5000);
+await toast("Continuando");
+```
 
 `agendarNotificacao()` agenda uma notificacao. Se voce passar um array para ela, ou usar `agendarNotificacoes()`, o html2apk agenda varias em sequencia. Cada item recebe `id` automatico se voce nao informar um.
 
@@ -637,9 +661,10 @@ Arquivos, galeria e compartilhamento:
 
 ```js
 const imagem = await escolherImagem();
-const imagens = await escolherImagens({ multiplo: true });
+const imagens = await escolherImagens({ multiplas: true });
 const pdf = await escolherArquivo({ tipos: ["application/pdf"] });
 const arquivos = await escolherArquivos({ multiplo: true });
+const pasta = await escolherPasta();
 
 await salvarArquivo({
   nome: "relatorio.txt",
@@ -647,8 +672,50 @@ await salvarArquivo({
   conteudo: "Conteudo salvo pelo app"
 });
 
-await compartilhar({ texto: "Veja isso", url: "https://exemplo.com" });
+await compartilhar({
+  titulo: "Material",
+  texto: "Veja isso",
+  url: "https://exemplo.com",
+  arquivo: imagem
+});
+
+aoReceberCompartilhamento((dados) => {
+  console.log("Compartilhamento recebido", dados.tipo, dados.uri || dados.texto);
+});
+
+const texto = await ocr(imagem);
+console.log(texto.texto);
+
+await falar("Ola mundo", { idioma: "pt-BR", velocidade: 1 });
+const voz = await ouvir({ idioma: "pt-BR" });
+console.log(voz.texto);
+
+aoConectarBT((dispositivo) => {
+  console.log("Bluetooth conectado", dispositivo.nome);
+});
+
+aoReceberDadosBT((dados) => {
+  console.log("Dados Bluetooth", dados);
+});
+
+const dispositivos = await procurarBT();
+if (dispositivos[0]) {
+  await conectarBT(dispositivos[0].id);
+  await enviarBT({ mensagem: "Ola por Bluetooth" });
+}
+
+await share_me(); // compartilha o APK do proprio app aberto
 ```
+
+`escolherImagem()` e `escolherImagens()` usam o Android Photo Picker no Android 13+ e caem automaticamente para o Storage Access Framework em Android antigo. Quando o Photo Picker esta disponivel, o html2apk nao solicita permissao ampla de armazenamento. O retorno segue o mesmo formato dos seletores: `{ uri, nome, mimeType, tamanho }`.
+
+`compartilhar()` aceita texto, link, imagem, video, PDF, arquivo salvo pelo app, URI `content://` e lista de arquivos em `arquivo`/`arquivos`. O retorno confirma a abertura do share sheet com `{ ok: true }`.
+
+Apps gerados tambem entram no menu Compartilhar do Android para `text/plain`, `image/*`, `video/*`, `application/pdf` e `*/*`. Use `obterCompartilhamentoInicial()` no boot se o app foi aberto por compartilhamento, e `aoReceberCompartilhamento()` para receber novos intents enquanto ele ja esta aberto.
+
+`ocr()` usa ML Kit local para reconhecimento de texto em imagens. O processamento fica offline no aparelho. `falar()` usa o TextToSpeech do Android e `ouvir()` usa o reconhecedor de voz do sistema; ambos aceitam `idioma: "pt-BR"` ou `idioma: "auto"`.
+
+Bluetooth usa RFCOMM classico entre apps html2apk. O aparelho que vai receber registra `aoConectarBT()` e `aoReceberDadosBT()`; isso inicia o servidor interno. O outro chama `procurarBT()`, escolhe um `id`, chama `conectarBT(id)` e envia JSON com `enviarBT(objeto)`. Para aparecer na busca, o aparelho precisa estar pareado ou visivel nas configuracoes Bluetooth do Android.
 
 `salvarArquivo()` tem dois modos:
 
@@ -684,7 +751,8 @@ await baixarArquivo("https://exemplo.com/relatorio.pdf", "relatorio.pdf");
 await abrirArquivo("relatorio.pdf");
 
 await baixarBase64("foto.png", base64DaImagem, {
-  mimeType: "image/png"
+  mimeType: "image/png",
+  galeria: true
 });
 
 const arquivo = await escolherArquivo();
@@ -694,6 +762,8 @@ if (arquivo) {
 ```
 
 Durante `baixarArquivo()`, `baixarBase64()` e `baixarArquivoLocal()`, o Android mostra uma notificacao de progresso quando a permissao `POST_NOTIFICATIONS` estiver liberada. No Android 13+, o html2apk pede essa permissao automaticamente; se o usuario negar, o download continua e o retorno vem com `notificationShown: false`.
+
+Por padrao, o arquivo baixado fica no armazenamento do app para funcionar com `abrirArquivo()` e `compartilharArquivo()`. Para imagem ou video aparecer na galeria, passe `{ galeria: true }`; no Android 10+ o html2apk publica uma copia em `Pictures/html2apk` ou `Movies/html2apk` e retorna `publicUri`.
 
 Papel de parede:
 

@@ -626,6 +626,7 @@
 
         <pre><code>await toast("Olá");
 await vibrar(250);
+await aguardar(5000);
 await notificar({ titulo: "Pedido", texto: "Atualizado" });
 await salvarArquivo("perfil.json", { nome: "Ana" });
 await baixarArquivo("https://site.com/manual.pdf", "manual.pdf");</code></pre>
@@ -801,12 +802,12 @@ await baixarArquivo("https://site.com/manual.pdf", "manual.pdf");</code></pre>
       <section id="features">
         <h2>Funções interpretadas</h2>
         <p class="lead">As funções interpretadas são agrupadas por comportamento, não por arquivo. Esse é o caminho mais claro para entender o que a ferramenta oferece ao JavaScript do app.</p>
-        <div class="note"><strong>Contagem atual:</strong> a aba "Códigos interpretados" documenta <strong>48 funções ou blocos de API</strong> disponíveis para o JavaScript do APK, incluindo chamadas em português e aliases em inglês quando existem.</div>
+        <div class="note"><strong>Contagem atual:</strong> a aba "Códigos interpretados" documenta <strong>55 funções ou blocos de API</strong> disponíveis para o JavaScript do APK, incluindo chamadas em português e aliases em inglês quando existem.</div>
 
         <div class="grid">
           <div class="card">
             <h3>Feedback e tela</h3>
-            <p>Toast, vibração, fullscreen, manter tela ligada, brilho, cor de barras e lanterna.</p>
+            <p>Toast, vibração, aguardar/loading, fullscreen, manter tela ligada, brilho, cor de barras e lanterna.</p>
           </div>
           <div class="card">
             <h3>Notificações</h3>
@@ -814,7 +815,7 @@ await baixarArquivo("https://site.com/manual.pdf", "manual.pdf");</code></pre>
           </div>
           <div class="card">
             <h3>Mídia</h3>
-            <p>Foto, video, QR Code, microfone, seletor de imagem/video/arquivo.</p>
+            <p>Foto, video, QR Code, microfone, Photo Picker, OCR local, voz e seletor de imagem/video/arquivo.</p>
           </div>
           <div class="card">
             <h3>Arquivos e downloads</h3>
@@ -830,7 +831,7 @@ await baixarArquivo("https://site.com/manual.pdf", "manual.pdf");</code></pre>
           </div>
           <div class="card">
             <h3>Localização e eventos</h3>
-            <p>Localização atual, watch de localização, eventos nativos, deep links e notificação inicial.</p>
+            <p>Localização atual, watch de localização, eventos nativos, Bluetooth, deep links, compartilhamento recebido e notificação inicial.</p>
           </div>
           <div class="card">
             <h3>Wallpaper e overlay</h3>
@@ -880,9 +881,9 @@ await baixarArquivo("https://site.com/manual.pdf", "manual.pdf");</code></pre>
             </tr>
             <tr>
               <td>Mídia</td>
-              <td><code>tirarFoto</code>, <code>capturarVideo</code>, <code>ouvirMic</code>, <code>lanterna</code></td>
-              <td>Chame em resposta a botão e trate cancelamento/permissão.</td>
-              <td>Câmera, microfone e lanterna dependem de permissão e aparelho real.</td>
+              <td><code>tirarFoto</code>, <code>capturarVideo</code>, <code>escolherImagem</code>, <code>ocr</code>, <code>falar</code>, <code>ouvir</code></td>
+              <td>Use Photo Picker, OCR local, TTS e reconhecimento de voz em resposta a ações claras.</td>
+              <td>Câmera/microfone dependem de permissão; voz depende do serviço instalado no aparelho.</td>
             </tr>
             <tr>
               <td>Arquivos</td>
@@ -898,9 +899,9 @@ await baixarArquivo("https://site.com/manual.pdf", "manual.pdf");</code></pre>
             </tr>
             <tr>
               <td>Compartilhar e abrir</td>
-              <td><code>compartilhar</code>, <code>copiarTexto</code>, <code>abrirNoApp</code>, <code>abrirForaDoApp</code></td>
-              <td>Use para clipboard, share sheet, rotas internas, navegador, WhatsApp, discador e mapas.</td>
-              <td>Apps externos podem não existir; trate erro e mantenha fallback.</td>
+              <td><code>compartilhar</code>, <code>aoReceberCompartilhamento</code>, <code>procurarBT</code>, <code>enviarBT</code>, <code>share_me</code></td>
+              <td>Use para clipboard, share sheet, receber compartilhamentos, Bluetooth, compartilhar o próprio APK e apps externos.</td>
+              <td>Apps externos podem não existir; Bluetooth exige aparelho pareado ou visível para descoberta.</td>
             </tr>
             <tr>
               <td>Segurança</td>
@@ -922,6 +923,7 @@ await baixarArquivo("https://site.com/manual.pdf", "manual.pdf");</code></pre>
         <h3>Toast, vibração e erro tratado</h3>
         <pre><code>try {
   await toast("Salvo com sucesso");
+  await aguardar(5000);
   await vibrar(180);
 } catch (erro) {
   console.error("Feedback nativo falhou", erro);
@@ -956,6 +958,42 @@ console.log("ID para cancelar depois:", aviso.id);</code></pre>
 // Quando não precisar mais:
 parar();</code></pre>
 
+        <h3>Receber compartilhamento</h3>
+        <pre><code>const inicial = await obterCompartilhamentoInicial();
+
+if (inicial) {
+  console.log("App abriu por compartilhamento", inicial);
+}
+
+const pararCompartilhamento = aoReceberCompartilhamento((dados) => {
+  console.log(dados.tipo, dados.uri || dados.texto);
+});
+
+// Quando sair da tela:
+pararCompartilhamento();</code></pre>
+
+        <p>O APK entra no menu Compartilhar do Android para texto, imagem, vídeo, PDF e arquivos genéricos. O retorno usa URI de documento, então trate como <code>content://</code> e não como caminho absoluto.</p>
+
+        <h3>Bluetooth simples</h3>
+        <pre><code>aoConectarBT((dispositivo) => {
+  console.log("Conectado", dispositivo.nome);
+});
+
+aoReceberDadosBT((dados) => {
+  console.log("Recebido", dados);
+});
+
+const dispositivos = await procurarBT();
+
+if (dispositivos[0]) {
+  await conectarBT(dispositivos[0].id);
+  await enviarBT({
+    mensagem: "Olá por Bluetooth"
+  });
+}</code></pre>
+
+        <div class="note">O Bluetooth usa RFCOMM clássico. O lado que recebe registra os eventos e passa a escutar; o outro procura, conecta e envia JSON. Para aparecer na busca, o aparelho precisa estar pareado ou visível nas configurações Bluetooth do Android.</div>
+
         <h3>Camera e QR Code</h3>
         <pre><code>const foto = await tirarFoto({ base64: true });
 
@@ -985,6 +1023,40 @@ setTimeout(async () => {
   new Audio(url).play();
 }, 3000);</code></pre>
 
+        <h3>Photo Picker, OCR e voz</h3>
+        <pre><code>const imagem = await escolherImagem();
+const imagens = await escolherImagens({ multiplas: true });
+
+if (imagem) {
+  const texto = await ocr(imagem);
+  console.log(texto.texto);
+}
+
+await falar("Olá mundo", {
+  idioma: "pt-BR",
+  velocidade: 1
+});
+
+const voz = await ouvir({ idioma: "pt-BR" });
+console.log(voz.texto);
+
+await pararFala();</code></pre>
+
+        <div class="note">No Android 13+, imagem usa Photo Picker nativo sem pedir permissão ampla de armazenamento. Em Android antigo, o html2apk cai automaticamente para o Storage Access Framework. O OCR usa ML Kit local no aparelho.</div>
+
+        <h3>Compartilhamento avançado</h3>
+        <pre><code>const imagem = await escolherImagem();
+const pdf = await escolherArquivo({
+  tipos: ["application/pdf"]
+});
+
+await compartilhar({
+  titulo: "Material",
+  texto: "Veja estes arquivos",
+  url: "https://exemplo.com",
+  arquivos: [imagem, pdf]
+});</code></pre>
+
         <h3>CRUD interno de arquivos</h3>
         <pre><code>await salvarArquivo("perfil.json", {
   nome: "Ana",
@@ -1011,13 +1083,16 @@ await excluirArquivo("perfil.json");</code></pre>
 await abrirArquivo("relatorio.pdf");
 
 await baixarBase64("foto.png", base64, {
-  mimeType: "image/png"
+  mimeType: "image/png",
+  galeria: true
 });
 
 const arquivo = await escolherArquivo();
 if (arquivo) {
   await baixarArquivoLocal(arquivo, "copia-" + arquivo.name);
 }</code></pre>
+
+        <div class="note">Por padrão, o download fica no armazenamento do app para funcionar com <code>abrirArquivo()</code> e <code>compartilharArquivo()</code>. Para imagem ou vídeo aparecer na galeria do Android, passe <code>{ galeria: true }</code>; o retorno inclui <code>publicUri</code> quando a publicação for feita.</div>
 
         <h3>Localização</h3>
         <pre><code>const local = await obterLocalizacao({

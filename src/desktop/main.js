@@ -561,10 +561,18 @@ function nativeFunctionLabHtml() {
       var actions = {
         toast: { title: "toast()", run: function () { return fn("toast")("Mensagem do app de teste"); } },
         vibrar: { title: "vibrar()", run: function () { return fn("vibrar")(250); } },
+        aguardar: { title: "aguardar(1000)", run: function () { return fn("aguardar")(1000); } },
         copiarTexto: { title: "copiarTexto()", run: function () { return fn("copiarTexto")("Texto copiado pelo html2apk"); } },
         lerTextoCopiado: { title: "lerTextoCopiado()", run: function () { return fn("lerTextoCopiado")(); } },
         compartilharTexto: { title: "compartilharTexto()", run: function () { return fn("compartilharTexto")("Compartilhado pelo app de teste html2apk"); } },
         compartilhar: { title: "compartilhar()", run: function () { return fn("compartilhar")({ texto: "Teste html2apk", url: "https://example.com" }); } },
+        compartilharApp: { title: "share_me()", run: function () { return fn("share_me")({ titulo: "Compartilhar app de teste" }); } },
+        receberCompartilhamento: { title: "aoReceberCompartilhamento()", run: function () { if (state.stopShareEvent) { state.stopShareEvent(); } state.stopShareEvent = fn("aoReceberCompartilhamento")(function (event) { log("compartilhamento recebido", event, "ok"); }); return { listening: true }; } },
+        compartilhamentoInicial: { title: "obterCompartilhamentoInicial()", run: function () { return fn("obterCompartilhamentoInicial")(); } },
+        iniciarBt: { title: "aoConectarBT()", run: function () { if (state.stopBtConnect) { state.stopBtConnect(); } state.stopBtConnect = fn("aoConectarBT")(function (event) { state.bluetoothConnected = true; log("bluetooth conectado", event, "ok"); }); if (state.stopBtData) { state.stopBtData(); } state.stopBtData = fn("aoReceberDadosBT")(function (data) { log("dados bluetooth", data, "ok"); }); return { listening: true }; } },
+        procurarBt: { title: "procurarBT()", run: async function () { var devices = await fn("procurarBT")({ timeoutMs: 10000 }); state.bluetoothDevices = devices || []; state.bluetoothDeviceId = state.bluetoothDevices[0] && state.bluetoothDevices[0].id; return devices; } },
+        conectarBt: { title: "conectarBT()", run: async function () { if (!state.bluetoothDeviceId) { var devices = await fn("procurarBT")({ timeoutMs: 10000 }); state.bluetoothDevices = devices || []; state.bluetoothDeviceId = state.bluetoothDevices[0] && state.bluetoothDevices[0].id; } if (!state.bluetoothDeviceId) { return { connected: false, message: "Nenhum dispositivo encontrado." }; } return fn("conectarBT")(state.bluetoothDeviceId); } },
+        enviarBt: { title: "enviarBT()", run: function () { return fn("enviarBT")({ origem: "laboratorio-html2apk", mensagem: "Ola via Bluetooth", quando: Date.now() }); } },
 
         notificar: { title: "notificar()", run: function () { return fn("notificar")({ titulo: "html2apk", texto: "Notificacao imediata", aoClicar: { funcao: "toast", argumentos: ["Notificacao clicada"] } }); } },
         agendarNotificacao: { title: "agendarNotificacao()", run: async function () { var result = await fn("agendarNotificacao")({ titulo: "html2apk", texto: "Agendada para 10 segundos", quando: Date.now() + 10000 }); state.scheduledId = result && result.id; return result; } },
@@ -598,9 +606,13 @@ function nativeFunctionLabHtml() {
         escanearQRCode: { title: "escanearQRCode()", run: function () { return fn("escanearQRCode")(); } },
         ouvirMic: { title: "ouvirMic()", run: async function () { state.micRecording = true; return fn("ouvirMic")(); } },
         pararMic: { title: "pararMic()", run: async function () { state.micRecording = false; return fn("pararMic")(); } },
+        falar: { title: "falar()", run: function () { return fn("falar")("Ola, eu sou o html2apk", { idioma: "pt-BR", velocidade: 1 }); } },
+        pararFala: { title: "pararFala()", run: function () { return fn("pararFala")(); } },
+        ouvir: { title: "ouvir()", run: function () { return fn("ouvir")({ idioma: "pt-BR", prompt: "Fale uma frase para testar" }); } },
+        ocr: { title: "ocr(imagem)", run: async function () { if (!state.lastImage) { state.lastImage = await fn("escolherImagem")(); } if (!state.lastImage || !state.lastImage.uri) { return { canceled: true }; } return fn("ocr")(state.lastImage); } },
 
         escolherImagem: { title: "escolherImagem()", run: async function () { var result = await fn("escolherImagem")(); state.lastImage = result; return result; } },
-        escolherImagens: { title: "escolherImagens()", run: function () { return fn("escolherImagens")({ multiplo: true }); } },
+        escolherImagens: { title: "escolherImagens()", run: function () { return fn("escolherImagens")({ multiplas: true }); } },
         escolherArquivo: { title: "escolherArquivo()", run: function () { return fn("escolherArquivo")({ tipos: ["text/*", "application/json", "image/*"] }); } },
         escolherArquivos: { title: "escolherArquivos()", run: function () { return fn("escolherArquivos")({ multiplo: true }); } },
         escolherVideo: { title: "escolherVideo()", run: function () { return fn("escolherVideo")(); } },
@@ -615,7 +627,7 @@ function nativeFunctionLabHtml() {
         abrirArquivo: { title: "abrirArquivo()", run: function () { return fn("abrirArquivo")("lab.json"); } },
         compartilharArquivo: { title: "compartilharArquivo()", run: function () { return fn("compartilharArquivo")("lab.json"); } },
         baixarArquivo: { title: "baixarArquivo()", run: function () { return fn("baixarArquivo")("https://example.com/", "example.html"); } },
-        baixarBase64: { title: "baixarBase64()", run: function () { return fn("baixarBase64")("pixel-download.png", sampleImageBase64, { mimeType: "image/png" }); } },
+        baixarBase64: { title: "baixarBase64()", run: function () { return fn("baixarBase64")("pixel-download.png", sampleImageBase64, { mimeType: "image/png", galeria: true }); } },
         baixarArquivoLocal: { title: "baixarArquivoLocal()", run: async function () { var file = await fn("escolherArquivo")(); if (!file) { return { canceled: true }; } return fn("baixarArquivoLocal")(file, "copia-" + (file.name || file.nome || "arquivo")); } },
         excluirArquivo: { title: "excluirArquivo()", run: function () { return fn("excluirArquivo")("lab.json"); } },
 
@@ -657,11 +669,13 @@ function nativeFunctionLabHtml() {
       };
 
       var groups = [
-        { title: "Feedback e compartilhamento", ids: ["toast", "vibrar", "copiarTexto", "lerTextoCopiado", "compartilharTexto", "compartilhar"] },
+        { title: "Feedback e compartilhamento", ids: ["toast", "vibrar", "aguardar", "copiarTexto", "lerTextoCopiado", "compartilharTexto", "compartilhar", "compartilharApp", "receberCompartilhamento", "compartilhamentoInicial"] },
+        { title: "Bluetooth", ids: ["iniciarBt", "procurarBt", "conectarBt", "enviarBt"] },
         { title: "Notificacoes", ids: ["notificar", "agendarNotificacao", "cancelarNotificacao", "agendarLoopNotificacoes", "cancelarLoopNotificacoes", "pushInfo"] },
         { title: "Permissoes e configuracoes", ids: ["statusPermissoes", "permissaoNotificacao", "permissaoCamera", "permissaoMicrofone", "alarmeExato", "abrirAlarmeExato", "statusSobreposicao", "abrirSobreposicao"] },
         { title: "Tela e hardware", ids: ["fullscreenOn", "fullscreenOff", "telaAcordadaOn", "telaAcordadaOff", "brilhoTela", "corTema", "lanterna", "statusLanterna", "iniciarIconeFlutuante", "pararIconeFlutuante"] },
         { title: "Camera, QR Code e microfone", ids: ["tirarFoto", "capturarVideo", "escanearQRCode", "ouvirMic", "pararMic"] },
+        { title: "Texto e voz", ids: ["ocr", "falar", "pararFala", "ouvir"] },
         { title: "Arquivos e midia", ids: ["escolherImagem", "escolherImagens", "escolherArquivo", "escolherArquivos", "escolherVideo", "escolherPasta", "salvarArquivoPicker", "salvarArquivoCrud", "lerArquivo", "lerArquivoCompleto", "listarArquivos", "infoArquivo", "arquivoExiste", "abrirArquivo", "compartilharArquivo", "baixarArquivo", "baixarBase64", "baixarArquivoLocal", "excluirArquivo"] },
         { title: "Abrir apps externos", ids: ["abrirNoApp", "abrirForaDoApp", "abrirUrl", "discar", "abrirMapa", "abrirWhatsapp"] },
         { title: "Diagnostico", ids: ["infoDispositivo", "infoRede", "infoBateria", "infoMemoria", "infoArmazenamento", "infoDesempenho", "appsAbertos"] },

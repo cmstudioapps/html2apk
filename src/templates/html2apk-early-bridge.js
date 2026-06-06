@@ -21,6 +21,14 @@
     "battery:changed": "bateria:mudou",
     "location:changed": "localizacao:mudou",
     "biometric:failed": "biometria:falhou",
+    "share:received": "compartilhamento:recebido",
+    "sharing:received": "compartilhamento:recebido",
+    "bt:connected": "bluetooth:conectado",
+    "bluetooth:connected": "bluetooth:conectado",
+    "bt:data": "bluetooth:dados",
+    "bluetooth:data": "bluetooth:dados",
+    "bt:disconnected": "bluetooth:desconectado",
+    "bluetooth:disconnected": "bluetooth:desconectado",
     "notification:received": "notificacao:recebida",
     "notification:clicked": "notificacao:clicada"
   };
@@ -28,6 +36,7 @@
   var notificationListeners = [];
   var initialNotification = null;
   var initialLink = null;
+  var initialShare = null;
 
   function markReady() {
     if (deviceReady) {
@@ -474,16 +483,20 @@
     return normalized;
   }
 
-  function downloadFileOptions(urlOrOptions, nameOrOptions) {
+  function downloadFileOptions(urlOrOptions, nameOrOptions, options) {
     var normalized;
     var source;
 
     if (urlOrOptions && typeof urlOrOptions === "object" && !Array.isArray(urlOrOptions)) {
       normalized = cloneSerializable(urlOrOptions) || {};
-      return applyDownloadName(normalized, nameOrOptions);
+      applyDownloadName(normalized, nameOrOptions);
+      if (options && typeof options === "object" && !Array.isArray(options)) {
+        Object.assign(normalized, cloneSerializable(options) || {});
+      }
+      return normalized;
     }
 
-    normalized = {};
+    normalized = cloneSerializable(options || {}) || {};
     source = String(urlOrOptions || "").trim();
     if (source.indexOf("data:") === 0) {
       applyBase64DownloadSource(normalized, source);
@@ -510,16 +523,20 @@
     return applyBase64DownloadSource(normalized, base64);
   }
 
-  function downloadLocalFileOptions(fileOrOptions, nameOrOptions) {
+  function downloadLocalFileOptions(fileOrOptions, nameOrOptions, options) {
     var normalized;
     var source;
 
     if (fileOrOptions && typeof fileOrOptions === "object" && !Array.isArray(fileOrOptions)) {
       normalized = cloneSerializable(fileOrOptions) || {};
-      return applyDownloadName(normalized, nameOrOptions);
+      applyDownloadName(normalized, nameOrOptions);
+      if (options && typeof options === "object" && !Array.isArray(options)) {
+        Object.assign(normalized, cloneSerializable(options) || {});
+      }
+      return normalized;
     }
 
-    normalized = {};
+    normalized = cloneSerializable(options || {}) || {};
     source = String(fileOrOptions || "").trim();
     if (/^(content|file):\/\//.test(source)) {
       normalized.uri = source;
@@ -532,6 +549,50 @@
       normalized.arquivoOrigem = source;
     }
     return applyDownloadName(normalized, nameOrOptions);
+  }
+
+  function ocrOptions(sourceOrOptions) {
+    if (sourceOrOptions && typeof sourceOrOptions === "object" && !Array.isArray(sourceOrOptions)) {
+      return cloneSerializable(sourceOrOptions) || {};
+    }
+    var source = String(sourceOrOptions || "").trim();
+    if (source.indexOf("data:") === 0) {
+      return { base64: source };
+    }
+    if (/^(content|file):\/\//.test(source)) {
+      return { uri: source, contentUri: source };
+    }
+    if (/^[A-Za-z]:[\\/]/.test(source) || source.charAt(0) === "/" || source.charAt(0) === "\\") {
+      return { path: source, caminho: source };
+    }
+    return { name: source, nome: source };
+  }
+
+  function normalizeReceivedShare(detail) {
+    var normalized = cloneSerializable(detail || {}) || {};
+    var kind = normalized.tipoConteudo || normalized.contentType || normalized.tipo || normalized.type;
+    if (kind) {
+      normalized.tipo = kind;
+      normalized.type = kind;
+    }
+    return normalized;
+  }
+
+  function bluetoothReceivedData(detail) {
+    if (!detail || typeof detail !== "object") {
+      return detail;
+    }
+    if (Object.prototype.hasOwnProperty.call(detail, "dados")) {
+      return detail.dados;
+    }
+    if (Object.prototype.hasOwnProperty.call(detail, "data")) {
+      return detail.data;
+    }
+    return detail;
+  }
+
+  function startBluetoothServerSilently() {
+    call("startBluetoothServer").catch(function () {});
   }
 
   function wallpaperOptions(sourceOrOptions, options) {
@@ -817,6 +878,14 @@
     toast: function (message) {
       return call("toast", [String(message || "")]);
     },
+    aguardar: function (ms) {
+      var delay = Math.max(0, Math.min(Number(ms) || 0, 2147483647));
+      return new Promise(function (resolve) {
+        setTimeout(function () {
+          resolve({ ok: true, ms: delay });
+        }, delay);
+      });
+    },
     fullscreen: function (enabled) {
       return call("fullscreen", [Boolean(enabled)]);
     },
@@ -876,6 +945,46 @@
     },
     compartilhar: function (options) {
       return call("share", [options || {}]);
+    },
+    compartilharApp: function (options) {
+      return call("shareCurrentApp", [options || {}]);
+    },
+    procurarBT: function (options) {
+      return call("scanBluetooth", [options || {}]);
+    },
+    conectarBT: function (idDispositivo) {
+      return call("connectBluetooth", [String(idDispositivo || "")]);
+    },
+    enviarBT: function (data) {
+      return call("sendBluetooth", [data]);
+    },
+    aoConectarBT: function (listener) {
+      if (typeof listener !== "function") {
+        throw new TypeError("listener must be a function");
+      }
+      startBluetoothServerSilently();
+      return onEvent("bluetooth:conectado", listener);
+    },
+    aoReceberDadosBT: function (listener) {
+      if (typeof listener !== "function") {
+        throw new TypeError("listener must be a function");
+      }
+      startBluetoothServerSilently();
+      return onEvent("bluetooth:dados", function (detail) {
+        listener(bluetoothReceivedData(detail));
+      });
+    },
+    ocr: function (sourceOrOptions) {
+      return call("ocr", [ocrOptions(sourceOrOptions)]);
+    },
+    falar: function (text, options) {
+      return call("speakText", [String(text || ""), options || {}]);
+    },
+    pararFala: function () {
+      return call("stopSpeaking");
+    },
+    ouvir: function (options) {
+      return call("recognizeSpeech", [options || {}]);
     },
     abrirUrl: function (url) {
       return call("openUrl", [String(url || "")]);
@@ -945,14 +1054,14 @@
     compartilharArquivo: function (nameOrOptions, options) {
       return call("shareStoredFile", [storedFileNameOptions(nameOrOptions, options)]);
     },
-    baixarArquivo: function (urlOrOptions, nameOrOptions) {
-      return call("downloadFile", [downloadFileOptions(urlOrOptions, nameOrOptions)]);
+    baixarArquivo: function (urlOrOptions, nameOrOptions, options) {
+      return call("downloadFile", [downloadFileOptions(urlOrOptions, nameOrOptions, options)]);
     },
     baixarBase64: function (nameOrOptions, base64, options) {
       return call("downloadFile", [downloadBase64Options(nameOrOptions, base64, options)]);
     },
-    baixarArquivoLocal: function (fileOrOptions, nameOrOptions) {
-      return call("downloadFile", [downloadLocalFileOptions(fileOrOptions, nameOrOptions)]);
+    baixarArquivoLocal: function (fileOrOptions, nameOrOptions, options) {
+      return call("downloadFile", [downloadLocalFileOptions(fileOrOptions, nameOrOptions, options)]);
     },
     definirPapelParede: function (sourceOrOptions, options) {
       return call("setWallpaper", [wallpaperOptions(sourceOrOptions, options)]);
@@ -1062,6 +1171,12 @@
         return initialLink;
       });
     },
+    obterCompartilhamentoInicial: function () {
+      return call("getInitialShare").then(function (share) {
+        initialShare = share && (share.text || share.texto || share.uri || (share.items && share.items.length)) ? normalizeReceivedShare(share) : null;
+        return initialShare;
+      });
+    },
     aoEvento: onEvent,
     aoMinimizar: function (listener) {
       return onEvent("app:background", listener);
@@ -1076,6 +1191,19 @@
         }, 0);
       }
       return onEvent("link:aberto", listener);
+    },
+    aoReceberCompartilhamento: function (listener) {
+      if (typeof listener !== "function") {
+        throw new TypeError("listener must be a function");
+      }
+      if (initialShare) {
+        setTimeout(function () {
+          listener(normalizeReceivedShare(initialShare));
+        }, 0);
+      }
+      return onEvent("compartilhamento:recebido", function (detail) {
+        listener(normalizeReceivedShare(detail));
+      });
     },
     aoMudarRede: function (listener) {
       return onEvent("rede:mudou", listener);
@@ -1107,6 +1235,7 @@
     cancelNotification: api.cancelarNotificacao,
     cancelNotificationLoop: api.cancelarLoopNotificacoes,
     vibrate: api.vibrar,
+    loading: api.aguardar,
     manterTelaLigada: api.manterTelaAcordada,
     keepScreenAwake: api.manterTelaAcordada,
     keepScreenOn: api.manterTelaAcordada,
@@ -1133,6 +1262,27 @@
     readText: api.lerTextoCopiado,
     shareText: api.compartilharTexto,
     share: api.compartilhar,
+    shareApp: api.compartilharApp,
+    share_me: api.compartilharApp,
+    scanBluetooth: api.procurarBT,
+    procurarBluetooth: api.procurarBT,
+    buscarBT: api.procurarBT,
+    connectBluetooth: api.conectarBT,
+    conectarBluetooth: api.conectarBT,
+    sendBluetooth: api.enviarBT,
+    onBluetoothConnect: api.aoConectarBT,
+    onBluetoothConnected: api.aoConectarBT,
+    onBluetoothData: api.aoReceberDadosBT,
+    onBTData: api.aoReceberDadosBT,
+    recognizeText: api.ocr,
+    textFromImage: api.ocr,
+    speak: api.falar,
+    textToSpeech: api.falar,
+    stopSpeaking: api.pararFala,
+    stopSpeech: api.pararFala,
+    listen: api.ouvir,
+    recognizeSpeech: api.ouvir,
+    speechToText: api.ouvir,
     openUrl: api.abrirUrl,
     openExternalUrl: api.abrirUrl,
     abrirUrlExterno: api.abrirUrl,
@@ -1213,6 +1363,9 @@
     stopFloatingIcon: api.pararIconeFlutuante,
     getInitialNotification: api.obterNotificacaoInicial,
     getInitialLink: api.obterLinkInicial,
+    getInitialShare: api.obterCompartilhamentoInicial,
+    onShareReceived: api.aoReceberCompartilhamento,
+    onReceiveShare: api.aoReceberCompartilhamento,
     onEvent: api.aoEvento,
     onMinimize: api.aoMinimizar,
     onAppResume: api.aoVoltarParaApp,
@@ -1255,6 +1408,12 @@
         if (link) {
           initialLink = link;
           emitEvent("link:aberto", link);
+        }
+      });
+      api.obterCompartilhamentoInicial().then(function (share) {
+        if (share) {
+          initialShare = share;
+          emitEvent("compartilhamento:recebido", share);
         }
       });
     }, false);

@@ -103,6 +103,7 @@ Exemplos:
 ```js
 await toast("Ola");
 await vibrar(250);
+await aguardar(5000);
 await notificar({ titulo: "Pedido", texto: "Chegou uma atualizacao" });
 await salvarArquivo("perfil.json", { nome: "Ana" });
 await baixarArquivo("https://site.com/app.pdf", "manual.pdf");
@@ -160,6 +161,14 @@ await vibrar(250);
 ```
 
 `toast()` mostra uma mensagem nativa curta. `vibrar(ms)` aciona a vibracao por milissegundos.
+
+`aguardar(ms)` e `loading(ms)` criam uma pausa com Promise para usar com `await`, sem travar a WebView:
+
+```js
+await toast("Comecando");
+await aguardar(5000);
+await toast("Continuando");
+```
 
 Cuidados:
 
@@ -429,11 +438,14 @@ Imagem:
 
 ```js
 const imagem = await escolherImagem();
+const imagens = await escolherImagens({ multiplas: true });
 
 if (imagem) {
   document.querySelector("img.preview").src = imagem.uri;
 }
 ```
+
+No Android 13+, imagem e multiplas imagens usam o Photo Picker nativo. Em Android antigo, a bridge cai automaticamente para `ACTION_OPEN_DOCUMENT`. Quando Photo Picker esta disponivel, nao e solicitada permissao ampla de armazenamento.
 
 Varios arquivos:
 
@@ -476,11 +488,77 @@ if (salvo.saved) {
 Compartilhar:
 
 ```js
+const imagem = await escolherImagem();
+
 await compartilhar({
+  titulo: "Veja esse app",
   texto: "Veja esse app",
-  url: "https://exemplo.com"
+  url: "https://exemplo.com",
+  arquivo: imagem
+});
+
+await share_me();
+```
+
+`compartilhar()` aceita texto, link, imagem, video, PDF, URI `content://`, arquivo salvo pelo app e listas em `arquivo`/`arquivos`. Ela abre o share sheet do Android e retorna `{ ok: true }` quando a intent foi disparada.
+
+`share_me()` tambem existe como `compartilharApp()` e `shareApp()`. Ela compartilha o APK do proprio app aberto. Em APK unico gerado direto pelo html2apk, esse caminho tende a funcionar bem. Se o app veio de AAB/loja com split APKs, o retorno avisa que compartilhar apenas o APK base pode nao reinstalar todos os recursos.
+
+Receber compartilhamento:
+
+```js
+const inicial = await obterCompartilhamentoInicial();
+console.log(inicial);
+
+aoReceberCompartilhamento((dados) => {
+  console.log(dados.tipo, dados.uri || dados.texto);
 });
 ```
+
+O plugin instala intent filters para `text/plain`, `image/*`, `video/*`, `application/pdf` e `*/*`. Quando o app abre pelo menu Compartilhar, a bridge guarda o compartilhamento inicial; quando ele ja esta aberto, envia o evento `compartilhamento:recebido`.
+
+OCR e voz:
+
+```js
+const texto = await ocr(imagem);
+console.log(texto.texto);
+
+await falar("Ola mundo", {
+  idioma: "pt-BR",
+  velocidade: 1
+});
+
+const voz = await ouvir({ idioma: "pt-BR" });
+console.log(voz.texto);
+
+await pararFala();
+```
+
+`ocr()` usa ML Kit local, sem enviar a imagem para servidor. `falar()` usa TextToSpeech do Android. `ouvir()` usa o reconhecedor de voz do sistema com suporte a `pt-BR`, `en-US` ou idioma automatico.
+
+Bluetooth entre apps:
+
+```js
+aoConectarBT((dispositivo) => {
+  console.log("Conectado", dispositivo.nome);
+});
+
+aoReceberDadosBT((dados) => {
+  console.log("Recebido", dados);
+});
+
+const dispositivos = await procurarBT();
+
+if (dispositivos[0]) {
+  await conectarBT(dispositivos[0].id);
+  await enviarBT({
+    tipo: "ping",
+    enviadoEm: Date.now()
+  });
+}
+```
+
+A bridge usa Bluetooth classico RFCOMM. `aoConectarBT()` inicia o servidor interno do app. `procurarBT()` lista aparelhos pareados e aparelhos visiveis durante a busca. `enviarBT()` serializa o objeto como JSON; no outro lado, `aoReceberDadosBT()` entrega o objeto original.
 
 Clipboard:
 
@@ -558,7 +636,8 @@ Baixar base64:
 
 ```js
 await baixarBase64("pixel.png", base64, {
-  mimeType: "image/png"
+  mimeType: "image/png",
+  galeria: true
 });
 ```
 
@@ -583,6 +662,7 @@ Cuidados:
 
 - URL depende de internet;
 - base64 gigante consome memoria;
+- por padrao o download fica no armazenamento do app; use `{ galeria: true }` para publicar imagem/video no MediaStore e receber `publicUri`;
 - se `POST_NOTIFICATIONS` for negada, o download continua, mas `notificationShown` volta `false`;
 - use `infoArmazenamento()` antes de baixar arquivos grandes.
 

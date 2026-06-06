@@ -527,6 +527,13 @@ const nativeCodeEntries = [
     handling: { pt: "Limite duracoes longas e deixe a permissao `VIBRATE` no app; se falhar, siga sem bloquear o fluxo principal.", en: "Keep long durations under control and include the `VIBRATE` permission; if it fails, continue without blocking the main flow." }
   },
   {
+    syntax: { pt: "aguardar(5000) / loading(5000)", en: "loading(5000)" },
+    java: "JavaScript timer",
+    description: { pt: "Cria uma pausa assincrona entre linhas de codigo usando Promise.", en: "Creates an asynchronous pause between code lines using a Promise." },
+    returns: { pt: "{ ok, ms } depois do intervalo.", en: "{ ok, ms } after the interval." },
+    handling: { pt: "Use com `await` para esperar sem travar a WebView. O tempo e em milissegundos.", en: "Use with `await` to wait without blocking the WebView. The time is in milliseconds." }
+  },
+  {
     syntax: { pt: "notificar({ titulo, texto, aoClicar?, acoes?, open? })", en: "notify({ title, text, onClick?, actions?, open? })" },
     java: "notify",
     description: { pt: "Cria notificacao Android imediata. So `titulo` e `texto` ja bastam; `aoClicar`, `acoes` e `open` sao opcionais.", en: "Creates an immediate Android notification. `title` and `text` are enough; `onClick`, `actions` and `open` are optional." },
@@ -619,15 +626,15 @@ const nativeCodeEntries = [
   },
   {
     syntax: { pt: "escolherImagem()", en: "pickImage()" },
-    java: "pickFile",
-    description: { pt: "Abre o seletor nativo para o usuario escolher uma imagem.", en: "Opens the native picker for one image." },
+    java: "Photo Picker / ACTION_OPEN_DOCUMENT",
+    description: { pt: "Abre o Photo Picker moderno no Android 13+ e usa SAF automaticamente nos Androids antigos.", en: "Opens the modern Photo Picker on Android 13+ and automatically falls back to SAF on older Android versions." },
     returns: { pt: "{ uri, name, nome, size, tamanho, mimeType } ou null.", en: "{ uri, name, nome, size, tamanho, mimeType } or null." },
-    handling: { pt: "Se vier `null`, o usuario cancelou. Use `uri` em `<img>`/upload; nao espere caminho absoluto de arquivo.", en: "If it returns `null`, the user canceled. Use `uri` for `<img>`/upload; do not expect an absolute file path." }
+    handling: { pt: "Nao pede permissao ampla de armazenamento quando o Photo Picker esta disponivel. Use `uri`, nao caminho absoluto.", en: "Does not request broad storage permission when Photo Picker is available. Use `uri`, not an absolute file path." }
   },
   {
-    syntax: { pt: "escolherImagens({ multiplo: true })", en: "pickImages({ multiple: true })" },
-    java: "pickFile",
-    description: { pt: "Abre galeria/seletor para varias imagens.", en: "Opens gallery/picker for multiple images." },
+    syntax: { pt: "escolherImagens({ multiplas: true })", en: "pickImages({ multiple: true })" },
+    java: "Photo Picker / ACTION_OPEN_DOCUMENT",
+    description: { pt: "Abre selecao multipla de imagens usando Photo Picker moderno quando possivel.", en: "Opens multiple image selection using the modern Photo Picker when possible." },
     returns: { pt: "Array de arquivos; vazio se o usuario cancelar.", en: "Array of files; empty when the user cancels." },
     handling: { pt: "Sempre trate como array. Limite quantidade/tamanho antes de enviar ou processar.", en: "Always handle it as an array. Limit quantity/size before uploading or processing." }
   },
@@ -656,7 +663,7 @@ const nativeCodeEntries = [
     syntax: { pt: "escolherPasta()", en: "pickFolder()" },
     java: "pickFolder",
     description: { pt: "Abre o seletor nativo de pasta quando o Android permitir.", en: "Opens the native folder picker when Android allows it." },
-    returns: { pt: "{ uri } ou objeto vazio se cancelar.", en: "{ uri } or an empty object when canceled." },
+    returns: { pt: "{ uri, nome } ou objeto vazio se cancelar.", en: "{ uri, name } or an empty object when canceled." },
     handling: { pt: "Confira se `uri` existe antes de salvar. Android moderno entrega URI de documento, nao caminho real.", en: "Check that `uri` exists before saving. Modern Android returns a document URI, not a real path." }
   },
   {
@@ -667,11 +674,53 @@ const nativeCodeEntries = [
     handling: { pt: "Depois do retorno, confira `saved === true`. Para binario, envie `base64`; para texto, use `conteudo`/`content`.", en: "After the return, check `saved === true`. For binary data, send `base64`; for text, use `content`/`conteudo`." }
   },
   {
-    syntax: { pt: "compartilhar({ texto, url })", en: "share({ text, url })" },
+    syntax: { pt: "compartilhar({ texto, url, arquivo, arquivos })", en: "share({ text, url, file, files })" },
     java: "share",
-    description: { pt: "Abre a folha nativa de compartilhamento.", en: "Opens the native share sheet." },
-    returns: { pt: "Promise<void>.", en: "Promise<void>." },
-    handling: { pt: "Monte mensagens curtas e trate erro quando nao houver app capaz de compartilhar.", en: "Build short messages and handle errors when no app can share the content." }
+    description: { pt: "Abre a folha nativa para texto, link, imagem, video, PDF, arquivo unico ou multiplos arquivos.", en: "Opens the native share sheet for text, link, image, video, PDF, one file or multiple files." },
+    returns: { pt: "{ ok, shared, items, mimeType }.", en: "{ ok, shared, items, mimeType }." },
+    handling: { pt: "Aceita objeto retornado por `escolherArquivo()`, URI ou nome salvo no armazenamento do app.", en: "Accepts an object returned by `pickFile()`, a URI or a file name saved in app storage." }
+  },
+  {
+    syntax: { pt: "aoReceberCompartilhamento(callback)", en: "onShareReceived(callback)" },
+    java: "ACTION_SEND / ACTION_SEND_MULTIPLE",
+    description: { pt: "Permite que o app criado apareca no menu Compartilhar do Android e receba texto, imagem, video, PDF ou arquivo.", en: "Lets the generated app appear in Android's Share menu and receive text, image, video, PDF or file data." },
+    returns: { pt: "Callback recebe { tipo, uri, mimeType, texto, items }.", en: "Callback receives { type, uri, mimeType, text, items }." },
+    handling: { pt: "Use `obterCompartilhamentoInicial()` no boot e `aoReceberCompartilhamento()` para intents recebidas com o app aberto.", en: "Use `getInitialShare()` on boot and `onShareReceived()` for intents received while the app is open." }
+  },
+  {
+    syntax: { pt: "procurarBT() / conectarBT(id) / enviarBT(objeto)", en: "scanBluetooth() / connectBluetooth(id) / sendBluetooth(object)" },
+    java: "Bluetooth RFCOMM",
+    description: { pt: "Comunica dois apps html2apk por Bluetooth classico usando JSON.", en: "Communicates two html2apk apps over classic Bluetooth using JSON." },
+    returns: { pt: "`procurarBT` retorna lista de dispositivos; `conectarBT` retorna o dispositivo conectado; `enviarBT` retorna { ok, enviado }.", en: "`scanBluetooth` returns a device list; `connectBluetooth` returns the connected device; `sendBluetooth` returns { ok, sent }." },
+    handling: { pt: "No aparelho que recebe, registre `aoConectarBT()` e `aoReceberDadosBT()`. Para descoberta, o outro aparelho precisa estar pareado ou visivel no Bluetooth do Android.", en: "On the receiving device, register `onBluetoothConnect()` and `onBluetoothData()`. For discovery, the other device must be paired or visible in Android Bluetooth." }
+  },
+  {
+    syntax: { pt: "ocr(imagem)", en: "recognizeText(image)" },
+    java: "ML Kit TextRecognition local",
+    description: { pt: "Reconhece texto em imagem usando ML Kit local, sem enviar dados para servidor.", en: "Recognizes text in an image using local ML Kit, without sending data to a server." },
+    returns: { pt: "{ texto, text, offline, blocks }.", en: "{ texto, text, offline, blocks }." },
+    handling: { pt: "Aceita objeto de `escolherImagem()`, URI, base64 ou nome salvo. O modelo latino atende portugues.", en: "Accepts a `pickImage()` object, URI, base64 or saved file name. The Latin model supports Portuguese." }
+  },
+  {
+    syntax: { pt: "falar('Ola', { idioma: 'pt-BR', velocidade: 1 }) / pararFala()", en: "speak('Hello', { language: 'en-US', speed: 1 }) / stopSpeaking()" },
+    java: "TextToSpeech",
+    description: { pt: "Usa o motor TTS instalado no Android para falar texto.", en: "Uses Android's installed TTS engine to speak text." },
+    returns: { pt: "{ ok, speaking, idioma, velocidade }.", en: "{ ok, speaking, language, speed }." },
+    handling: { pt: "Se o idioma nao estiver instalado/suportado, a Promise rejeita. Use `pararFala()` para interromper.", en: "If the language is not installed/supported, the Promise rejects. Use `stopSpeaking()` to interrupt." }
+  },
+  {
+    syntax: { pt: "ouvir({ idioma: 'pt-BR' })", en: "recognizeSpeech({ language: 'en-US' })" },
+    java: "RecognizerIntent",
+    description: { pt: "Abre o reconhecimento de voz nativo do Android e retorna o texto reconhecido.", en: "Opens Android native speech recognition and returns recognized text." },
+    returns: { pt: "{ texto, resultados, confidence }.", en: "{ text, results, confidence }." },
+    handling: { pt: "Use `idioma: 'auto'` ou omita idioma para deixar o Android escolher. Depende do servico de voz disponivel no aparelho.", en: "Use `language: 'auto'` or omit language to let Android choose. Depends on the voice service available on the device." }
+  },
+  {
+    syntax: { pt: "share_me() / compartilharApp()", en: "share_me() / shareApp()" },
+    java: "shareCurrentApp",
+    description: { pt: "Compartilha o APK do proprio app aberto usando a folha nativa do Android.", en: "Shares the APK of the currently open app through the native Android share sheet." },
+    returns: { pt: "{ shared, name, uri, size, packageName, splitApks, installableAsSingleApk }.", en: "{ shared, name, uri, size, packageName, splitApks, installableAsSingleApk }." },
+    handling: { pt: "Funciona melhor em APK unico gerado pelo html2apk. Se o app veio de AAB/loja com split APKs, o retorno avisa que compartilhar apenas o APK base pode nao reinstalar tudo.", en: "Works best with a single APK generated by html2apk. If the app came from an AAB/store with split APKs, the return warns that sharing only the base APK may not reinstall everything." }
   },
   {
     syntax: { pt: "copiarTexto('texto') / lerTextoCopiado()", en: "copyText('text') / readText()" },
@@ -800,18 +849,18 @@ const nativeCodeEntries = [
     handling: { pt: "A chamada antiga `salvarArquivo({ nome, conteudo })` continua abrindo o seletor nativo. Use string no primeiro argumento para o CRUD interno.", en: "The old `saveFile({ name, content })` call still opens the native picker. Use a string first argument for internal CRUD." }
   },
   {
-    syntax: { pt: "baixarArquivo(url, 'arquivo.pdf') / abrirArquivo('arquivo.pdf')", en: "downloadFile(url, 'file.pdf') / openFile('file.pdf')" },
+    syntax: { pt: "baixarArquivo(url, 'foto.png', { galeria: true }) / abrirArquivo('foto.png')", en: "downloadFile(url, 'photo.png', { gallery: true }) / openFile('photo.png')" },
     java: "HttpURLConnection + NotificationCompat",
-    description: { pt: "Baixa por URL para o armazenamento persistente e mostra notificacao Android com barra de progresso.", en: "Downloads from a URL to persistent storage and shows an Android progress notification." },
-    returns: { pt: "`baixarArquivo` retorna metadados, tamanho, origem e se a notificacao foi mostrada.", en: "`downloadFile` returns metadata, size, source and whether the notification was shown." },
-    handling: { pt: "Valide URL e tamanho. No Android 13+, se a permissao de notificacao for negada, o download continua e retorna `notificationShown:false`.", en: "Validate URL and size. On Android 13+, if notification permission is denied, the download continues and returns `notificationShown:false`." }
+    description: { pt: "Baixa por URL para o armazenamento persistente do app e mostra notificacao Android com barra de progresso.", en: "Downloads from a URL to the app's persistent storage and shows an Android progress notification." },
+    returns: { pt: "`baixarArquivo` retorna metadados, tamanho, origem, notificacao e, com `{ galeria: true }`, `publicUri`.", en: "`downloadFile` returns metadata, size, source, notification state and, with `{ gallery: true }`, `publicUri`." },
+    handling: { pt: "Sem `{ galeria: true }`, imagens ficam privadas do app e nao aparecem na galeria. No Android 13+, se a permissao de notificacao for negada, o download continua.", en: "Without `{ gallery: true }`, images stay private to the app and do not appear in the gallery. On Android 13+, if notification permission is denied, the download continues." }
   },
   {
-    syntax: { pt: "baixarBase64('foto.png', base64) / baixarArquivoLocal(arquivo, 'copia.pdf')", en: "downloadBase64('photo.png', base64) / downloadLocalFile(file, 'copy.pdf')" },
+    syntax: { pt: "baixarBase64('foto.png', base64, { galeria: true }) / baixarArquivoLocal(arquivo, 'copia.pdf')", en: "downloadBase64('photo.png', base64, { gallery: true }) / downloadLocalFile(file, 'copy.pdf')" },
     java: "InputStream + NotificationCompat",
     description: { pt: "Cria um download a partir de base64, data URL, URI/caminho de arquivo ou objeto retornado por `escolherArquivo()`.", en: "Creates a download from base64, data URL, file URI/path or an object returned by `pickFile()`." },
-    returns: { pt: "Metadados do arquivo salvo, `sourceType`, `notificationShown` e permissao de notificacao.", en: "Saved file metadata, `sourceType`, `notificationShown` and notification permission." },
-    handling: { pt: "Use `baixarBase64` para conteudo em memoria e `baixarArquivoLocal` para copiar arquivo normal com progresso. Para esconder a notificacao, passe `{ notificacao: false }`.", en: "Use `downloadBase64` for in-memory content and `downloadLocalFile` to copy a normal file with progress. To hide the notification, pass `{ notification: false }`." }
+    returns: { pt: "Metadados do arquivo salvo, `sourceType`, `notificationShown`, permissao de notificacao e publicacao opcional.", en: "Saved file metadata, `sourceType`, `notificationShown`, notification permission and optional public publication." },
+    handling: { pt: "Para imagem/video aparecer na galeria, passe `{ galeria: true }`. Para esconder a notificacao, passe `{ notificacao: false }`.", en: "For image/video to appear in the gallery, pass `{ gallery: true }`. To hide the notification, pass `{ notification: false }`." }
   },
   {
     syntax: { pt: "obterLocalizacao() / acompanharLocalizacao()", en: "getLocation() / watchLocation()" },
@@ -887,6 +936,7 @@ if (!info.videoSupported) {
 [
   "feedback",
   "feedback",
+  "feedback",
   "notifications",
   "notifications",
   "notifications",
@@ -907,6 +957,12 @@ if (!info.videoSupported) {
   "media",
   "files",
   "files",
+  "share",
+  "share",
+  "share",
+  "media",
+  "media",
+  "media",
   "share",
   "share",
   "device",
@@ -960,6 +1016,17 @@ const nativeCodeRecipes = [
     example: {
       pt: `await vibrar(250);`,
       en: `await vibrate(250);`
+    }
+  },
+  {
+    when: { pt: "Para esperar entre duas linhas sem bloquear a interface.", en: "To wait between two lines without blocking the interface." },
+    example: {
+      pt: `await toast("Comecando");
+await aguardar(5000);
+await toast("Continuando");`,
+      en: `await toast("Starting");
+await loading(5000);
+await toast("Continuing");`
     }
   },
   {
@@ -1318,7 +1385,7 @@ if (image) {
   {
     when: { pt: "Para galeria com selecao multipla, como anexar varias fotos.", en: "For multiple gallery selection, such as attaching many photos." },
     example: {
-      pt: `const imagens = await escolherImagens({ multiplo: true });
+      pt: `const imagens = await escolherImagens({ multiplas: true });
 
 for (const imagem of imagens) {
   console.log(imagem.nome, imagem.tamanho);
@@ -1422,16 +1489,96 @@ if (saved.saved) {
     }
   },
   {
-    when: { pt: "Para abrir o compartilhamento nativo do Android com texto e/ou link.", en: "To open Android native sharing with text and/or link." },
+    when: { pt: "Para abrir o compartilhamento nativo do Android com texto, link e arquivos.", en: "To open Android native sharing with text, link and files." },
     example: {
-      pt: `await compartilhar({
+      pt: `const imagem = await escolherImagem();
+
+await compartilhar({
   texto: "Veja esse app",
-  url: "https://exemplo.com"
+  url: "https://exemplo.com",
+  arquivo: imagem
 });`,
-      en: `await share({
+      en: `const image = await pickImage();
+
+await share({
   text: "Check this app",
-  url: "https://example.com"
+  url: "https://example.com",
+  file: image
 });`
+    }
+  },
+  {
+    when: { pt: "Para receber dados enviados pelo menu Compartilhar do Android.", en: "To receive data sent through Android's Share menu." },
+    example: {
+      pt: `aoReceberCompartilhamento((dados) => {
+  console.log(dados.tipo, dados.uri || dados.texto);
+});
+
+const inicial = await obterCompartilhamentoInicial();`,
+      en: `onShareReceived((data) => {
+  console.log(data.type, data.uri || data.text);
+});
+
+const initial = await getInitialShare();`
+    }
+  },
+  {
+    when: { pt: "Para trocar objetos entre dois celulares com apps html2apk abertos.", en: "To exchange objects between two phones running html2apk apps." },
+    example: {
+      pt: `aoConectarBT((dispositivo) => {
+  console.log("Conectado", dispositivo.nome);
+});
+
+aoReceberDadosBT((dados) => {
+  console.log("Recebido", dados);
+});
+
+const lista = await procurarBT();
+await conectarBT(lista[0].id);
+await enviarBT({ mensagem: "Ola" });`,
+      en: `onBluetoothConnect((device) => {
+  console.log("Connected", device.name);
+});
+
+onBluetoothData((data) => {
+  console.log("Received", data);
+});
+
+const list = await scanBluetooth();
+await connectBluetooth(list[0].id);
+await sendBluetooth({ message: "Hello" });`
+    }
+  },
+  {
+    when: { pt: "Para reconhecer texto de uma foto sem enviar a imagem para servidor.", en: "To recognize text from a photo without sending the image to a server." },
+    example: {
+      pt: `const imagem = await escolherImagem();
+const resultado = await ocr(imagem);
+
+console.log(resultado.texto);`,
+      en: `const image = await pickImage();
+const result = await recognizeText(image);
+
+console.log(result.text);`
+    }
+  },
+  {
+    when: { pt: "Para falar texto e ouvir uma frase do usuario.", en: "To speak text and listen to a user phrase." },
+    example: {
+      pt: `await falar("Ola mundo", {
+  idioma: "pt-BR",
+  velocidade: 1
+});
+
+const voz = await ouvir({ idioma: "pt-BR" });
+console.log(voz.texto);`,
+      en: `await speak("Hello world", {
+  language: "en-US",
+  speed: 1
+});
+
+const voice = await recognizeSpeech({ language: "en-US" });
+console.log(voice.text);`
     }
   },
   {
@@ -1708,11 +1855,23 @@ const files = await listFiles();`
   "relatorio.pdf"
 );
 
+await baixarArquivo(
+  "https://exemplo.com/foto.png",
+  "foto.png",
+  { galeria: true }
+);
+
 await abrirArquivo("relatorio.pdf");
 // await compartilharArquivo("relatorio.pdf");`,
       en: `await downloadFile(
   "https://example.com/report.pdf",
   "report.pdf"
+);
+
+await downloadFile(
+  "https://example.com/photo.png",
+  "photo.png",
+  { gallery: true }
 );
 
 await openFile("report.pdf");
@@ -1723,7 +1882,8 @@ await openFile("report.pdf");
     when: { pt: "Para transformar base64 ou um arquivo escolhido em download com barra de progresso.", en: "To turn base64 or a picked file into a download with a progress bar." },
     example: {
       pt: `await baixarBase64("pixel.png", base64, {
-  mimeType: "image/png"
+  mimeType: "image/png",
+  galeria: true
 });
 
 const arquivo = await escolherArquivo();
@@ -1731,7 +1891,8 @@ if (arquivo) {
   await baixarArquivoLocal(arquivo, "copia-" + arquivo.name);
 }`,
       en: `await downloadBase64("pixel.png", base64, {
-  mimeType: "image/png"
+  mimeType: "image/png",
+  gallery: true
 });
 
 const file = await pickFile();
