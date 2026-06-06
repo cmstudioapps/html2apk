@@ -1,0 +1,1198 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>html2apk - Sobre técnico</title>
+  <script>
+    (function () {
+      try {
+        var saved = localStorage.getItem("html2apkSobreTheme");
+        var prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+        if (saved === "dark" || (!saved && prefersDark)) {
+          document.documentElement.dataset.theme = "dark";
+        }
+      } catch (error) {
+      }
+    }());
+  </script>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f7f9fc;
+      --surface: #ffffff;
+      --surface-soft: #eef3f8;
+      --card: #fbfdff;
+      --text: #142033;
+      --muted: #5e6f86;
+      --line: #d6deea;
+      --teal: #0f766e;
+      --blue: #2563eb;
+      --button-bg: #2563eb;
+      --button-border: #1d4ed8;
+      --button-hover: #1d4ed8;
+      --amber: #b45309;
+      --violet: #6d28d9;
+      --red: #b42318;
+      --ink: #0f172a;
+      --code: #101827;
+      --inline-code-bg: #eef3f8;
+      --topbar-bg: rgba(247, 249, 252, .94);
+      --note-bg: #f0fbf8;
+      --note-text: #17443f;
+      --warning-bg: #fff8eb;
+      --warning-text: #5f3b04;
+      --tag-bg: #e7f5f3;
+      --tag-line: #b8ded8;
+      --tag-amber-bg: #fff4df;
+      --tag-amber-line: #f4d19d;
+      --tag-violet-bg: #f2ecff;
+      --tag-violet-line: #d8c7ff;
+      --radius: 8px;
+      --shadow: 0 16px 45px rgba(15, 23, 42, .08);
+    }
+
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --bg: #07111f;
+      --surface: #0f172a;
+      --surface-soft: #172033;
+      --card: #111c2d;
+      --text: #dbe7f6;
+      --muted: #9fb0c7;
+      --line: #26344d;
+      --teal: #2dd4bf;
+      --blue: #8bb8ff;
+      --button-bg: #2563eb;
+      --button-border: #3b82f6;
+      --button-hover: #1d4ed8;
+      --amber: #fbbf24;
+      --violet: #c4b5fd;
+      --red: #f87171;
+      --ink: #f8fafc;
+      --code: #050816;
+      --inline-code-bg: #182238;
+      --topbar-bg: rgba(7, 17, 31, .92);
+      --note-bg: #0e2825;
+      --note-text: #baf7ec;
+      --warning-bg: #2a210d;
+      --warning-text: #fde68a;
+      --tag-bg: #0b302d;
+      --tag-line: #1f6f67;
+      --tag-amber-bg: #2a210d;
+      --tag-amber-line: #8a5b12;
+      --tag-violet-bg: #221a3a;
+      --tag-violet-line: #5b45a3;
+      --shadow: 0 18px 50px rgba(0, 0, 0, .34);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.68;
+      letter-spacing: 0;
+    }
+
+    a {
+      color: var(--blue);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 12px clamp(16px, 4vw, 42px);
+      background: var(--topbar-bg);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(14px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      color: var(--ink);
+      font-weight: 900;
+    }
+
+    .brand img {
+      width: 34px;
+      height: 34px;
+      border-radius: 7px;
+      object-fit: cover;
+      border: 1px solid var(--line);
+    }
+
+    .brand span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .pill {
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .download-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 36px;
+      border-radius: 999px;
+      border: 1px solid var(--button-border);
+      background: var(--button-bg);
+      color: #ffffff;
+      padding: 7px 14px;
+      font-size: 13px;
+      font-weight: 900;
+      text-decoration: none;
+      white-space: nowrap;
+      box-shadow: 0 10px 24px rgba(37, 99, 235, .22);
+    }
+
+    .download-button:hover {
+      background: var(--button-hover);
+      text-decoration: none;
+    }
+
+    .theme-toggle {
+      min-height: 36px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--ink);
+      padding: 7px 12px;
+      font-size: 13px;
+      font-weight: 900;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .theme-toggle:hover {
+      background: var(--surface-soft);
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-top: 20px;
+    }
+
+    .secondary-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 36px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--ink);
+      padding: 7px 14px;
+      font-size: 13px;
+      font-weight: 900;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .secondary-link:hover {
+      background: var(--surface-soft);
+      text-decoration: none;
+    }
+
+    .shell {
+      width: min(1320px, 100%);
+      margin: 0 auto;
+      padding: 28px clamp(16px, 4vw, 42px) 64px;
+      display: grid;
+      grid-template-columns: minmax(0, 280px) minmax(0, 1fr);
+      gap: 24px;
+      align-items: start;
+    }
+
+    .toc {
+      position: sticky;
+      top: 76px;
+      max-height: calc(100vh - 96px);
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      padding: 14px;
+    }
+
+    .toc h2 {
+      margin: 0 0 10px;
+      color: var(--ink);
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+
+    .toc a {
+      display: block;
+      padding: 7px 8px;
+      border-radius: 6px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .toc a:hover {
+      background: var(--surface-soft);
+      color: var(--ink);
+    }
+
+    main {
+      min-width: 0;
+    }
+
+    .hero {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      padding: clamp(22px, 4vw, 44px);
+      overflow: hidden;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 26px;
+      align-items: center;
+    }
+
+    .hero img {
+      width: min(180px, 28vw);
+      aspect-ratio: 1;
+      border-radius: 8px;
+      object-fit: cover;
+      border: 1px solid var(--line);
+      box-shadow: 0 14px 32px rgba(15, 23, 42, .12);
+    }
+
+    .eyebrow {
+      margin: 0 0 10px;
+      color: var(--teal);
+      font-size: 13px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+
+    h1 {
+      margin: 0;
+      color: var(--ink);
+      font-size: clamp(34px, 6vw, 72px);
+      line-height: .98;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      max-width: 820px;
+      margin: 18px 0 0;
+      color: var(--muted);
+      font-size: clamp(17px, 2vw, 21px);
+    }
+
+    .credit {
+      margin-top: 18px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    section {
+      scroll-margin-top: 86px;
+      margin-top: 24px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      padding: clamp(20px, 3vw, 34px);
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      color: var(--ink);
+      font-size: clamp(24px, 3vw, 36px);
+      line-height: 1.15;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 26px 0 8px;
+      color: var(--ink);
+      font-size: 20px;
+      line-height: 1.25;
+      letter-spacing: 0;
+    }
+
+    p {
+      margin: 10px 0;
+    }
+
+    ul, ol {
+      margin: 10px 0 10px 22px;
+      padding: 0;
+    }
+
+    li {
+      margin: 6px 0;
+    }
+
+    .lead {
+      color: var(--muted);
+      font-size: 18px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 16px;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--card);
+      padding: 16px;
+    }
+
+    .card h3 {
+      margin-top: 0;
+      font-size: 17px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 4px 9px;
+      font-size: 12px;
+      font-weight: 900;
+      background: var(--tag-bg);
+      color: var(--teal);
+      border: 1px solid var(--tag-line);
+    }
+
+    .tag.amber {
+      background: var(--tag-amber-bg);
+      color: var(--amber);
+      border-color: var(--tag-amber-line);
+    }
+
+    .tag.violet {
+      background: var(--tag-violet-bg);
+      color: var(--violet);
+      border-color: var(--tag-violet-line);
+    }
+
+    .note {
+      border-left: 4px solid var(--teal);
+      background: var(--note-bg);
+      padding: 12px 14px;
+      border-radius: 0 var(--radius) var(--radius) 0;
+      color: var(--note-text);
+      margin: 16px 0;
+    }
+
+    .warning {
+      border-left-color: var(--amber);
+      background: var(--warning-bg);
+      color: var(--warning-text);
+    }
+
+    pre {
+      margin: 14px 0;
+      padding: 15px;
+      border-radius: var(--radius);
+      background: var(--code);
+      color: #d8e4f3;
+      overflow: auto;
+      font: 13px/1.55 "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
+      border: 1px solid #233047;
+    }
+
+    code {
+      font-family: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
+      font-size: .92em;
+      background: var(--inline-code-bg);
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      padding: 1px 5px;
+    }
+
+    pre code {
+      background: transparent;
+      border: 0;
+      padding: 0;
+      color: inherit;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin: 16px 0;
+    }
+
+    .step {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface-soft);
+      padding: 12px;
+      min-height: 96px;
+    }
+
+    .step strong {
+      display: block;
+      color: var(--ink);
+      margin-bottom: 5px;
+    }
+
+    .step span {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      font-size: 14px;
+    }
+
+    th, td {
+      border: 1px solid var(--line);
+      padding: 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: var(--surface-soft);
+      color: var(--ink);
+    }
+
+    .footer {
+      margin: 24px 0 0;
+      padding: 18px;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    @media (max-width: 980px) {
+      .shell {
+        grid-template-columns: 1fr;
+      }
+
+      .toc {
+        position: static;
+        max-height: none;
+      }
+
+      .flow {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 680px) {
+      .topbar {
+        align-items: flex-start;
+      }
+
+      .hero-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .hero img {
+        width: 96px;
+      }
+
+      .grid, .flow {
+        grid-template-columns: 1fr;
+      }
+
+      table {
+        display: block;
+        overflow-x: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#top" aria-label="Voltar ao topo">
+      <img src="html2apk.png" alt="">
+      <span>html2apk</span>
+    </a>
+    <div class="top-actions">
+      <a class="download-button" href="https://www.mediafire.com/file/u3874g8uxtyhwp7/dist-desktop_0.9.0.zip/file">Baixar para Windows</a>
+      <button class="theme-toggle" type="button" id="themeToggle" aria-pressed="false">Modo escuro</button>
+      <span class="pill">Versão 0.9.0</span>
+      <span class="pill">Criado por Caio Multiversando</span>
+    </div>
+  </header>
+
+  <div class="shell" id="top">
+    <aside class="toc" aria-label="Sumario">
+      <h2>Sumario</h2>
+      <a href="#visao">Modo por cima</a>
+      <a href="#cerebro">Cérebro da aplicação</a>
+      <a href="#build">Fluxo de build</a>
+      <a href="#runtime">Runtime e bridge</a>
+      <a href="#native">Java nativo</a>
+      <a href="#permissions">Permissões</a>
+      <a href="#features">Funções interpretadas</a>
+      <a href="#desktop">Desktop e laboratório</a>
+      <a href="#limits">Limites reais</a>
+      <a href="#contribute">Como mexer sem quebrar</a>
+    </aside>
+
+    <main>
+      <article class="hero">
+        <div class="hero-grid">
+          <div>
+            <p class="eyebrow">Livro técnico da ferramenta</p>
+            <h1>Sobre o html2apk</h1>
+            <p class="subtitle">Uma explicação em dois modos: primeiro simples, depois aprofundando no algoritmo, na lógica, nos limites reais e no funcionamento interno da ferramenta.</p>
+            <div class="credit">
+              <span class="tag">Criação: Caio Multiversando</span>
+              <span class="tag amber">APK e AAB</span>
+              <span class="tag violet">Cordova + Bridge nativa</span>
+            </div>
+            <div class="hero-actions">
+              <a class="download-button" href="https://www.mediafire.com/file/u3874g8uxtyhwp7/dist-desktop_0.9.0.zip/file">Baixar ferramenta para Windows</a>
+              <a class="secondary-link" href="#features">Ver funções interpretadas</a>
+            </div>
+          </div>
+          <img src="html2apk.png" alt="Ícone do html2apk">
+        </div>
+      </article>
+
+      <section id="visao">
+        <h2>Modo por cima</h2>
+        <p class="lead">O html2apk transforma uma pasta web em um app Android instalável. Ele usa Cordova para empacotar a WebView e injeta uma bridge própria para que JavaScript consiga conversar com recursos nativos do Android.</p>
+
+        <div class="flow" aria-label="Fluxo resumido">
+          <div class="step"><strong>1. Entrada</strong><span>HTML, CSS, JS, assets e app.json.</span></div>
+          <div class="step"><strong>2. Preparação</strong><span>Configuração normalizada, ambiente Android detectado e projeto temporário criado.</span></div>
+          <div class="step"><strong>3. Ponte</strong><span>Scripts e plugin nativo entram no app gerado.</span></div>
+          <div class="step"><strong>4. Saída</strong><span>Cordova compila e o APK/AAB aparece em dist.</span></div>
+        </div>
+
+        <p>Por fora, o usuário chama funções como <code>notificar()</code>, <code>salvarArquivo()</code>, <code>baixarArquivo()</code> e <code>definirPapelParede()</code>. Por dentro, a ferramenta normaliza argumentos, espera Cordova ficar pronto, chama <code>cordova.exec</code>, entra no Java Android, pede permissões quando necessário e devolve o resultado para uma Promise.</p>
+
+        <pre><code>await toast("Olá");
+await vibrar(250);
+await notificar({ titulo: "Pedido", texto: "Atualizado" });
+await salvarArquivo("perfil.json", { nome: "Ana" });
+await baixarArquivo("https://site.com/manual.pdf", "manual.pdf");</code></pre>
+
+        <p>O resumo técnico é este: a interface continua sendo HTML, CSS e JavaScript, mas o app passa a ter uma camada nativa para acessar recursos que uma página comum não acessaria sozinha.</p>
+      </section>
+
+      <section id="cerebro">
+        <h2>Cérebro da aplicação</h2>
+        <p class="lead">O cérebro do html2apk é uma sequência de transformações. Cada camada reduz a incerteza para que a próxima etapa trabalhe com dados mais previsíveis.</p>
+
+        <pre><code>config do usuário
+  -> normalização
+  -> validação
+  -> ambiente Android
+  -> projeto Cordova temporário
+  -> cópia web
+  -> injeção runtime
+  -> plugin nativo
+  -> build Android
+  -> artefato final</code></pre>
+
+        <h3>Neurônio 1: intenção</h3>
+        <p>A ferramenta junta defaults, arquivo de configuração e overrides. O override vence o arquivo; o arquivo vence o default. O merge é profundo para objetos simples, então configurações como keystore podem ser completadas sem apagar o restante.</p>
+
+        <h3>Neurônio 2: normalização</h3>
+        <p>Valores humanos viram valores previsíveis. <code>vertical</code> vira <code>portrait</code>, <code>horizontal</code> vira <code>landscape</code>, AAB força release, aliases de OneSignal viram um campo único, tema automático vira <code>themeMode: auto</code> e permissões viram um array limpo.</p>
+
+        <h3>Neurônio 3: validação</h3>
+        <p>Antes de copiar qualquer coisa, a ferramenta confere se <code>webRoot</code> e <code>entryFile</code> ficam dentro do projeto. Isso impede que uma configuração inválida faça o build acessar arquivos fora da área esperada.</p>
+
+        <h3>Neurônio 4: isolamento</h3>
+        <p>O build acontece em um projeto temporário. Essa decisão protege a pasta web do usuário contra pastas Android pesadas, plugins, plataformas e cache. O projeto original fica mais limpo; o temporário concentra os arquivos gerados durante a compilação.</p>
+
+        <div class="note">O html2apk não converte HTML em layout Android nativo. Ele empacota a WebView e instala uma ponte nativa, mantendo o comportamento previsível e alinhado ao modelo do Cordova.</div>
+      </section>
+
+      <section id="build">
+        <h2>Fluxo de build</h2>
+        <p class="lead">O build é uma orquestração. Ele não é apenas uma chamada ao Cordova; antes disso a ferramenta cria o contexto inteiro que Cordova precisa.</p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Etapa</th>
+              <th>Lógica</th>
+              <th>Vantagem</th>
+              <th>Limite</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Ambiente</td>
+              <td>Descobre Java, Gradle, Android SDK e ajusta PATH efetivo.</td>
+              <td>Menos dependencia de terminal configurado manualmente.</td>
+              <td>SDK e JDK ainda precisam existir.</td>
+            </tr>
+            <tr>
+              <td>Copia web</td>
+              <td>Copia a pasta web ignorando lixo comum ou usa lista <code>files</code>.</td>
+              <td>Evita mandar node_modules e builds antigos para o APK.</td>
+              <td>Projetos fora do padrao podem precisar declarar arquivos.</td>
+            </tr>
+            <tr>
+              <td>Config XML</td>
+              <td>Sintetiza manifest, permissões, splash, ícone, deep links e preferências.</td>
+              <td>O usuário escreve JSON; o Cordova recebe XML.</td>
+              <td>Manifest não concede runtime permission sozinho.</td>
+            </tr>
+            <tr>
+              <td>Runtime</td>
+              <td>Injeta early bridge, console opcional e cordova.js de forma idempotente.</td>
+              <td>O usuário não precisa editar HTML manualmente.</td>
+              <td>HTML muito incomum pode escapar da heurística textual.</td>
+            </tr>
+            <tr>
+              <td>Artefato</td>
+              <td>Procura APK/AAB recursivamente e prefere debug/release esperado.</td>
+              <td>Resiste a variações de pasta de saída do Cordova.</td>
+              <td>Se Cordova não gerar nada, falha de forma explícita.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Doctor</h3>
+        <p>O doctor executa comandos reais e checa pastas reais. Ele testa Java, Javac, Gradle, Cordova, Android SDK, platform-tools, cmdline-tools, sdkmanager, build-tools, plataforma Android e permissão de escrita. Ele não gera APK; ele identifica requisitos ausentes antes do build.</p>
+
+        <h3>USB debug</h3>
+        <p>O teste USB lê <code>adb devices</code>, ignora emuladores, trata <code>unauthorized</code>, trata <code>offline</code> e procura um aparelho físico autorizado. Primeiro tenta <code>cordova run android --device</code>; se isso falhar, gera um APK debug, instala com <code>adb install -r -d</code> e abre com <code>monkey</code>.</p>
+      </section>
+
+      <section id="runtime">
+        <h2>Runtime e bridge</h2>
+        <p class="lead">A bridge é a parte que transforma uma função JavaScript em comportamento Android. Ela também evita que o usuário precise lidar diretamente com o ciclo de inicialização do Cordova.</p>
+
+        <pre><code>JavaScript do app
+  -> função global html2apk
+  -> normalização de argumentos
+  -> espera cordova.exec
+  -> action nativa
+  -> Java Android
+  -> CallbackContext
+  -> Promise resolve/reject</code></pre>
+
+        <h3>Early bridge</h3>
+        <p>A early bridge é injetada cedo. Ela cria as funções globais antes do Cordova estar totalmente pronto e espera o canal nativo por até 10 segundos. Se a ponte fica pronta, executa. Se não fica, falha com erro claro.</p>
+
+        <h3>Plugin JS</h3>
+        <p>O plugin JS vive dentro do modelo Cordova e chama <code>cordova.exec</code> diretamente. Ele mantém a mesma API pública da early bridge, com nomes em português e aliases em inglês.</p>
+
+        <h3>Normalizadores</h3>
+        <p>Antes de chegar ao Java, a bridge ajusta formatos: notificação string vira objeto, arquivo simples vira payload, download por base64 vira origem <code>base64</code>, papel de parede entende <code>alvo</code>/<code>target</code>, storage seguro entende chave e valor.</p>
+
+        <h3>Runtime console</h3>
+        <p>Quando ligado, o console runtime envolve <code>console.log</code>, erros globais, promises rejeitadas, <code>fetch</code>, <code>XMLHttpRequest</code> e funções html2apk conhecidas. Ele mostra chamadas, retornos, falhas, rede, botão de copiar console e botão de copiar apenas erros.</p>
+      </section>
+
+      <section id="native">
+        <h2>Java nativo</h2>
+        <p class="lead">No Android, o plugin recebe uma action e decide qual subsistema executar. Essa action é a linguagem comum entre JavaScript e Java.</p>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Dispatcher</h3>
+            <p>Recebe <code>action</code>, <code>args</code> e <code>callbackContext</code>. Cada action mapeia para uma operação: notificação, câmera, arquivo, download, wallpaper, biometria, localização e mais.</p>
+          </div>
+          <div class="card">
+            <h3>Callbacks pendentes</h3>
+            <p>Quando uma permissão interrompe o fluxo, a bridge guarda o callback e as opções. Depois que o Android responde, ela retoma a operação original.</p>
+          </div>
+          <div class="card">
+            <h3>Thread certa</h3>
+            <p>Operações visuais usam UI thread. Downloads e operações pesadas usam thread pool para não travar a WebView.</p>
+          </div>
+          <div class="card">
+            <h3>Eventos</h3>
+            <p>Eventos nativos voltam para o JS via <code>CustomEvent</code>, como <code>html2apk:event</code> e eventos específicos.</p>
+          </div>
+        </div>
+
+        <h3>Notificações</h3>
+        <p>Notificação imediata cria canal, monta <code>NotificationCompat.Builder</code>, adiciona PendingIntent de clique e ações. Notificação agendada usa AlarmManager, salva estado e pode ser reprogramada depois de boot. Loops calculam a próxima notificação depois de cada disparo.</p>
+
+        <h3>Arquivos</h3>
+        <p>Arquivos internos usam armazenamento do app, nome sanitizado, metadados e FileProvider para abrir/compartilhar. A validação bloqueia separadores, dois pontos e <code>..</code> no nome.</p>
+
+        <h3>Downloads</h3>
+        <p>Downloads convergem para uma fonte interna com InputStream, tamanho, mimeType e tipo de origem. URL usa HttpURLConnection; base64 vira ByteArrayInputStream; URI usa ContentResolver; arquivo local usa FileInputStream. A cópia acontece em blocos de 8192 bytes e a notificação de progresso atualiza em intervalos controlados.</p>
+
+        <h3>Wallpaper</h3>
+        <p>Papel de parede decodifica bitmap e usa WallpaperManager. Imagem estática pode ir para tela inicial, bloqueio ou ambos. Video wallpaper e fundo de chamada são tratados como limites conhecidos, porque dependem de live wallpaper ou fabricante.</p>
+      </section>
+
+      <section id="permissions">
+        <h2>Permissões</h2>
+        <p class="lead">Manifest e runtime permission são coisas diferentes. O html2apk declara o que precisa e, quando chega a hora, pede o que o Android exige em runtime.</p>
+
+        <pre><code>função precisa de permissão
+  -> já concedida?
+      executa
+  -> não concedida?
+      guarda callback e opções
+      pede permissão
+        concedida -> continua
+        negada -> retorna status/erro
+        negada permanente -> abre configuração quando faz sentido</code></pre>
+
+        <p>O sistema usa busy state para evitar duas requisições concorrentes da mesma família. Câmera, microfone, notificação, localização e downloads com notificação passam por esse cuidado.</p>
+
+        <div class="note warning">Algumas permissões são especiais: overlay usa tela própria, alarme exato pode exigir configuração, notificação no Android 13+ exige <code>POST_NOTIFICATIONS</code>. O html2apk abre o caminho correto, mas o usuário final ainda decide.</div>
+      </section>
+
+      <section id="features">
+        <h2>Funções interpretadas</h2>
+        <p class="lead">As funções interpretadas são agrupadas por comportamento, não por arquivo. Esse é o caminho mais claro para entender o que a ferramenta oferece ao JavaScript do app.</p>
+        <div class="note"><strong>Contagem atual:</strong> a aba "Códigos interpretados" documenta <strong>48 funções ou blocos de API</strong> disponíveis para o JavaScript do APK, incluindo chamadas em português e aliases em inglês quando existem.</div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Feedback e tela</h3>
+            <p>Toast, vibração, fullscreen, manter tela ligada, brilho, cor de barras e lanterna.</p>
+          </div>
+          <div class="card">
+            <h3>Notificações</h3>
+            <p>Imediatas, agendadas, loops, cancelamento, clique, ações e permissão.</p>
+          </div>
+          <div class="card">
+            <h3>Mídia</h3>
+            <p>Foto, video, QR Code, microfone, seletor de imagem/video/arquivo.</p>
+          </div>
+          <div class="card">
+            <h3>Arquivos e downloads</h3>
+            <p>CRUD interno, abrir, compartilhar, baixar por URL, base64, URI, caminho ou arquivo salvo.</p>
+          </div>
+          <div class="card">
+            <h3>Dispositivo</h3>
+            <p>Bateria, rede, memória, armazenamento, desempenho, apps/processos visíveis.</p>
+          </div>
+          <div class="card">
+            <h3>Segurança</h3>
+            <p>Biometria, storage seguro com AndroidKeyStore e status de permissões.</p>
+          </div>
+          <div class="card">
+            <h3>Localização e eventos</h3>
+            <p>Localização atual, watch de localização, eventos nativos, deep links e notificação inicial.</p>
+          </div>
+          <div class="card">
+            <h3>Wallpaper e overlay</h3>
+            <p>Papel de parede estático, configuração de wallpaper, ícone flutuante e permissão de sobreposição.</p>
+          </div>
+        </div>
+
+        <h3>Como chamar essas funções</h3>
+        <p>A regra de uso é sempre a mesma: chame no JavaScript do app, use <code>await</code>, trate erro e lembre que no navegador comum essas funções nativas não existem. Elas ficam disponíveis no APK gerado pelo html2apk.</p>
+
+        <pre><code>try {
+  const resultado = await algumaFuncaoInterpretada();
+  console.log(resultado);
+} catch (erro) {
+  console.error("Função nativa falhou", erro);
+}</code></pre>
+
+        <div class="note">A bridge espera o Android ficar pronto. Mesmo assim, o melhor hábito é chamar recursos nativos depois que a tela inicial carregou ou em resposta a uma ação do usuário.</div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Categoria</th>
+              <th>Funções principais</th>
+              <th>Como usar</th>
+              <th>Cuidado real</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Feedback</td>
+              <td><code>toast</code>, <code>vibrar</code></td>
+              <td>Use para confirmações curtas, erro simples e resposta de botão.</td>
+              <td>Vibração longa incomoda; falha de feedback não deve bloquear o app.</td>
+            </tr>
+            <tr>
+              <td>Notificações</td>
+              <td><code>notificar</code>, <code>agendarNotificacao</code>, <code>agendarLoopNotificacoes</code></td>
+              <td>Informe título/texto e, se quiser, <code>aoClicar</code>, <code>acoes</code> e <code>open</code>.</td>
+              <td>Android 13+ exige <code>POST_NOTIFICATIONS</code>; alarmes exatos podem exigir ajuste.</td>
+            </tr>
+            <tr>
+              <td>Permissões e eventos</td>
+              <td><code>statusPermissoes</code>, <code>aoEvento</code>, <code>aoMinimizar</code>, <code>obterLinkInicial</code></td>
+              <td>Consulte estado, escute ciclo de vida e reaja a deep links.</td>
+              <td>Guarde a função de parar listeners para evitar duplicação.</td>
+            </tr>
+            <tr>
+              <td>Mídia</td>
+              <td><code>tirarFoto</code>, <code>capturarVideo</code>, <code>ouvirMic</code>, <code>lanterna</code></td>
+              <td>Chame em resposta a botão e trate cancelamento/permissão.</td>
+              <td>Câmera, microfone e lanterna dependem de permissão e aparelho real.</td>
+            </tr>
+            <tr>
+              <td>Arquivos</td>
+              <td><code>salvarArquivo</code>, <code>lerArquivo</code>, <code>listarArquivos</code>, <code>abrirArquivo</code></td>
+              <td>Use string no primeiro argumento para CRUD interno; objeto abre seletor nativo.</td>
+              <td>Nomes internos não podem ter separadores, dois pontos ou <code>..</code>.</td>
+            </tr>
+            <tr>
+              <td>Downloads</td>
+              <td><code>baixarArquivo</code>, <code>baixarBase64</code>, <code>baixarArquivoLocal</code></td>
+              <td>Baixe URL, base64 ou copie URI/arquivo com notificação de progresso.</td>
+              <td>Se a notificação for negada, o download continua com <code>notificationShown:false</code>.</td>
+            </tr>
+            <tr>
+              <td>Compartilhar e abrir</td>
+              <td><code>compartilhar</code>, <code>copiarTexto</code>, <code>abrirNoApp</code>, <code>abrirForaDoApp</code></td>
+              <td>Use para clipboard, share sheet, rotas internas, navegador, WhatsApp, discador e mapas.</td>
+              <td>Apps externos podem não existir; trate erro e mantenha fallback.</td>
+            </tr>
+            <tr>
+              <td>Segurança</td>
+              <td><code>autenticarBiometria</code>, <code>salvarSeguro</code>, <code>lerSeguro</code></td>
+              <td>Use biometria para confirmar acesso e Keystore para dados pequenos.</td>
+              <td>Biometria precisa de aparelho compatível; storage seguro não é lugar para arquivo grande.</td>
+            </tr>
+            <tr>
+              <td>Wallpaper e overlay</td>
+              <td><code>definirPapelParede</code>, <code>abrirConfiguracaoPapelParede</code>, <code>iniciarIconeFlutuante</code></td>
+              <td>Aplique imagem estática ou abra ajustes nativos; overlay precisa de permissão especial.</td>
+              <td>Video wallpaper e fundo de chamada dependem do Android/fabricante.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Receitas essenciais</h3>
+
+        <h3>Toast, vibração e erro tratado</h3>
+        <pre><code>try {
+  await toast("Salvo com sucesso");
+  await vibrar(180);
+} catch (erro) {
+  console.error("Feedback nativo falhou", erro);
+}</code></pre>
+
+        <h3>Notificacao com clique</h3>
+        <pre><code>await notificar({
+  titulo: "Pedido aprovado",
+  texto: "Toque para abrir os detalhes",
+  aoClicar: {
+    funcao: "abrirNoApp",
+    argumentos: ["#/pedido/123"]
+  }
+});</code></pre>
+
+        <p>Para notificação agendada ou app fechado, prefira <code>{ funcao, argumentos }</code> em vez de callback anônimo. Callback anônimo depende do processo JavaScript ainda estar vivo.</p>
+
+        <h3>Agendar lembrete</h3>
+        <pre><code>const aviso = await agendarNotificacao({
+  titulo: "Lembrete",
+  texto: "Volte ao app daqui 1 minuto",
+  quando: Date.now() + 60 * 1000
+});
+
+console.log("ID para cancelar depois:", aviso.id);</code></pre>
+
+        <h3>Eventos nativos</h3>
+        <pre><code>const parar = aoEvento("app:background", (evento) => {
+  console.log("App saiu da frente", evento.timestamp);
+});
+
+// Quando não precisar mais:
+parar();</code></pre>
+
+        <h3>Camera e QR Code</h3>
+        <pre><code>const foto = await tirarFoto({ base64: true });
+
+if (foto.base64) {
+  document.querySelector("img.preview").src =
+    "data:" + foto.mimeType + ";base64," + foto.base64;
+}
+
+try {
+  const qr = await escanearQRCode();
+  console.log(qr && qr.text);
+} catch (erro) {
+  await toast("Digite ou cole o código");
+}</code></pre>
+
+        <h3>Microfone</h3>
+        <pre><code>const inicio = await ouvirMic();
+
+if (inicio.settingsOpened) {
+  console.log("Libere Microfone nas configurações e tente de novo");
+  return;
+}
+
+setTimeout(async () => {
+  const audio = await pararMic();
+  const url = "data:" + audio.mimeType + ";base64," + audio.base64;
+  new Audio(url).play();
+}, 3000);</code></pre>
+
+        <h3>CRUD interno de arquivos</h3>
+        <pre><code>await salvarArquivo("perfil.json", {
+  nome: "Ana",
+  plano: "premium"
+});
+
+const perfil = await lerArquivo("perfil.json");
+console.log(perfil.nome);
+
+const arquivos = await listarArquivos();
+const existe = await arquivoExiste("perfil.json");
+
+await compartilharArquivo("perfil.json");
+await excluirArquivo("perfil.json");</code></pre>
+
+        <div class="note warning"><code>salvarArquivo({ nome, conteudo })</code> abre o seletor nativo para o usuário escolher onde salvar. <code>salvarArquivo("nome.json", valor)</code> salva direto no armazenamento interno do app.</div>
+
+        <h3>Downloads com progresso</h3>
+        <pre><code>await baixarArquivo(
+  "https://exemplo.com/relatorio.pdf",
+  "relatorio.pdf"
+);
+
+await abrirArquivo("relatorio.pdf");
+
+await baixarBase64("foto.png", base64, {
+  mimeType: "image/png"
+});
+
+const arquivo = await escolherArquivo();
+if (arquivo) {
+  await baixarArquivoLocal(arquivo, "copia-" + arquivo.name);
+}</code></pre>
+
+        <h3>Localização</h3>
+        <pre><code>const local = await obterLocalizacao({
+  altaPrecisao: true,
+  timeoutMs: 10000
+});
+
+console.log(local.latitude, local.longitude);
+
+const watch = await acompanharLocalizacao();
+const pararEvento = aoMudarLocalizacao(console.log);
+
+// Ao sair da tela:
+await pararLocalizacao(watch.watchId);
+pararEvento();</code></pre>
+
+        <h3>Biometria e storage seguro</h3>
+        <pre><code>const bio = await autenticarBiometria({
+  titulo: "Confirmar acesso",
+  descricao: "Use a biometria do aparelho"
+});
+
+if (bio.authenticated) {
+  await salvarSeguro("token", "abc123");
+  const token = await lerSeguro("token");
+  console.log(token);
+}</code></pre>
+
+        <h3>Papel de parede e ícone flutuante</h3>
+        <pre><code>const wallpaper = await definirPapelParede("foto.jpg", {
+  alvo: "inicio"
+});
+
+if (!wallpaper.applied) {
+  await abrirConfiguracaoPapelParede();
+}
+
+const overlay = await iniciarIconeFlutuante();
+
+if (overlay.requiresSettings) {
+  console.log("Permita aparecer sobre outros apps e chame de novo");
+}</code></pre>
+
+        <h3>Exemplo completo de travessia</h3>
+        <pre><code>await baixarArquivo("https://exemplo.com/foto.png", "foto.png");
+
+// vira:
+// 1. payload normalizado
+// 2. action downloadFile
+// 3. Java abre URL
+// 4. copia bytes para armazenamento interno
+// 5. mostra progresso se permitido
+// 6. grava metadados
+// 7. resolve Promise com JSON de resultado</code></pre>
+      </section>
+
+      <section id="desktop">
+        <h2>Desktop e laboratório</h2>
+        <p class="lead">A interface desktop é uma camada de operação sobre o mesmo núcleo do CLI. Ela não deve duplicar regra crítica; ela deve chamar as APIs centrais e mostrar o estado de forma clara.</p>
+
+        <h3>Processo principal</h3>
+        <p>Abre diálogos, roda build, roda doctor, cria laboratório, chama USB debug, gerencia janela e acessa o sistema de arquivos.</p>
+
+        <h3>Preload</h3>
+        <p>Expõe uma API segura para o renderer. Isso mantém Node fora da interface web e reduz o risco de a UI expor acesso indevido ao sistema.</p>
+
+        <h3>Renderer</h3>
+        <p>Cuida de idioma, tema, formulário, editor, logs, aba de códigos interpretados, categorias e laboratório de funções.</p>
+
+        <h3>Laboratório de funções</h3>
+        <p>O botão "Testar funções" cria um app temporário com runtime console ligado e botões para experimentar as APIs nativas no celular. Ele exige USB porque o objetivo é observar comportamento real, com permissões reais e execução no Android.</p>
+      </section>
+
+      <section id="limits">
+        <h2>Limites reais</h2>
+        <p class="lead">A ferramenta é mais confiável quando assume seus limites. Recursos que dependem do Android, do fabricante ou de permissões especiais precisam ser documentados com clareza.</p>
+
+        <ul>
+          <li>WebView continua sendo WebView: HTML/CSS/JS rodam dentro dela.</li>
+          <li>Permissão declarada no manifest não significa permissão concedida.</li>
+          <li>Fabricantes podem mudar telas de permissão, bateria, overlay e wallpaper.</li>
+          <li>Base64 gigante consome memória; para arquivos grandes, streaming é melhor.</li>
+          <li>Notificações no Android 13+ dependem de <code>POST_NOTIFICATIONS</code>.</li>
+          <li>Alarmes exatos podem exigir configuração manual.</li>
+          <li>Video wallpaper depende de live wallpaper; fundo de chamada depende do app/fabricante.</li>
+          <li>Apps abertos são limitados por privacidade do Android moderno.</li>
+          <li>OneSignal exige configuração externa e nunca deve receber chave secreta dentro do APK.</li>
+          <li>Keystore perdida não é recuperada pela ferramenta.</li>
+        </ul>
+      </section>
+
+      <section id="contribute">
+        <h2>Como mexer sem quebrar</h2>
+        <p class="lead">Uma mudança boa respeita o fluxo inteiro. Função nova não é só botão, nem só Java, nem só documentação. Ela precisa atravessar a ponte toda.</p>
+
+        <pre><code>função nova
+  -> nome PT-BR
+  -> alias inglês
+  -> normalizador JS
+  -> action Cordova
+  -> implementação Java
+  -> permissão manifest/runtime se precisar
+  -> retorno JSON consistente
+  -> runtime console se fizer sentido
+  -> aba códigos interpretados
+  -> laboratório USB se fizer sentido
+  -> teste de consistência JS/Java
+  -> documentação</code></pre>
+
+        <p>Para arquivo, preserve sanitização e FileProvider. Para permissão, preserve callback pendente e busy state. Para build, preserve temporário, logs e limpeza segura. Para UI, preserve preload como fronteira.</p>
+
+        <div class="note">O html2apk organiza a complexidade do Android para que o usuário consiga transformar um projeto web em app instalável sem implementar cada recurso nativo manualmente.</div>
+      </section>
+
+      <p class="footer">Criação, direção, propriedade e créditos: <strong>Caio Multiversando</strong>.</p>
+    </main>
+  </div>
+  <script>
+    (function () {
+      var button = document.getElementById("themeToggle");
+      var downloadButtons = document.querySelectorAll(".download-button[href]");
+
+      function currentTheme() {
+        return document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+      }
+
+      function applyTheme(theme) {
+        var isDark = theme === "dark";
+        document.documentElement.dataset.theme = isDark ? "dark" : "light";
+        if (button) {
+          button.textContent = isDark ? "Modo claro" : "Modo escuro";
+          button.setAttribute("aria-pressed", isDark ? "true" : "false");
+        }
+        try {
+          localStorage.setItem("html2apkSobreTheme", isDark ? "dark" : "light");
+        } catch (error) {
+        }
+      }
+
+      function isWindows() {
+        var platform = "";
+        var userAgent = "";
+
+        try {
+          platform = navigator.userAgentData && navigator.userAgentData.platform
+            ? navigator.userAgentData.platform
+            : navigator.platform || "";
+          userAgent = navigator.userAgent || "";
+        } catch (error) {
+          platform = "";
+          userAgent = "";
+        }
+
+        return /win/i.test(platform) || /windows/i.test(userAgent);
+      }
+
+      function warnIfNotWindows() {
+        if (isWindows()) {
+          return;
+        }
+
+        window.alert("O html2apk desktop foi feito para executar no Windows. O download vai abrir mesmo assim, mas use um computador Windows para rodar o .exe.");
+      }
+
+      if (button) {
+        applyTheme(currentTheme());
+        button.addEventListener("click", function () {
+          applyTheme(currentTheme() === "dark" ? "light" : "dark");
+        });
+      }
+
+      downloadButtons.forEach(function (downloadButton) {
+        downloadButton.addEventListener("click", warnIfNotWindows);
+      });
+    }());
+  </script>
+</body>
+</html>

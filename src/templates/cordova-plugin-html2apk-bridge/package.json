@@ -1,0 +1,16 @@
+{
+  "name": "cordova-plugin-html2apk-bridge",
+  "version": "0.1.0",
+  "description": "Initial native bridge used by html2apk generated apps.",
+  "cordova": {
+    "id": "cordova-plugin-html2apk-bridge",
+    "platforms": [
+      "android"
+    ]
+  },
+  "keywords": [
+    "cordova",
+    "html2apk"
+  ],
+  "license": "MIT"
+}

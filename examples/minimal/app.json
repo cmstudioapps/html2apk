@@ -1,0 +1,34 @@
+{
+  "_editMe": "Edite os campos abaixo e rode: html2apk doctor && html2apk build",
+  "appName": "MeuApp",
+  "packageId": "com.seuapp.meuapp",
+  "version": "1.0.0",
+  "buildFormat": "apk",
+  "mode": "fullscreen",
+  "orientation": "default",
+  "minSdkVersion": 24,
+  "themeColor": "#126fff",
+  "themeMode": "fixed",
+  "oneSignalAppId": "",
+  "icon": "",
+  "splash": "",
+  "permissions": [
+    "INTERNET",
+    "POST_NOTIFICATIONS",
+    "VIBRATE"
+  ],
+  "plugins": [],
+  "release": false,
+  "showRuntimeLogs": false,
+  "androidPlatform": "android@15.0.0",
+  "keystore": {
+    "path": "",
+    "alias": "",
+    "storePassword": "",
+    "keyPassword": ""
+  },
+  "debug": false,
+  "entryFile": "index.html",
+  "webRoot": ".",
+  "files": []
+}

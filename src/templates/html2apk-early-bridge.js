@@ -1,0 +1,1262 @@
+"use strict";
+
+(function () {
+  if (typeof window === "undefined" || window.Html2ApkEarlyBridge) {
+    return;
+  }
+
+  var deviceReady = typeof document === "undefined";
+  var readyCallbacks = [];
+  var scheduledNotificationCounter = 0;
+  var notificationActionCounter = 0;
+  var notificationActionCallbacks = {};
+  var eventAliases = {
+    "app:ready": "app:pronto",
+    "app:paused": "app:pausado",
+    "app:closed": "app:fechado",
+    "app:resumed": "app:voltou",
+    "back:button": "botao:voltar",
+    "link:opened": "link:aberto",
+    "network:changed": "rede:mudou",
+    "battery:changed": "bateria:mudou",
+    "location:changed": "localizacao:mudou",
+    "biometric:failed": "biometria:falhou",
+    "notification:received": "notificacao:recebida",
+    "notification:clicked": "notificacao:clicada"
+  };
+  var eventListeners = {};
+  var notificationListeners = [];
+  var initialNotification = null;
+  var initialLink = null;
+
+  function markReady() {
+    if (deviceReady) {
+      return;
+    }
+    deviceReady = true;
+    readyCallbacks.splice(0).forEach(function (callback) {
+      callback();
+    });
+  }
+
+  function whenReady() {
+    if (deviceReady) {
+      return Promise.resolve();
+    }
+    return new Promise(function (resolve) {
+      readyCallbacks.push(resolve);
+    });
+  }
+
+  if (typeof document !== "undefined") {
+    document.addEventListener("deviceready", markReady, false);
+  }
+
+  function call(action, args) {
+    return whenCordovaBridgeReady().then(function (exec) {
+      return new Promise(function (resolve, reject) {
+        try {
+          exec(resolve, reject, "Html2ApkBridge", action, args || []);
+        } catch (error) {
+          reject(error);
+        }
+      });
+    });
+  }
+
+  function whenCordovaBridgeReady() {
+    var startedAt;
+
+    if (isCordovaBridgeReady()) {
+      return Promise.resolve(window.cordova.exec);
+    }
+
+    startedAt = Date.now();
+    return new Promise(function (resolve, reject) {
+      var timer = setInterval(function () {
+        if (isCordovaBridgeReady()) {
+          clearInterval(timer);
+          resolve(window.cordova.exec);
+          return;
+        }
+        if (Date.now() - startedAt > 10000) {
+          clearInterval(timer);
+          reject(new Error("html2apk native bridge is not ready. Make sure cordova.js finished loading."));
+        }
+      }, 25);
+    });
+  }
+
+  function isCordovaBridgeReady() {
+    var channel = cordovaChannel();
+    return Boolean(
+      window.cordova &&
+      typeof window.cordova.exec === "function" &&
+      channel &&
+      channel.onCordovaReady &&
+      channel.onCordovaReady.state === 2
+    );
+  }
+
+  function cordovaChannel() {
+    try {
+      if (window.cordova && typeof window.cordova.require === "function") {
+        return window.cordova.require("cordova/channel");
+      }
+    } catch (error) {
+      return null;
+    }
+    return null;
+  }
+
+  function asyncThrow(error) {
+    setTimeout(function () {
+      throw error;
+    }, 0);
+  }
+
+  function cloneSerializable(value) {
+    var output;
+
+    if (typeof value === "function" || typeof value === "undefined") {
+      return undefined;
+    }
+    if (value === null || typeof value !== "object") {
+      return value;
+    }
+    if (Array.isArray(value)) {
+      output = [];
+      value.forEach(function (item) {
+        var cloned = cloneSerializable(item);
+        if (typeof cloned !== "undefined") {
+          output.push(cloned);
+        }
+      });
+      return output;
+    }
+    if (value instanceof Date) {
+      return value.toISOString();
+    }
+
+    output = {};
+    Object.keys(value).forEach(function (key) {
+      var cloned = cloneSerializable(value[key]);
+      if (typeof cloned !== "undefined") {
+        output[key] = cloned;
+      }
+    });
+    return output;
+  }
+
+  function registerNotificationAction(handler, source) {
+    var id = "html2apk-click-" + Date.now() + "-" + (++notificationActionCounter);
+    notificationActionCallbacks[id] = function (detail) {
+      return handler(detail, source || {});
+    };
+    return id;
+  }
+
+  function normalizeNotificationClick(click) {
+    var normalized;
+    var callbackId;
+    var actionHandler;
+    var functionName;
+
+    if (typeof click === "function") {
+      callbackId = registerNotificationAction(click);
+      return {
+        action: "run-function",
+        acao: "executar-funcao",
+        callbackId: callbackId
+      };
+    }
+
+    if (!click || typeof click !== "object") {
+      return {
+        action: "open-app",
+        acao: "abrir-app"
+      };
+    }
+
+    normalized = cloneSerializable(click) || {};
+    actionHandler = click.acao || click.action;
+    if (typeof actionHandler === "function") {
+      callbackId = registerNotificationAction(actionHandler, click);
+      normalized.callbackId = callbackId;
+      normalized.action = normalized.action || "run-function";
+      normalized.acao = normalized.acao || "executar-funcao";
+    }
+
+    functionName = normalized.funcao || normalized.functionName || normalized.function || normalized.fn || normalized.nomeFuncao;
+    if (typeof functionName === "string" && functionName.trim()) {
+      normalized.funcao = functionName.trim();
+      normalized.functionName = normalized.funcao;
+      normalized.action = normalized.action || "run-function";
+      normalized.acao = normalized.acao || "executar-funcao";
+    }
+
+    if (normalized.action && !normalized.acao) {
+      normalized.acao = normalized.action;
+    }
+    if (normalized.acao && !normalized.action) {
+      normalized.action = normalized.acao;
+    }
+
+    return normalized;
+  }
+
+  function notificationOpenValue(source) {
+    if (!source || typeof source !== "object") {
+      return undefined;
+    }
+    if (Object.prototype.hasOwnProperty.call(source, "open")) {
+      return source.open !== false;
+    }
+    if (Object.prototype.hasOwnProperty.call(source, "abrir")) {
+      return source.abrir !== false;
+    }
+    if (Object.prototype.hasOwnProperty.call(source, "abrirApp")) {
+      return source.abrirApp !== false;
+    }
+    if (Object.prototype.hasOwnProperty.call(source, "openApp")) {
+      return source.openApp !== false;
+    }
+    return undefined;
+  }
+
+  function normalizeNotificationActions(actions) {
+    if (!Array.isArray(actions)) {
+      return actions;
+    }
+
+    return actions.map(function (action) {
+      var normalized = cloneSerializable(action) || {};
+      var click = action && (action.aoClicar || action.onClick);
+      if (!click && action && (
+        typeof action.funcao === "string" ||
+        typeof action.functionName === "string" ||
+        typeof action.fn === "string"
+      )) {
+        click = action;
+      }
+      if (click) {
+        normalized.aoClicar = normalizeNotificationClick(click);
+        normalized.onClick = normalized.aoClicar;
+      }
+      if (typeof notificationOpenValue(action) !== "undefined") {
+        normalized.open = notificationOpenValue(action);
+        if (normalized.aoClicar && typeof normalized.aoClicar.open === "undefined") {
+          normalized.aoClicar.open = normalized.open;
+          normalized.onClick = normalized.aoClicar;
+        }
+      }
+      return normalized;
+    });
+  }
+
+  function normalizeNotificationOptions(messageOrOptions) {
+    var options;
+    var click;
+    var actions;
+
+    if (typeof messageOrOptions === "string") {
+      return {
+        title: "Notificacao",
+        titulo: "Notificacao",
+        text: messageOrOptions,
+        texto: messageOrOptions,
+        onClick: { action: "open-app" }
+      };
+    }
+
+    options = cloneSerializable(messageOrOptions || {}) || {};
+    click = messageOrOptions && (messageOrOptions.aoClicar || messageOrOptions.onClick);
+    options.onClick = normalizeNotificationClick(click);
+    options.aoClicar = options.onClick;
+    if (typeof notificationOpenValue(messageOrOptions) !== "undefined") {
+      options.open = notificationOpenValue(messageOrOptions);
+      options.abrir = options.open;
+      options.onClick.open = options.open;
+      options.aoClicar.open = options.open;
+    }
+
+    actions = normalizeNotificationActions(messageOrOptions && (messageOrOptions.acoes || messageOrOptions.actions));
+    if (Array.isArray(actions)) {
+      options.acoes = actions;
+      options.actions = actions;
+    }
+
+    return options;
+  }
+
+  function notificationId(input) {
+    if (input && typeof input === "object") {
+      return input.id || input.notificationId || input.notificacaoId;
+    }
+    return input;
+  }
+
+  function normalizeScheduledNotificationOptions(options) {
+    var normalized = normalizeNotificationOptions(options || {});
+    if (!normalized.id) {
+      scheduledNotificationCounter = (scheduledNotificationCounter + 1) % 100000;
+      normalized.id = Math.floor(Date.now() % 0x0fffffff) + scheduledNotificationCounter;
+    }
+    return normalized;
+  }
+
+  function parseIntervalMs(value) {
+    var text;
+    var match;
+    var amount;
+    var unit;
+
+    if (typeof value === "number" && isFinite(value)) {
+      return Math.max(0, Math.round(value));
+    }
+    if (value && typeof value === "object") {
+      return parseIntervalMs(value.intervalo || value.interval || value.aCada || value.every || value.ms);
+    }
+
+    text = String(value || "").trim().toLowerCase();
+    match = text.match(/^(\d+(?:\.\d+)?)\s*(ms|s|seg|m|min|h|hr|d|dia|dias)?$/);
+    if (!match) {
+      return 0;
+    }
+
+    amount = Number(match[1]);
+    unit = match[2] || "ms";
+    if (unit === "s" || unit === "seg") {
+      return Math.round(amount * 1000);
+    }
+    if (unit === "m" || unit === "min") {
+      return Math.round(amount * 60 * 1000);
+    }
+    if (unit === "h" || unit === "hr") {
+      return Math.round(amount * 60 * 60 * 1000);
+    }
+    if (unit === "d" || unit === "dia" || unit === "dias") {
+      return Math.round(amount * 24 * 60 * 60 * 1000);
+    }
+    return Math.round(amount);
+  }
+
+  function scheduleNotification(options) {
+    return call("scheduleNotification", [normalizeScheduledNotificationOptions(options || {})]);
+  }
+
+  function scheduleNotifications(items) {
+    var list = Array.isArray(items) ? items : [];
+    return Promise.all(list.map(function (item) {
+      return scheduleNotification(item);
+    }));
+  }
+
+  function scheduleNotificationLoop(options) {
+    var source = options || {};
+    var notifications = source.notificacoes || source.notifications || source.items || [];
+    var interval = parseIntervalMs(source.intervalo || source.interval || source.aCada || source.every || source.repeat || source.repetir);
+    var normalized;
+
+    if (!interval) {
+      return Promise.reject(new Error("Notification loop interval is required."));
+    }
+    if (!Array.isArray(notifications) || notifications.length === 0) {
+      return Promise.reject(new Error("Notification loop requires at least one notification."));
+    }
+
+    normalized = normalizeScheduledNotificationOptions(Object.assign({}, source));
+    normalized.intervalo = interval;
+    normalized.interval = interval;
+    normalized.repeat = true;
+    normalized.repetir = true;
+    normalized.notificacoes = notifications.map(function (item) {
+      return normalizeNotificationOptions(Object.assign({}, item || {}));
+    });
+    normalized.notifications = normalized.notificacoes;
+    normalized.loopIndex = Number(source.loopIndex || source.indiceLoop || 0) || 0;
+    normalized.indiceLoop = normalized.loopIndex;
+    normalized.quando = normalized.quando || normalized.when || (Date.now() + interval);
+    normalized.when = normalized.when || normalized.quando;
+    return scheduleNotification(normalized);
+  }
+
+  function firstOrNull(result) {
+    return Array.isArray(result) && result.length ? result[0] : null;
+  }
+
+  function openInAppUrl(url, options) {
+    var target = String(url || "").trim();
+    if (!target) {
+      return Promise.reject(new Error("URL is required."));
+    }
+    return Promise.resolve({
+      url: target,
+      target: "app",
+      alvo: "app",
+      opened: true,
+      aberto: true
+    }).then(function (result) {
+      setTimeout(function () {
+        if (options && (options.replace || options.substituir)) {
+          window.location.replace(target);
+          return;
+        }
+        window.location.assign(target);
+      }, 0);
+      return result;
+    });
+  }
+
+  function hasOwn(object, key) {
+    return Object.prototype.hasOwnProperty.call(object || {}, key);
+  }
+
+  function storedFileOptions(nameOrOptions, value, options) {
+    var normalized;
+    if (nameOrOptions && typeof nameOrOptions === "object" && !Array.isArray(nameOrOptions)) {
+      return cloneSerializable(nameOrOptions) || {};
+    }
+
+    normalized = cloneSerializable(options || {}) || {};
+    normalized.name = String(nameOrOptions || "");
+    normalized.nome = normalized.name;
+    normalized.value = cloneSerializable(value);
+    normalized.valor = normalized.value;
+    if (typeof value !== "string" && !hasOwn(normalized, "json")) {
+      normalized.json = true;
+    }
+    return normalized;
+  }
+
+  function storedFileNameOptions(nameOrOptions, options) {
+    var normalized;
+    if (nameOrOptions && typeof nameOrOptions === "object" && !Array.isArray(nameOrOptions)) {
+      return cloneSerializable(nameOrOptions) || {};
+    }
+    normalized = cloneSerializable(options || {}) || {};
+    normalized.name = String(nameOrOptions || "");
+    normalized.nome = normalized.name;
+    return normalized;
+  }
+
+  function applyDownloadName(normalized, nameOrOptions) {
+    if (typeof nameOrOptions === "string") {
+      normalized.name = nameOrOptions;
+      normalized.nome = nameOrOptions;
+      normalized.fileName = nameOrOptions;
+      normalized.nomeArquivo = nameOrOptions;
+    } else if (nameOrOptions && typeof nameOrOptions === "object" && !Array.isArray(nameOrOptions)) {
+      Object.assign(normalized, cloneSerializable(nameOrOptions) || {});
+    }
+    return normalized;
+  }
+
+  function applyBase64DownloadSource(normalized, value) {
+    var source = String(value || "");
+    var comma;
+    var header;
+    var mimeType;
+
+    if (source.indexOf("data:") === 0) {
+      comma = source.indexOf(",");
+      header = comma >= 0 ? source.slice(5, comma) : "";
+      mimeType = header.split(";")[0];
+      normalized.base64 = comma >= 0 ? source.slice(comma + 1) : source;
+      if (mimeType) {
+        normalized.mimeType = normalized.mimeType || mimeType;
+        normalized.tipoMime = normalized.tipoMime || mimeType;
+      }
+      return normalized;
+    }
+
+    normalized.base64 = source;
+    return normalized;
+  }
+
+  function downloadFileOptions(urlOrOptions, nameOrOptions) {
+    var normalized;
+    var source;
+
+    if (urlOrOptions && typeof urlOrOptions === "object" && !Array.isArray(urlOrOptions)) {
+      normalized = cloneSerializable(urlOrOptions) || {};
+      return applyDownloadName(normalized, nameOrOptions);
+    }
+
+    normalized = {};
+    source = String(urlOrOptions || "").trim();
+    if (source.indexOf("data:") === 0) {
+      applyBase64DownloadSource(normalized, source);
+    } else {
+      normalized.url = source;
+    }
+    return applyDownloadName(normalized, nameOrOptions);
+  }
+
+  function downloadBase64Options(nameOrOptions, base64, options) {
+    var normalized;
+    if (nameOrOptions && typeof nameOrOptions === "object" && !Array.isArray(nameOrOptions)) {
+      normalized = cloneSerializable(nameOrOptions) || {};
+      if (typeof base64 === "string") {
+        applyBase64DownloadSource(normalized, base64);
+      } else if (base64 && typeof base64 === "object" && !Array.isArray(base64)) {
+        Object.assign(normalized, cloneSerializable(base64) || {});
+      }
+      return normalized;
+    }
+
+    normalized = cloneSerializable(options || {}) || {};
+    applyDownloadName(normalized, String(nameOrOptions || ""));
+    return applyBase64DownloadSource(normalized, base64);
+  }
+
+  function downloadLocalFileOptions(fileOrOptions, nameOrOptions) {
+    var normalized;
+    var source;
+
+    if (fileOrOptions && typeof fileOrOptions === "object" && !Array.isArray(fileOrOptions)) {
+      normalized = cloneSerializable(fileOrOptions) || {};
+      return applyDownloadName(normalized, nameOrOptions);
+    }
+
+    normalized = {};
+    source = String(fileOrOptions || "").trim();
+    if (/^(content|file):\/\//.test(source)) {
+      normalized.uri = source;
+      normalized.contentUri = source;
+    } else if (/^[A-Za-z]:[\\/]/.test(source) || source.charAt(0) === "/" || source.charAt(0) === "\\") {
+      normalized.path = source;
+      normalized.caminho = source;
+    } else {
+      normalized.sourceName = source;
+      normalized.arquivoOrigem = source;
+    }
+    return applyDownloadName(normalized, nameOrOptions);
+  }
+
+  function wallpaperOptions(sourceOrOptions, options) {
+    var normalized;
+    var source;
+    var comma;
+    var header;
+    var mimeType;
+
+    if (sourceOrOptions && typeof sourceOrOptions === "object" && !Array.isArray(sourceOrOptions)) {
+      normalized = cloneSerializable(sourceOrOptions) || {};
+    } else {
+      normalized = cloneSerializable(options || {}) || {};
+      source = String(sourceOrOptions || "").trim();
+      if (source.indexOf("data:") === 0) {
+        comma = source.indexOf(",");
+        header = comma >= 0 ? source.slice(5, comma) : "";
+        mimeType = header.split(";")[0];
+        normalized.base64 = comma >= 0 ? source.slice(comma + 1) : source;
+        if (mimeType) {
+          normalized.mimeType = normalized.mimeType || mimeType;
+          normalized.tipoMime = normalized.tipoMime || mimeType;
+        }
+      } else if (/^(content|file):\/\//.test(source)) {
+        normalized.uri = source;
+        normalized.contentUri = source;
+      } else if (/^[A-Za-z]:[\\/]/.test(source) || source.charAt(0) === "/" || source.charAt(0) === "\\") {
+        normalized.path = source;
+        normalized.caminho = source;
+      } else {
+        normalized.name = source;
+        normalized.nome = source;
+        normalized.fileName = source;
+        normalized.nomeArquivo = source;
+      }
+    }
+
+    if (normalized.alvo && !normalized.target) {
+      normalized.target = normalized.alvo;
+    }
+    if (normalized.target && !normalized.alvo) {
+      normalized.alvo = normalized.target;
+    }
+    return normalized;
+  }
+
+  function secureItemOptions(keyOrOptions, value, options) {
+    var normalized;
+    if (keyOrOptions && typeof keyOrOptions === "object" && !Array.isArray(keyOrOptions)) {
+      return cloneSerializable(keyOrOptions) || {};
+    }
+    normalized = cloneSerializable(options || {}) || {};
+    normalized.key = String(keyOrOptions || "");
+    normalized.chave = normalized.key;
+    normalized.value = cloneSerializable(value);
+    normalized.valor = normalized.value;
+    if (typeof value !== "string" && !hasOwn(normalized, "json")) {
+      normalized.json = true;
+    }
+    return normalized;
+  }
+
+  function secureKeyOptions(keyOrOptions, options) {
+    var normalized;
+    if (keyOrOptions && typeof keyOrOptions === "object" && !Array.isArray(keyOrOptions)) {
+      return cloneSerializable(keyOrOptions) || {};
+    }
+    normalized = cloneSerializable(options || {}) || {};
+    normalized.key = String(keyOrOptions || "");
+    normalized.chave = normalized.key;
+    return normalized;
+  }
+
+  function unwrapStoredValue(result) {
+    if (!result || result.exists === false || result.existe === false) {
+      return null;
+    }
+    if (hasOwn(result, "value")) {
+      return result.value;
+    }
+    if (hasOwn(result, "valor")) {
+      return result.valor;
+    }
+    if (hasOwn(result, "base64")) {
+      return result.base64;
+    }
+    if (hasOwn(result, "content")) {
+      return result.content;
+    }
+    if (hasOwn(result, "conteudo")) {
+      return result.conteudo;
+    }
+    return result;
+  }
+
+  function detectQRCodeFromPhoto(photo) {
+    var source;
+    var detector;
+
+    if (!photo || !photo.base64) {
+      return null;
+    }
+    if (typeof BarcodeDetector !== "function" || typeof createImageBitmap !== "function" || typeof fetch !== "function") {
+      throw new Error("QR code scanning requires BarcodeDetector support in this Android WebView.");
+    }
+
+    detector = new BarcodeDetector({ formats: ["qr_code"] });
+    source = "data:" + (photo.mimeType || "image/jpeg") + ";base64," + photo.base64;
+    return fetch(source)
+      .then(function (response) {
+        return response.blob();
+      })
+      .then(function (blob) {
+        return createImageBitmap(blob);
+      })
+      .then(function (image) {
+        return detector.detect(image);
+      })
+      .then(function (codes) {
+        var first = codes && codes[0];
+        if (!first) {
+          return null;
+        }
+        return {
+          text: first.rawValue || "",
+          texto: first.rawValue || "",
+          rawValue: first.rawValue || "",
+          valorBruto: first.rawValue || "",
+          format: first.format || "qr_code",
+          formato: first.format || "qr_code",
+          codes: codes,
+          codigos: codes,
+          photo: photo,
+          foto: photo
+        };
+      });
+  }
+
+  function normalizeEventType(type) {
+    var eventType = String(type || "");
+    return eventAliases[eventType] || eventType;
+  }
+
+  function emitEvent(type, detail) {
+    var eventType = normalizeEventType(type || (detail && detail.type));
+    var payload = detail || {};
+    if (!eventType) {
+      return;
+    }
+    payload.type = payload.type || eventType;
+    payload.tipo = payload.tipo || eventType;
+    payload.timestamp = payload.timestamp || Date.now();
+    (eventListeners[eventType] || []).slice().forEach(function (listener) {
+      listener(payload);
+    });
+  }
+
+  function onEvent(type, listener) {
+    if (typeof listener !== "function") {
+      throw new TypeError("listener must be a function");
+    }
+    var eventType = normalizeEventType(type);
+    eventListeners[eventType] = eventListeners[eventType] || [];
+    eventListeners[eventType].push(listener);
+    return function unsubscribe() {
+      eventListeners[eventType] = (eventListeners[eventType] || []).filter(function (item) {
+        return item !== listener;
+      });
+    };
+  }
+
+  function emitNotificationClick(detail) {
+    var notification = detail || null;
+    initialNotification = notification;
+    notificationListeners.slice().forEach(function (listener) {
+      try {
+        listener(notification);
+      } catch (error) {
+        asyncThrow(error);
+      }
+    });
+    executeNotificationClickAction(notification);
+  }
+
+  function notificationActionFromDetail(detail) {
+    var action;
+
+    if (!detail || typeof detail !== "object") {
+      return null;
+    }
+
+    action = detail.action || detail.acao;
+    if (action && typeof action === "object") {
+      if (action.callbackId || action.functionName || action.funcao || action.fn || action.nomeFuncao) {
+        return action;
+      }
+      if (action.aoClicar || action.onClick) {
+        return action.aoClicar || action.onClick;
+      }
+    }
+
+    return detail.aoClicar || detail.onClick || null;
+  }
+
+  function notificationActionArgs(action, detail) {
+    var args = action && (
+      action.argumentos ||
+      action.args ||
+      action.parametros ||
+      action.params ||
+      action.parameters
+    );
+
+    if (typeof args === "undefined") {
+      return action && (action.passarEvento === false || action.passEvent === false) ? [] : [detail];
+    }
+
+    return Array.isArray(args) ? args : [args];
+  }
+
+  function handleActionResult(result) {
+    if (result && typeof result.then === "function") {
+      result.catch(asyncThrow);
+    }
+  }
+
+  function executeNotificationClickAction(detail) {
+    var action = notificationActionFromDetail(detail);
+    var callbackId = action && (action.callbackId || action.idCallback || action.callback);
+    var functionName;
+    var handler;
+    var args;
+
+    if (!action || typeof action !== "object") {
+      return;
+    }
+    if (detail && detail.__html2apkActionHandled) {
+      return;
+    }
+
+    if (callbackId && notificationActionCallbacks[callbackId]) {
+      detail.__html2apkActionHandled = true;
+      handleActionResult(notificationActionCallbacks[callbackId](detail));
+      return;
+    }
+
+    functionName = action.funcao || action.functionName || action.function || action.fn || action.nomeFuncao;
+    if (!functionName) {
+      return;
+    }
+
+    handler = api && api[functionName];
+    if (typeof handler !== "function") {
+      handler = window[functionName];
+    }
+    if (typeof handler !== "function") {
+      return;
+    }
+
+    args = notificationActionArgs(action, detail);
+    detail.__html2apkActionHandled = true;
+    handleActionResult(handler.apply(window, args));
+  }
+
+  var api = {
+    notificar: function (messageOrOptions) {
+      return call("notify", [normalizeNotificationOptions(messageOrOptions)]);
+    },
+    agendarNotificacao: function (options) {
+      return Array.isArray(options) ? scheduleNotifications(options) : scheduleNotification(options);
+    },
+    agendarNotificacoes: scheduleNotifications,
+    agendarLoopNotificacoes: scheduleNotificationLoop,
+    cancelarNotificacao: function (id) {
+      return call("cancelNotification", [notificationId(id)]);
+    },
+    cancelarLoopNotificacoes: function (id) {
+      return call("cancelNotification", [notificationId(id)]);
+    },
+    vibrar: function (ms) {
+      return call("vibrate", [Number(ms) || 200]);
+    },
+    toast: function (message) {
+      return call("toast", [String(message || "")]);
+    },
+    fullscreen: function (enabled) {
+      return call("fullscreen", [Boolean(enabled)]);
+    },
+    manterTelaAcordada: function (enabled) {
+      return call("keepScreenAwake", [Boolean(enabled)]);
+    },
+    brilhoTela: function (value) {
+      return call("setScreenBrightness", [Number(value)]);
+    },
+    definirCorTema: function (optionsOrColor) {
+      return call("setSystemBarsColor", [optionsOrColor || "#126fff"]);
+    },
+    definirCorBarrasSistema: function (optionsOrColor) {
+      return call("setSystemBarsColor", [optionsOrColor || "#126fff"]);
+    },
+    lanterna: function (enabled) {
+      return call("flashlight", [Boolean(enabled)]);
+    },
+    alternarLanterna: function () {
+      return call("toggleFlashlight");
+    },
+    statusLanterna: function () {
+      return call("flashlightStatus");
+    },
+    tirarFoto: function (options) {
+      return call("capturePhoto", [options || {}]);
+    },
+    capturarVideo: function (options) {
+      return call("captureVideo", [options || {}]);
+    },
+    escanearQRCode: function (options) {
+      return api.tirarFoto(Object.assign({ base64: true }, options || {})).then(detectQRCodeFromPhoto);
+    },
+    solicitarPermissaoCamera: function () {
+      return call("requestCameraPermission");
+    },
+    solicitarPermissaoMicrofone: function () {
+      return call("requestMicrophonePermission");
+    },
+    statusMicrofone: function () {
+      return call("microphoneStatus");
+    },
+    ouvirMic: function () {
+      return call("startMic");
+    },
+    pararMic: function () {
+      return call("stopMic");
+    },
+    copiarTexto: function (text) {
+      return call("copyText", [String(text || "")]);
+    },
+    lerTextoCopiado: function () {
+      return call("readText");
+    },
+    compartilharTexto: function (text) {
+      return call("shareText", [String(text || "")]);
+    },
+    compartilhar: function (options) {
+      return call("share", [options || {}]);
+    },
+    abrirUrl: function (url) {
+      return call("openUrl", [String(url || "")]);
+    },
+    abrirNoApp: function (url, options) {
+      return openInAppUrl(url, options || {});
+    },
+    discar: function (phone) {
+      return call("dial", [String(phone || "")]);
+    },
+    abrirMapa: function (query) {
+      return call("openMap", [String(query || "")]);
+    },
+    abrirWhatsapp: function (phone, message) {
+      return call("openWhatsapp", [String(phone || ""), String(message || "")]);
+    },
+    escolherArquivo: function (options) {
+      return call("pickFile", [options || {}]).then(firstOrNull);
+    },
+    escolherArquivos: function (options) {
+      var nextOptions = options || {};
+      nextOptions.multiplo = nextOptions.multiplo !== false;
+      nextOptions.multiple = nextOptions.multiple !== false;
+      return call("pickFile", [nextOptions]);
+    },
+    escolherImagem: function (options) {
+      return call("pickFile", [Object.assign({ tipo: "image", kind: "image" }, options || {})]).then(firstOrNull);
+    },
+    escolherImagens: function (options) {
+      return call("pickFile", [Object.assign({ tipo: "image", kind: "image", multiplo: true, multiple: true }, options || {})]);
+    },
+    escolherVideo: function (options) {
+      return call("pickFile", [Object.assign({ tipo: "video", kind: "video" }, options || {})]).then(firstOrNull);
+    },
+    escolherPasta: function () {
+      return call("pickFolder");
+    },
+    salvarArquivo: function (nameOrOptions, value, options) {
+      if (typeof nameOrOptions === "string") {
+        return call("saveStoredFile", [storedFileOptions(nameOrOptions, value, options)]);
+      }
+      return call("saveFile", [nameOrOptions || {}]);
+    },
+    lerArquivo: function (nameOrOptions, options) {
+      return call("readStoredFile", [storedFileNameOptions(nameOrOptions, options)]).then(unwrapStoredValue);
+    },
+    lerArquivoCompleto: function (nameOrOptions, options) {
+      return call("readStoredFile", [storedFileNameOptions(nameOrOptions, options)]);
+    },
+    excluirArquivo: function (nameOrOptions, options) {
+      return call("deleteStoredFile", [storedFileNameOptions(nameOrOptions, options)]);
+    },
+    infoArquivo: function (nameOrOptions, options) {
+      return call("storedFileInfo", [storedFileNameOptions(nameOrOptions, options)]);
+    },
+    arquivoExiste: function (nameOrOptions, options) {
+      return api.infoArquivo(nameOrOptions, options).then(function (info) {
+        return Boolean(info && (info.exists || info.existe));
+      });
+    },
+    listarArquivos: function () {
+      return call("listStoredFiles");
+    },
+    abrirArquivo: function (nameOrOptions, options) {
+      return call("openStoredFile", [storedFileNameOptions(nameOrOptions, options)]);
+    },
+    compartilharArquivo: function (nameOrOptions, options) {
+      return call("shareStoredFile", [storedFileNameOptions(nameOrOptions, options)]);
+    },
+    baixarArquivo: function (urlOrOptions, nameOrOptions) {
+      return call("downloadFile", [downloadFileOptions(urlOrOptions, nameOrOptions)]);
+    },
+    baixarBase64: function (nameOrOptions, base64, options) {
+      return call("downloadFile", [downloadBase64Options(nameOrOptions, base64, options)]);
+    },
+    baixarArquivoLocal: function (fileOrOptions, nameOrOptions) {
+      return call("downloadFile", [downloadLocalFileOptions(fileOrOptions, nameOrOptions)]);
+    },
+    definirPapelParede: function (sourceOrOptions, options) {
+      return call("setWallpaper", [wallpaperOptions(sourceOrOptions, options)]);
+    },
+    infoPapelParede: function () {
+      return call("wallpaperInfo");
+    },
+    abrirConfiguracaoPapelParede: function () {
+      return call("openWallpaperSettings");
+    },
+    infoDispositivo: function () {
+      return call("deviceInfo");
+    },
+    infoRede: function () {
+      return call("networkInfo");
+    },
+    infoBateria: function () {
+      return call("batteryInfo");
+    },
+    infoMemoria: function () {
+      return call("memoryInfo");
+    },
+    infoArmazenamento: function () {
+      return call("storageInfo");
+    },
+    infoDesempenho: function () {
+      return call("performanceInfo");
+    },
+    appsAbertos: function () {
+      return call("openAppsMemory");
+    },
+    infoAppsAbertos: function () {
+      return call("openAppsMemory");
+    },
+    obterLocalizacao: function (options) {
+      return call("getLocation", [options || {}]);
+    },
+    acompanharLocalizacao: function (options) {
+      return call("watchLocation", [options || {}]);
+    },
+    pararLocalizacao: function (id) {
+      return call("stopLocationWatch", [id || ""]);
+    },
+    aoMudarLocalizacao: function (listener) {
+      return onEvent("localizacao:mudou", listener);
+    },
+    autenticarBiometria: function (options) {
+      return call("authenticateBiometric", [options || {}]);
+    },
+    salvarSeguro: function (keyOrOptions, value, options) {
+      return call("saveSecureItem", [secureItemOptions(keyOrOptions, value, options)]);
+    },
+    lerSeguro: function (keyOrOptions, options) {
+      return call("readSecureItem", [secureKeyOptions(keyOrOptions, options)]).then(unwrapStoredValue);
+    },
+    lerSeguroCompleto: function (keyOrOptions, options) {
+      return call("readSecureItem", [secureKeyOptions(keyOrOptions, options)]);
+    },
+    removerSeguro: function (keyOrOptions, options) {
+      return call("deleteSecureItem", [secureKeyOptions(keyOrOptions, options)]);
+    },
+    listarSeguro: function () {
+      return call("listSecureKeys");
+    },
+    limparSeguro: function () {
+      return call("clearSecureStorage");
+    },
+    statusPermissoes: function (permissions) {
+      return call("permissionStatus", [permissions || []]);
+    },
+    solicitarPermissaoNotificacoes: function () {
+      return call("requestNotificationPermission");
+    },
+    statusPermissaoNotificacoes: function () {
+      return call("notificationPermissionStatus");
+    },
+    podeAgendarNotificacaoExata: function () {
+      return call("canScheduleExactAlarms");
+    },
+    abrirConfiguracaoAlarmeExato: function () {
+      return call("openExactAlarmSettings");
+    },
+    statusPermissaoSobreposicao: function () {
+      return call("overlayPermissionStatus");
+    },
+    solicitarPermissaoSobreposicao: function () {
+      return call("requestOverlayPermission");
+    },
+    abrirConfiguracaoSobreposicao: function () {
+      return call("openOverlaySettings");
+    },
+    iniciarIconeFlutuante: function () {
+      return call("startFloatingIcon");
+    },
+    pararIconeFlutuante: function () {
+      return call("stopFloatingIcon");
+    },
+    obterNotificacaoInicial: function () {
+      return call("getInitialNotification").then(function (notification) {
+        initialNotification = notification && notification.id ? notification : null;
+        return initialNotification;
+      });
+    },
+    obterLinkInicial: function () {
+      return call("getInitialLink").then(function (link) {
+        initialLink = link && link.url ? link : null;
+        return initialLink;
+      });
+    },
+    aoEvento: onEvent,
+    aoMinimizar: function (listener) {
+      return onEvent("app:background", listener);
+    },
+    aoVoltarParaApp: function (listener) {
+      return onEvent("app:voltou", listener);
+    },
+    aoAbrirLink: function (listener) {
+      if (initialLink) {
+        setTimeout(function () {
+          listener(initialLink);
+        }, 0);
+      }
+      return onEvent("link:aberto", listener);
+    },
+    aoMudarRede: function (listener) {
+      return onEvent("rede:mudou", listener);
+    },
+    aoMudarBateria: function (listener) {
+      return onEvent("bateria:mudou", listener);
+    },
+    aoClicarNotificacao: function (listener) {
+      if (typeof listener !== "function") {
+        throw new TypeError("listener must be a function");
+      }
+      notificationListeners.push(listener);
+      if (initialNotification) {
+        listener(initialNotification);
+      }
+      return function unsubscribe() {
+        notificationListeners = notificationListeners.filter(function (item) {
+          return item !== listener;
+        });
+      };
+    }
+  };
+
+  Object.assign(api, {
+    notify: api.notificar,
+    scheduleNotification: api.agendarNotificacao,
+    scheduleNotifications: api.agendarNotificacoes,
+    scheduleNotificationLoop: api.agendarLoopNotificacoes,
+    cancelNotification: api.cancelarNotificacao,
+    cancelNotificationLoop: api.cancelarLoopNotificacoes,
+    vibrate: api.vibrar,
+    manterTelaLigada: api.manterTelaAcordada,
+    keepScreenAwake: api.manterTelaAcordada,
+    keepScreenOn: api.manterTelaAcordada,
+    setScreenBrightness: api.brilhoTela,
+    setThemeColor: api.definirCorTema,
+    setSystemBarsColor: api.definirCorBarrasSistema,
+    flashlight: api.lanterna,
+    toggleFlashlight: api.alternarLanterna,
+    flashlightStatus: api.statusLanterna,
+    takePhoto: api.tirarFoto,
+    capturePhoto: api.tirarFoto,
+    captureVideo: api.capturarVideo,
+    scanQRCode: api.escanearQRCode,
+    scanQrCode: api.escanearQRCode,
+    requestCameraPermission: api.solicitarPermissaoCamera,
+    requestMicrophonePermission: api.solicitarPermissaoMicrofone,
+    microphoneStatus: api.statusMicrofone,
+    listenMic: api.ouvirMic,
+    startMic: api.ouvirMic,
+    startMicRecording: api.ouvirMic,
+    stopMic: api.pararMic,
+    stopMicRecording: api.pararMic,
+    copyText: api.copiarTexto,
+    readText: api.lerTextoCopiado,
+    shareText: api.compartilharTexto,
+    share: api.compartilhar,
+    openUrl: api.abrirUrl,
+    openExternalUrl: api.abrirUrl,
+    abrirUrlExterno: api.abrirUrl,
+    openOutsideApp: api.abrirUrl,
+    abrirForaDoApp: api.abrirUrl,
+    openInApp: api.abrirNoApp,
+    dial: api.discar,
+    openMap: api.abrirMapa,
+    openWhatsapp: api.abrirWhatsapp,
+    pickFile: api.escolherArquivo,
+    pickFiles: api.escolherArquivos,
+    pickImage: api.escolherImagem,
+    pickImages: api.escolherImagens,
+    pickVideo: api.escolherVideo,
+    pickFolder: api.escolherPasta,
+    saveFile: api.salvarArquivo,
+    readFile: api.lerArquivo,
+    readStoredFile: api.lerArquivo,
+    readStoredFileInfo: api.lerArquivoCompleto,
+    deleteFile: api.excluirArquivo,
+    removeFile: api.excluirArquivo,
+    excluirArquivoArmazenado: api.excluirArquivo,
+    removerArquivo: api.excluirArquivo,
+    apagarArquivo: api.excluirArquivo,
+    fileInfo: api.infoArquivo,
+    storedFileInfo: api.infoArquivo,
+    fileExists: api.arquivoExiste,
+    listFiles: api.listarArquivos,
+    listStoredFiles: api.listarArquivos,
+    openFile: api.abrirArquivo,
+    openStoredFile: api.abrirArquivo,
+    shareFile: api.compartilharArquivo,
+    shareStoredFile: api.compartilharArquivo,
+    downloadFile: api.baixarArquivo,
+    downloadBase64: api.baixarBase64,
+    downloadFromBase64: api.baixarBase64,
+    baixarArquivoBase64: api.baixarBase64,
+    downloadLocalFile: api.baixarArquivoLocal,
+    downloadFromFile: api.baixarArquivoLocal,
+    baixarArquivoNormal: api.baixarArquivoLocal,
+    setWallpaper: api.definirPapelParede,
+    setPhoneWallpaper: api.definirPapelParede,
+    wallpaper: api.definirPapelParede,
+    wallpaperInfo: api.infoPapelParede,
+    openWallpaperSettings: api.abrirConfiguracaoPapelParede,
+    deviceInfo: api.infoDispositivo,
+    networkInfo: api.infoRede,
+    batteryInfo: api.infoBateria,
+    memoryInfo: api.infoMemoria,
+    storageInfo: api.infoArmazenamento,
+    performanceInfo: api.infoDesempenho,
+    openAppsMemory: api.appsAbertos,
+    openAppsInfo: api.infoAppsAbertos,
+    getLocation: api.obterLocalizacao,
+    watchLocation: api.acompanharLocalizacao,
+    stopLocationWatch: api.pararLocalizacao,
+    onLocationChange: api.aoMudarLocalizacao,
+    authenticateBiometric: api.autenticarBiometria,
+    saveSecure: api.salvarSeguro,
+    secureSet: api.salvarSeguro,
+    readSecure: api.lerSeguro,
+    secureGet: api.lerSeguro,
+    readSecureItem: api.lerSeguroCompleto,
+    deleteSecure: api.removerSeguro,
+    removeSecure: api.removerSeguro,
+    secureDelete: api.removerSeguro,
+    listSecureKeys: api.listarSeguro,
+    clearSecureStorage: api.limparSeguro,
+    permissionStatus: api.statusPermissoes,
+    requestNotificationPermission: api.solicitarPermissaoNotificacoes,
+    notificationPermissionStatus: api.statusPermissaoNotificacoes,
+    canScheduleExactAlarms: api.podeAgendarNotificacaoExata,
+    openExactAlarmSettings: api.abrirConfiguracaoAlarmeExato,
+    overlayPermissionStatus: api.statusPermissaoSobreposicao,
+    requestOverlayPermission: api.solicitarPermissaoSobreposicao,
+    openOverlaySettings: api.abrirConfiguracaoSobreposicao,
+    startFloatingIcon: api.iniciarIconeFlutuante,
+    stopFloatingIcon: api.pararIconeFlutuante,
+    getInitialNotification: api.obterNotificacaoInicial,
+    getInitialLink: api.obterLinkInicial,
+    onEvent: api.aoEvento,
+    onMinimize: api.aoMinimizar,
+    onAppResume: api.aoVoltarParaApp,
+    onOpenLink: api.aoAbrirLink,
+    onNetworkChange: api.aoMudarRede,
+    onBatteryChange: api.aoMudarBateria,
+    onNotificationClick: api.aoClicarNotificacao
+  });
+
+  Object.keys(api).forEach(function (key) {
+    if (typeof window[key] !== "function") {
+      window[key] = api[key];
+    }
+  });
+
+  window.Html2ApkEarlyBridge = api;
+
+  window.addEventListener("html2apk:notification", function (event) {
+    emitNotificationClick(event.detail);
+  });
+
+  window.addEventListener("html2apk:event", function (event) {
+    emitEvent(event.detail && event.detail.type, event.detail);
+  });
+
+  if (typeof document !== "undefined") {
+    document.addEventListener("backbutton", function () {
+      emitEvent("botao:voltar", { type: "botao:voltar", timestamp: Date.now() });
+    }, false);
+
+    document.addEventListener("deviceready", function () {
+      emitEvent("app:pronto", { type: "app:pronto", timestamp: Date.now() });
+      api.obterNotificacaoInicial().then(function (notification) {
+        if (notification) {
+          emitNotificationClick(notification);
+          emitEvent("notificacao:clicada", notification);
+        }
+      });
+      api.obterLinkInicial().then(function (link) {
+        if (link) {
+          initialLink = link;
+          emitEvent("link:aberto", link);
+        }
+      });
+    }, false);
+  }
+})();

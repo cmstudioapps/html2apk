@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>html2apk</title>
+  <script>
+    (function () {
+      var theme = localStorage.getItem("html2apk.theme") === "dark" ? "dark" : "light";
+      document.documentElement.dataset.theme = theme;
+    })();
+  </script>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div id="creditOverlay" class="boot-overlay">
+    <div class="boot-card">
+      <img src="../../../html2apk.png" alt="html2apk" class="boot-icon">
+      <span class="boot-kicker">html2apk</span>
+      <h1 data-i18n="creditTitle">Creditos iniciais</h1>
+      <p data-i18n="creditText">Criado por Dev Caio Multiversando</p>
+      <div class="boot-loader"><span></span></div>
+    </div>
+  </div>
+
+  <div id="languageOverlay" class="modal-overlay hidden">
+    <section class="language-card">
+      <img src="../../../html2apk.png" alt="html2apk" class="language-icon">
+      <p class="eyebrow">html2apk</p>
+      <h2>Escolha seu idioma</h2>
+      <p>Choose your language for the interface and build feedback.</p>
+      <div class="language-actions">
+        <button class="primary-action" data-language-choice="pt">Portugues</button>
+        <button class="secondary-action" data-language-choice="en">English</button>
+      </div>
+    </section>
+  </div>
+
+  <div id="dragRegion" class="drag-region" aria-hidden="true"></div>
+  <div class="window-controls" aria-label="Window controls">
+    <button id="minimizeButton" type="button" aria-label="Minimize">_</button>
+    <button id="maximizeButton" type="button" aria-label="Maximize">[]</button>
+    <button id="closeButton" class="close-control" type="button" aria-label="Close">X</button>
+  </div>
+
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <img src="../../../html2apk.png" alt="" class="brand-icon">
+        <div>
+          <strong>html<span>2apk</span></strong>
+          <small id="appVersion">v0.7.0</small>
+        </div>
+      </div>
+
+      <nav class="nav-list" aria-label="Main">
+        <button class="nav-item active" data-view="home"><span class="nav-icon">H</span><span data-i18n="navHome">Inicio</span></button>
+        <button class="nav-item" data-view="settings"><span class="nav-icon">C</span><span data-i18n="navSettings">Configuracoes</span></button>
+        <button class="nav-item" data-view="appearance"><span class="nav-icon">A</span><span data-i18n="navAppearance">Aparencia</span></button>
+        <button class="nav-item" data-view="build"><span class="nav-icon">B</span><span data-i18n="navBuild">Build</span></button>
+        <button class="nav-item" data-view="files"><span class="nav-icon">F</span><span data-i18n="navFiles">Arquivos</span></button>
+        <button class="nav-item" data-view="codes"><span class="nav-icon">J</span><span data-i18n="navCodes">Codigos</span></button>
+        <button class="nav-item" data-view="logs"><span class="nav-icon">L</span><span data-i18n="navLogs">Logs</span></button>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <button class="nav-item" data-view="help"><span class="nav-icon">?</span><span data-i18n="navHelp">Ajuda</span></button>
+        <button id="themeToggle" class="theme-row" type="button">
+          <span class="nav-icon">T</span>
+          <span data-i18n="theme">Tema</span>
+          <strong id="themeName" data-i18n="themeLight">Claro</strong>
+        </button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <section id="view-home" class="view active">
+        <header class="view-header">
+          <div>
+            <p class="eyebrow" data-i18n="homeEyebrow">Comece aqui</p>
+            <h1 data-i18n="homeTitle">Arraste a pasta do projeto para o html2apk</h1>
+          </div>
+          <button id="selectFolderButton" class="secondary-action" type="button" data-i18n="chooseFolder">Escolher pasta</button>
+        </header>
+
+        <div id="dropZone" class="drop-zone">
+          <div class="folder-illustration">
+            <div class="folder-tab"></div>
+            <div class="folder-body"></div>
+            <div class="upload-mark"></div>
+          </div>
+          <h2 data-i18n="dropTitle">Solte a pasta do seu projeto HTML aqui</h2>
+          <p data-i18n="dropText">Depois confirme o build. O APK sera salvo em dist.</p>
+          <div class="info-pill" data-i18n="indexHint">A pasta deve conter index.html ou configurar entryFile no app.json</div>
+        </div>
+
+        <section id="projectSummary" class="summary-grid hidden">
+          <article class="summary-card">
+            <span data-i18n="project">Projeto</span>
+            <strong id="projectName">-</strong>
+            <small id="projectPath">-</small>
+          </article>
+          <article class="summary-card">
+            <span>app.json</span>
+            <strong id="configStatus">-</strong>
+            <small data-i18n="configHint">Configuracao detectada</small>
+          </article>
+          <article class="summary-card">
+            <span>index.html</span>
+            <strong id="entryStatus">-</strong>
+            <small id="entryPath">-</small>
+          </article>
+        </section>
+
+        <section class="action-strip">
+          <button id="nextSettingsButton" class="primary-action" type="button" disabled data-i18n="continueSettings">Continuar para configuracoes</button>
+        </section>
+      </section>
+
+      <section id="view-settings" class="view">
+        <header class="view-header compact">
+          <div>
+            <p class="eyebrow" data-i18n="settingsEyebrow">Antes de compilar</p>
+            <h1 data-i18n="settingsTitle">Configuracoes do build</h1>
+          </div>
+        </header>
+
+        <div class="settings-grid">
+          <label class="field">
+            <span data-i18n="appName">Nome do app</span>
+            <input id="appNameInput" type="text" placeholder="MeuApp">
+          </label>
+          <label class="field">
+            <span data-i18n="packageId">Package ID</span>
+            <input id="packageIdInput" type="text" placeholder="com.seuapp.meuapp">
+          </label>
+          <label class="field">
+            <span data-i18n="appVersion">Versao do app</span>
+            <input id="versionInput" type="text" placeholder="1.0.0">
+          </label>
+          <label class="field">
+            <span data-i18n="buildFormat">Formato</span>
+            <select id="buildFormatInput">
+              <option value="apk" data-i18n="formatApk">APK</option>
+              <option value="aab" data-i18n="formatAab">AAB</option>
+            </select>
+            <small data-i18n="buildFormatHint">APK para instalar direto; AAB para loja.</small>
+          </label>
+          <label class="field">
+            <span data-i18n="mode">Modo</span>
+            <select id="modeInput">
+              <option value="" data-i18n="chooseMode">Escolha o modo</option>
+              <option value="fullscreen" data-i18n="modeFullscreen">Tela cheia</option>
+              <option value="standalone" data-i18n="modeStandalone">Normal</option>
+              <option value="floating" data-i18n="modeFloating">Flutuante</option>
+            </select>
+          </label>
+          <label class="field">
+            <span data-i18n="orientation">Orientacao</span>
+            <select id="orientationInput">
+              <option value="default" data-i18n="orientationDefault">Automatico</option>
+              <option value="portrait" data-i18n="orientationPortrait">Vertical</option>
+              <option value="landscape" data-i18n="orientationLandscape">Horizontal</option>
+            </select>
+          </label>
+          <label class="field">
+            <span data-i18n="minSdkVersion">Android minimo</span>
+            <select id="minSdkVersionInput">
+              <option value="24">Android 7.0 (API 24)</option>
+              <option value="25">Android 7.1 (API 25)</option>
+              <option value="26">Android 8.0 (API 26)</option>
+              <option value="27">Android 8.1 (API 27)</option>
+              <option value="28">Android 9 (API 28)</option>
+              <option value="29">Android 10 (API 29)</option>
+              <option value="30">Android 11 (API 30)</option>
+              <option value="31">Android 12 (API 31)</option>
+              <option value="32">Android 12L (API 32)</option>
+              <option value="33">Android 13 (API 33)</option>
+              <option value="34">Android 14 (API 34)</option>
+              <option value="35">Android 15 (API 35)</option>
+              <option value="36">Android 16 (API 36)</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>cordova-android</span>
+            <input id="androidPlatformInput" type="text" placeholder="android@15.0.0">
+          </label>
+          <label class="field">
+            <span data-i18n="themeMode">Tema do APK</span>
+            <select id="themeModeInput">
+              <option value="fixed" data-i18n="themeModeFixed">Cor fixa</option>
+              <option value="auto" data-i18n="themeModeAuto">Automatico pela tela</option>
+            </select>
+          </label>
+          <label class="field color-field">
+            <span data-i18n="appThemeColor">Cor do tema do app</span>
+            <div class="color-picker">
+              <input id="themeColorInput" type="color" value="#126fff">
+              <input id="themeColorTextInput" type="text" value="#126fff" maxlength="7">
+            </div>
+          </label>
+          <label class="field onesignal-field">
+            <span data-i18n="oneSignalAppId">OneSignal App ID</span>
+            <input id="oneSignalAppIdInput" type="text" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+            <small data-i18n="oneSignalAppIdHint">Opcional. Use o App ID do OneSignal, nao a REST API Key.</small>
+          </label>
+          <div class="field icon-field">
+            <span data-i18n="appIcon">Icone do app</span>
+            <div class="icon-picker">
+              <img id="iconPreview" src="../../../html2apk.png" alt="">
+              <div>
+                <input id="iconPathInput" type="text" readonly placeholder="icon.png">
+                <button id="selectIconButton" class="secondary-action" type="button" data-i18n="chooseIcon">Escolher icone</button>
+              </div>
+            </div>
+          </div>
+          <div class="field keystore-field">
+            <span data-i18n="keystoreTitle">Assinatura / keystore</span>
+            <div class="keystore-grid">
+              <label>
+                <small data-i18n="keystoreFile">Arquivo keystore</small>
+                <div class="inline-picker">
+                  <input id="keystorePathInput" type="text" readonly placeholder="release.jks">
+                  <button id="selectKeystoreButton" class="secondary-action" type="button" data-i18n="chooseKeystore">Escolher</button>
+                </div>
+              </label>
+              <label>
+                <small data-i18n="keystoreAlias">Alias</small>
+                <input id="keystoreAliasInput" type="text" placeholder="app">
+              </label>
+              <label>
+                <small data-i18n="keystoreStorePassword">Senha da store</small>
+                <input id="keystoreStorePasswordInput" type="password" autocomplete="off">
+              </label>
+              <label>
+                <small data-i18n="keystoreKeyPassword">Senha da key</small>
+                <input id="keystoreKeyPasswordInput" type="password" autocomplete="off">
+              </label>
+            </div>
+            <small data-i18n="keystoreHint">Opcional para APK debug. Para AAB/release, preencha para assinar o arquivo.</small>
+          </div>
+          <div class="field permissions-field">
+            <span data-i18n="androidPermissions">Permissoes Android</span>
+            <div id="permissionGrid" class="permission-grid"></div>
+          </div>
+        </div>
+
+        <div class="toggle-grid">
+          <label class="toggle-card">
+            <input id="debugInput" type="checkbox">
+            <span>
+              <strong data-i18n="debugBuild">Debug tecnico</strong>
+              <small data-i18n="debugBuildText">Mantem a pasta Cordova temporaria para inspecao.</small>
+            </span>
+          </label>
+          <label class="toggle-card">
+            <input id="runtimeLogsInput" type="checkbox">
+            <span>
+              <strong data-i18n="runtimeLogsBuild">Console no APK</strong>
+              <small data-i18n="runtimeLogsBuildText">Mostra um modal Console no app gerado para depurar erros e funcoes interpretadas.</small>
+            </span>
+          </label>
+          <label class="toggle-card">
+            <input id="releaseInput" type="checkbox">
+            <span>
+              <strong data-i18n="releaseBuild">Release</strong>
+              <small data-i18n="releaseBuildText">Usa configuracao de assinatura se houver keystore.</small>
+            </span>
+          </label>
+        </div>
+
+        <div id="settingsValidation" class="validation-panel hidden"></div>
+        <section class="action-strip">
+          <button id="settingsNextButton" class="primary-action" type="button" data-i18n="reviewBuild">Revisar build</button>
+        </section>
+      </section>
+
+      <section id="view-appearance" class="view">
+        <header class="view-header compact">
+          <div>
+            <p class="eyebrow" data-i18n="appearanceEyebrow">Preferencias</p>
+            <h1 data-i18n="appearanceTitle">Idioma e tema</h1>
+          </div>
+        </header>
+        <div class="preference-row">
+          <div>
+            <strong data-i18n="language">Idioma</strong>
+            <p data-i18n="languageText">Escolha como os feedbacks aparecem durante o build.</p>
+          </div>
+          <div class="segmented">
+            <button data-language-choice="pt">PT</button>
+            <button data-language-choice="en">EN</button>
+          </div>
+        </div>
+        <div class="preference-row">
+          <div>
+            <strong data-i18n="theme">Tema</strong>
+            <p data-i18n="themeText">O botao tambem fica na barra lateral para acesso rapido.</p>
+          </div>
+          <button id="themeToggleLarge" class="secondary-action" type="button" data-i18n="toggleTheme">Alternar tema</button>
+        </div>
+      </section>
+
+      <section id="view-files" class="view">
+        <header class="view-header compact">
+          <div>
+            <p class="eyebrow" data-i18n="filesEyebrow">Editor visual</p>
+            <h1 data-i18n="filesTitle">Arquivos do projeto</h1>
+          </div>
+          <div class="result-actions">
+            <button id="newFileButton" class="secondary-action" type="button" data-i18n="newFile">Novo arquivo</button>
+            <button id="saveFileButton" class="primary-action" type="button" disabled data-i18n="saveFile">Salvar</button>
+          </div>
+        </header>
+        <div class="file-editor-layout">
+          <aside class="file-tree-panel">
+            <strong data-i18n="fileTreeTitle">Pastas e arquivos</strong>
+            <div id="fileTree" class="file-tree-empty" data-i18n="chooseProjectFirst">Escolha uma pasta primeiro</div>
+          </aside>
+          <section class="file-editor-panel">
+            <div class="file-editor-meta">
+              <strong id="currentFileName" data-i18n="noFileSelected">Nenhum arquivo selecionado</strong>
+              <span id="fileLanguageBadge">text</span>
+            </div>
+            <div class="code-editor-shell">
+              <pre id="fileHighlight" class="file-editor-highlight" aria-hidden="true"><code></code></pre>
+              <textarea id="fileEditorInput" spellcheck="false" disabled placeholder="index.html"></textarea>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section id="view-build" class="view">
+        <header class="view-header compact">
+          <div>
+            <p class="eyebrow" data-i18n="buildEyebrow">Revisao</p>
+            <h1 data-i18n="buildTitle">Confirme as informacoes e gere o APK</h1>
+          </div>
+          <button id="doctorButton" class="secondary-action" type="button" disabled data-i18n="runDoctor">Verificar ambiente</button>
+        </header>
+        <div class="progress-panel">
+          <div class="progress-copy">
+            <span data-i18n="progressLabel">Progresso</span>
+            <strong id="progressText" data-i18n="progressIdle">Aguardando pasta</strong>
+          </div>
+          <div class="progress-track" aria-hidden="true">
+            <div id="progressBar" class="progress-bar"></div>
+          </div>
+          <strong id="progressPercent" class="progress-percent">0%</strong>
+        </div>
+        <div id="reviewGrid" class="review-grid"></div>
+        <div class="pipeline">
+          <article class="step-card" data-step="folder"><span>01</span><strong data-i18n="stepFolder">Pasta recebida</strong><small id="stepFolderText">-</small></article>
+          <article class="step-card" data-step="doctor"><span>02</span><strong data-i18n="stepDoctor">Ambiente verificado</strong><small id="stepDoctorText">-</small></article>
+          <article class="step-card" data-step="settings"><span>03</span><strong data-i18n="stepSettings">Configuracoes completas</strong><small id="stepSettingsText">-</small></article>
+          <article class="step-card" data-step="build"><span>04</span><strong data-i18n="stepBuild">APK gerado</strong><small id="stepBuildText">-</small></article>
+        </div>
+        <section class="action-strip">
+          <button id="buildButton" class="primary-action" type="button" disabled data-i18n="startBuild">Gerar APK</button>
+          <button id="usbDebugButton" class="secondary-action" type="button" disabled data-i18n="startUsbDebug">Testar no USB</button>
+        </section>
+        <div id="resultPanel" class="result-panel hidden">
+          <div>
+            <strong data-i18n="apkReady">APK pronto</strong>
+            <p id="apkPath">-</p>
+          </div>
+          <div class="result-actions">
+            <button id="openDistButton" class="secondary-action" type="button" data-i18n="openDist">Abrir dist</button>
+            <button id="showApkButton" class="primary-action" type="button" data-i18n="showApk">Mostrar APK</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-success" class="view success-view">
+        <div class="success-panel">
+          <img src="../../../html2apk.png" alt="" class="success-icon">
+          <p class="eyebrow" data-i18n="successEyebrow">Concluido</p>
+          <h1 id="successTitle" data-i18n="successTitle">APK gerado com sucesso</h1>
+          <p id="successText" data-i18n="successText">Seu arquivo Android esta pronto na pasta dist.</p>
+          <code id="successApkPath">-</code>
+          <div class="result-actions">
+            <button id="successOpenDistButton" class="secondary-action" type="button" data-i18n="openDist">Abrir dist</button>
+            <button id="successShowApkButton" class="primary-action" type="button" data-i18n="showApk">Mostrar APK</button>
+            <button id="newBuildButton" class="secondary-action" type="button" data-i18n="newBuild">Novo build</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-logs" class="view">
+        <header class="view-header compact">
+          <div>
+            <p class="eyebrow" data-i18n="logsEyebrow">Ao vivo</p>
+            <h1 data-i18n="logsTitle">Logs do processo</h1>
+          </div>
+          <button id="clearLogsButton" class="secondary-action" type="button" data-i18n="clearLogs">Limpar logs</button>
+        </header>
+        <div id="logConsole" class="log-console"></div>
+      </section>
+
+      <section id="view-codes" class="view">
+        <header class="view-header compact">
+          <div>
+            <p class="eyebrow" data-i18n="codesEyebrow">Bridge nativa</p>
+            <h1 data-i18n="codesTitle">Codigos interpretados</h1>
+          </div>
+          <button id="nativeFunctionLabButton" class="primary-action" type="button" data-i18n="testNativeFunctions">Testar funcoes</button>
+        </header>
+        <p class="view-intro" data-i18n="codesIntro">Estas funcoes chamadas no JavaScript do app sao interpretadas pelo plugin Cordova e executadas no Java Android.</p>
+        <div class="code-browser">
+          <nav id="nativeCodeCategories" class="code-categories" aria-label="Categorias de codigos"></nav>
+          <section class="code-results">
+            <div id="nativeCodeSummary" class="code-summary"></div>
+            <div id="nativeCodeGrid" class="code-grid"></div>
+          </section>
+        </div>
+      </section>
+
+      <section id="view-help" class="view">
+        <header class="view-header compact">
+          <div>
+            <p class="eyebrow" data-i18n="helpEyebrow">Sem misterio</p>
+            <h1 data-i18n="helpTitle">Doctor, build e dependencias</h1>
+          </div>
+        </header>
+        <div class="help-grid">
+          <article>
+            <strong>doctor</strong>
+            <p data-i18n="helpDoctor">Verifica se Java, Gradle, Cordova e Android SDK estao prontos. Nao gera APK.</p>
+          </article>
+          <article>
+            <strong>build</strong>
+            <p data-i18n="helpBuild">Cria um projeto Cordova temporario, copia seu app web e gera o arquivo APK em dist.</p>
+          </article>
+          <article>
+            <strong data-i18n="helpDepsTitle">Dependencias no EXE</strong>
+            <p data-i18n="helpDeps">O executavel empacota html2apk, a interface e dependencias Node/Cordova. JDK e Android SDK ainda precisam existir na maquina por tamanho e licenca.</p>
+          </article>
+          <article class="creator-card">
+            <strong data-i18n="helpCreatorTitle">Criador</strong>
+            <p data-i18n="helpCreatorText">Conheca o Dev Caio Multiversando, criador desta linda aplicacao html2apk.</p>
+            <button id="devInstagramButton" class="secondary-action instagram-action" type="button" data-i18n="openInstagram">Conhecer o dev</button>
+          </article>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <section class="bottom-log-bar" aria-label="Live logs">
+    <div class="bottom-log-header">
+      <strong data-i18n="bottomLogsTitle">Logs ao vivo</strong>
+      <div class="bottom-log-actions">
+        <button id="bottomToggleLogsButton" class="secondary-action compact-action" type="button">Ocultar logs</button>
+        <button id="bottomClearLogsButton" class="secondary-action compact-action" type="button" data-i18n="clearLogs">Limpar logs</button>
+      </div>
+    </div>
+    <div id="bottomLogConsole" class="log-console bottom-log-console"></div>
+  </section>
+
+  <footer class="statusbar">
+    <span id="statusDot" class="status-dot"></span>
+    <span id="statusText" data-i18n="ready">Pronto</span>
+    <button id="toggleLogsButton" class="status-log-toggle" type="button">Mostrar logs</button>
+    <span class="status-credit">html2apk - Dev Caio Multiversando</span>
+  </footer>
+
+  <script src="./renderer.js"></script>
+</body>
+</html>

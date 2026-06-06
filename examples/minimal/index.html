@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MeuApp</title>
+  <style>
+    body {
+      min-height: 100vh;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      font-family: system-ui, sans-serif;
+      background: #101820;
+      color: white;
+    }
+
+    main {
+      width: min(92vw, 420px);
+      display: grid;
+      gap: 12px;
+    }
+
+    button {
+      min-height: 44px;
+      border: 0;
+      border-radius: 8px;
+      font: inherit;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>MeuApp</h1>
+    <button onclick="toast('Ola do Android')">Toast</button>
+    <button onclick="vibrar(250)">Vibrar</button>
+    <button onclick="notificar('Gerada pelo html2apk')">Notificar agora</button>
+  </main>
+  <script src="cordova.js"></script>
+</body>
+</html>

@@ -1,0 +1,1020 @@
+# html2apk
+
+`html2apk` transforma uma pasta com HTML, CSS, JS e assets em um APK ou AAB Android usando Cordova.
+
+Use ele quando voce ja tem um app web, por exemplo uma pasta com `index.html`, `style.css`, `app.js` e imagens, e quer gerar um `.apk` instalavel no Android ou um `.aab` para loja.
+
+## O Mais Importante
+
+Na pratica, voce vai usar estes comandos:
+
+```bash
+html2apk init
+html2apk doctor
+html2apk build
+```
+
+`doctor` e `build` fazem coisas diferentes:
+
+| Comando | O que faz | Quando usar |
+| --- | --- | --- |
+| `html2apk doctor` | Confere se o computador esta pronto para gerar APK. Ele verifica Java, Gradle, Cordova e Android SDK. | Use antes do primeiro build, depois de instalar ferramentas Android ou quando o build falhar por ambiente. |
+| `html2apk build` | Gera o APK de verdade a partir da sua pasta HTML. | Use quando o `doctor` estiver OK e voce quiser criar/atualizar o APK. |
+
+O `doctor` nao gera APK. Ele so diagnostica o ambiente.
+
+O `build` gera APK. Ele cria um projeto Cordova temporario, copia seu HTML/CSS/JS, compila Android e salva o resultado em `dist/`.
+
+## Instalar
+
+Se estiver usando como pacote global:
+
+```bash
+npm install -g html2apk
+```
+
+Durante desenvolvimento deste repositorio:
+
+```bash
+npm install
+npm link
+```
+
+Tambem da para rodar localmente sem link:
+
+```bash
+node bin/html2apk.js doctor
+node bin/html2apk.js build
+```
+
+## Requisitos Do Computador
+
+Para gerar APK, o computador precisa ter:
+
+- Node.js 18 ou superior
+- JDK
+- Android SDK ou Android Studio
+- Android command line tools
+- Gradle
+- Cordova CLI
+
+Este projeto usa `cordova-android@15.0.0` por padrao. Por isso, o Android SDK precisa ter:
+
+- Android Platform 36
+- Android Build Tools 36.0.0
+
+Com `sdkmanager`, os pacotes principais sao:
+
+```bash
+sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+```
+
+Variaveis de ambiente comuns:
+
+```bash
+export JAVA_HOME=/path/to/jdk
+export ANDROID_HOME=/path/to/android-sdk
+export ANDROID_SDK_ROOT=/path/to/android-sdk
+```
+
+No Windows, o `html2apk doctor` tenta encontrar automaticamente o SDK em:
+
+```text
+C:\Users\SEU_USUARIO\AppData\Local\Android\Sdk
+```
+
+## Interface Grafica
+
+A interface desktop permite arrastar a pasta do projeto, preencher as configuracoes obrigatorias em etapas e gerar o arquivo Android sem mexer no terminal.
+
+Recursos principais:
+
+- Escolher idioma, tema claro/escuro e ver logs do processo.
+- Gerar APK normal, APK release ou AAB.
+- Escolher icone PNG, cor de tema, OneSignal App ID e permissoes.
+- Preencher keystore pela interface: arquivo, alias, senha da store e senha da key.
+- Marcar `Console no APK` para o app gerado mostrar um modal de debug no celular.
+- Usar a aba `Arquivos` para abrir arquivos HTML/CSS/JS/JSON do projeto, salvar edicoes, criar novos arquivos e ver uma previa com sintaxe.
+
+Para AAB, a interface pede keystore completo antes de liberar o build.
+
+## Passo A Passo
+
+Entre na pasta do seu app web:
+
+```bash
+cd caminho/da/minha-pasta-html
+```
+
+Sua pasta deve ter pelo menos um arquivo de entrada, normalmente:
+
+```text
+index.html
+```
+
+Crie a configuracao inicial:
+
+```bash
+html2apk init
+```
+
+Esse comando cria dois arquivos quando eles ainda nao existem:
+
+- `app.json`
+- `index.html`
+
+Edite o `app.json` com o nome do app, pacote Android e preferencias.
+
+Depois confira o ambiente:
+
+```bash
+html2apk doctor
+```
+
+Se tudo aparecer como `OK`, gere o APK:
+
+```bash
+html2apk build
+```
+
+O arquivo final sera criado em:
+
+```text
+dist/NomeDoApp-1.0.0-debug.apk
+```
+
+## Comandos Da CLI
+
+### `html2apk init`
+
+Cria uma configuracao inicial para seu app.
+
+Use quando voce ainda nao tem `app.json`:
+
+```bash
+html2apk init
+```
+
+Ele nao apaga seu `app.json` nem seu `index.html` se eles ja existirem.
+
+### `html2apk doctor`
+
+Verifica se o computador esta pronto para compilar Android:
+
+```bash
+html2apk doctor
+```
+
+Exemplo de saida boa:
+
+```text
+OK  java
+OK  javac
+OK  gradle
+OK  cordova
+OK  Android build-tools 36.0.0
+OK  Android platform android-36
+Environment looks ready.
+```
+
+Se aparecer `ERR`, resolva esse item antes de rodar `build`.
+
+### `html2apk build`
+
+Gera o APK:
+
+```bash
+html2apk build
+```
+
+Opcoes comuns:
+
+```bash
+html2apk build --debug
+html2apk build --release
+html2apk build --apk
+html2apk build --aab
+html2apk build --show-runtime-logs
+html2apk build --mode fullscreen
+html2apk build --mode standalone
+html2apk build --mode floating
+html2apk build --orientation vertical
+html2apk build --min-sdk 24
+html2apk build --entry-file index.html
+html2apk build --web-root .
+html2apk build --app-name MeuApp
+html2apk build --package-id com.seuapp.meuapp
+html2apk build --theme auto
+html2apk build --android-platform android@15.0.0
+```
+
+Com `--debug`, a pasta Cordova temporaria fica salva para inspecao caso voce queira investigar arquivos gerados.
+
+Sem `--debug`, a pasta temporaria e limpa no fim do build.
+
+Com `--aab`, o build usa formato AAB e release automaticamente. Para publicar, preencha `keystore`.
+
+Com `--show-runtime-logs`, o APK/AAB gerado recebe um botao `Console` dentro do app. Esse console intercepta erros JavaScript, promises rejeitadas, logs, chamadas das funcoes interpretadas e requisicoes de rede (`fetch`/`XMLHttpRequest`), ajudando o dev a debugar no proprio celular. Se essa opcao ficar desligada, esse console nao aparece no app gerado.
+
+## Configuracao Com `app.json`
+
+O `app.json` fica na raiz do seu app. Se ele nao existir, `config.json` e usado como fallback.
+
+Exemplo completo:
+
+```json
+{
+  "_editMe": "Edite os campos abaixo e rode: html2apk doctor && html2apk build",
+  "appName": "MeuApp",
+  "packageId": "com.seuapp.meuapp",
+  "version": "1.0.0",
+  "buildFormat": "apk",
+  "mode": "fullscreen",
+  "orientation": "default",
+  "minSdkVersion": 24,
+  "themeColor": "#126fff",
+  "themeMode": "fixed",
+  "oneSignalAppId": "",
+  "icon": "",
+  "splash": "",
+  "deepLinks": {
+    "schemes": ["meuapp"],
+    "appLinks": [
+      {
+        "host": "meusite.com",
+        "paths": ["/produto/*", "/pedido/*"],
+        "autoVerify": false
+      }
+    ]
+  },
+  "permissions": ["INTERNET", "CAMERA", "RECORD_AUDIO", "POST_NOTIFICATIONS", "VIBRATE"],
+  "plugins": ["cordova-plugin-camera"],
+  "release": false,
+  "showRuntimeLogs": false,
+  "androidPlatform": "android@15.0.0",
+  "keystore": {
+    "path": "",
+    "alias": "app",
+    "storePassword": "",
+    "keyPassword": ""
+  },
+  "debug": false,
+  "entryFile": "index.html",
+  "webRoot": ".",
+  "files": []
+}
+```
+
+Campos principais:
+
+| Campo | Para que serve |
+| --- | --- |
+| `appName` | Nome visivel do app. |
+| `packageId` | Identificador Android. Precisa ter formato como `com.empresa.app`. |
+| `version` | Versao do app. |
+| `buildFormat` | `apk` para instalar direto ou `aab` para loja. |
+| `mode` | `fullscreen` para tela cheia, `standalone` para modo normal ou `floating` para icone flutuante. |
+| `orientation` | `default`, `vertical`, `horizontal`, `portrait` ou `landscape`. |
+| `minSdkVersion` | Versao minima do Android em API level. Padrao: `24`. |
+| `themeColor` | Cor base do tema/splash Android, em hexadecimal. Tambem vira fallback do modo automatico. |
+| `icon` | Icone PNG do app. Se ficar vazio, o html2apk usa automaticamente o icone padrao da ferramenta. |
+| `themeMode` | `fixed` usa a cor fixa. `auto` adapta as barras Android a cor visivel na tela do APK. Tambem aceita `theme: "auto"`. |
+| `oneSignalAppId` | Opcional. App ID publico do OneSignal para push remoto. Nao coloque REST API Key no APK. |
+| `deepLinks` | URLs que podem abrir o APK, como `meuapp://rota` ou `https://meusite.com/produto/1`. |
+| `entryFile` | Arquivo HTML inicial. Normalmente `index.html`. |
+| `webRoot` | Pasta onde estao os arquivos web. Normalmente `"."`. |
+| `permissions` | Permissoes Android adicionadas ao app. |
+| `plugins` | Plugins Cordova extras. |
+| `androidPlatform` | Versao da plataforma Cordova Android. Padrao: `android@15.0.0`. |
+| `debug` | Se `true`, preserva a pasta temporaria de build. |
+| `release` | Se `true`, gera build release. |
+| `showRuntimeLogs` | Se `true`, mostra um modal `Console` no app gerado para depurar erros e funcoes interpretadas. |
+| `keystore` | Dados de assinatura para build release. |
+
+Prioridade de configuracao:
+
+1. Opcoes passadas na CLI ou em `buildApk`.
+2. `app.json` ou `config.json`.
+3. Valores padrao do html2apk.
+
+### Modo Flutuante E Sobreposicao
+
+O icone flutuante usa a permissao especial `SYSTEM_ALERT_WINDOW`. A bridge nativa declara essa permissao no APK para que o Android liste o app na tela de `Aparecer sobre outros apps`.
+
+Mesmo com a permissao declarada no manifesto, o usuario ainda precisa liberar manualmente nas configuracoes do Android. Depois de liberar, volte ao app e chame `iniciarIconeFlutuante()` novamente.
+
+### Tema Automatico Do APK
+
+Use `themeMode: "auto"` ou `theme: "auto"` para o APK adaptar as barras nativas do Android a cor que esta visivel na tela. O html2apk observa a tela do WebView e ajusta status bar/navigation bar em tempo real.
+
+```json
+{
+  "themeMode": "auto",
+  "themeColor": "#126fff"
+}
+```
+
+`themeColor` continua importante: ela e usada no splash e como fallback quando o app ainda nao conseguiu detectar uma cor visivel.
+
+### OneSignal Opcional
+
+Se quiser receber notificacoes remotas pelo OneSignal, preencha `oneSignalAppId` no `app.json` ou no campo OneSignal App ID da interface grafica:
+
+```json
+{
+  "oneSignalAppId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+}
+```
+
+Quando esse campo esta vazio, nada do OneSignal e instalado no APK. Quando ele esta preenchido, o html2apk instala `onesignal-cordova-plugin`, injeta a inicializacao no HTML e mantem as notificacoes locais existentes (`notificar`, `agendarNotificacao`, loops etc.).
+
+Importante: o App ID do OneSignal pode ficar no APK. A REST API Key nao deve ir no app, porque e segredo de servidor. Envie pushes pelo painel do OneSignal ou por um backend seu.
+
+## Exemplo Minimo
+
+Este repositorio ja inclui um exemplo em:
+
+```text
+examples/minimal
+```
+
+Para testar:
+
+```bash
+cd examples/minimal
+node ../../bin/html2apk.js doctor
+node ../../bin/html2apk.js build
+```
+
+O APK sai em:
+
+```text
+examples/minimal/dist/
+```
+
+## Usando Como Biblioteca
+
+Tambem e possivel usar pelo Node.js:
+
+```js
+const { buildApk } = require("html2apk");
+
+const result = await buildApk();
+console.log(result.apkPath);
+```
+
+Com opcoes:
+
+```js
+const result = await buildApk({
+  mode: "fullscreen",
+  release: true
+});
+```
+
+Retorno:
+
+```json
+{
+  "apkPath": "/app/dist/MeuApp-1.0.0-debug.apk",
+  "buildDir": null,
+  "logs": [],
+  "status": "success",
+  "tempCleaned": true
+}
+```
+
+## Bridge Nativa
+
+A v0.1 instala um plugin Cordova local com uma API global simples para recursos Android. Todas as funcoes retornam `Promise`, exceto os ouvintes `aoEvento`/atalhos, que retornam uma funcao para cancelar a escuta.
+
+O html2apk injeta `html2apk-early-bridge.js` e `cordova.js` automaticamente no HTML inicial do APK. A bridge inicial cria as funcoes interpretadas antes dos scripts do seu projeto; se uma funcao nativa for chamada antes do `deviceready`, ela espera o Android ficar pronto antes de executar.
+
+Cada funcao em portugues tambem tem alias em ingles. A interface grafica mostra a sintaxe PT-BR quando o idioma esta em portugues e mostra a sintaxe em ingles quando o usuario troca o idioma para English.
+
+Exemplos de aliases:
+
+| PT-BR | English |
+| --- | --- |
+| `notificar()` | `notify()` |
+| `agendarNotificacao()` | `scheduleNotification()` |
+| `agendarNotificacoes()` | `scheduleNotifications()` |
+| `agendarLoopNotificacoes()` | `scheduleNotificationLoop()` |
+| `cancelarNotificacao()` | `cancelNotification()` |
+| `solicitarPermissaoNotificacoes()` | `requestNotificationPermission()` |
+| `solicitarPermissaoPush()` | `requestPushPermission()` |
+| `aoClicarPush()` | `onPushClick()` |
+| `identificarUsuarioPush()` | `loginPushUser()` |
+| `adicionarTagPush()` | `addPushTag()` |
+| `solicitarPermissaoMicrofone()` | `requestMicrophonePermission()` |
+| `statusMicrofone()` | `microphoneStatus()` |
+| `ouvirMic()` | `listenMic()` / `startMic()` |
+| `pararMic()` | `stopMic()` |
+| `lanterna()` | `flashlight()` |
+| `alternarLanterna()` | `toggleFlashlight()` |
+| `tirarFoto()` | `takePhoto()` / `capturePhoto()` |
+| `capturarVideo()` | `captureVideo()` |
+| `escanearQRCode()` | `scanQRCode()` |
+| `escolherArquivo()` | `pickFile()` |
+| `escolherImagem()` | `pickImage()` |
+| `salvarArquivo()` | `saveFile()` |
+| `lerArquivo()` | `readFile()` |
+| `listarArquivos()` | `listFiles()` |
+| `excluirArquivo()` | `deleteFile()` |
+| `abrirArquivo()` | `openFile()` |
+| `compartilharArquivo()` | `shareFile()` |
+| `baixarArquivo()` | `downloadFile()` |
+| `baixarBase64()` | `downloadBase64()` |
+| `baixarArquivoLocal()` | `downloadLocalFile()` / `downloadFromFile()` |
+| `definirPapelParede()` | `setWallpaper()` |
+| `infoPapelParede()` | `wallpaperInfo()` |
+| `abrirConfiguracaoPapelParede()` | `openWallpaperSettings()` |
+| `compartilhar()` | `share()` |
+| `copiarTexto()` | `copyText()` |
+| `lerTextoCopiado()` | `readText()` |
+| `abrirNoApp()` | `openInApp()` |
+| `abrirForaDoApp()` | `openOutsideApp()` |
+| `abrirUrlExterno()` | `openExternalUrl()` |
+| `manterTelaLigada()` | `keepScreenOn()` |
+| `brilhoTela()` | `setScreenBrightness()` |
+| `definirCorTema()` | `setThemeColor()` |
+| `infoMemoria()` | `memoryInfo()` |
+| `infoArmazenamento()` | `storageInfo()` |
+| `infoDesempenho()` | `performanceInfo()` |
+| `appsAbertos()` | `openAppsMemory()` |
+| `obterLocalizacao()` | `getLocation()` |
+| `acompanharLocalizacao()` | `watchLocation()` |
+| `pararLocalizacao()` | `stopLocationWatch()` |
+| `autenticarBiometria()` | `authenticateBiometric()` |
+| `salvarSeguro()` | `saveSecure()` |
+| `lerSeguro()` | `readSecure()` |
+| `removerSeguro()` | `deleteSecure()` |
+| `aoEvento()` | `onEvent()` |
+| `aoMinimizar()` | `onMinimize()` |
+| `obterLinkInicial()` | `getInitialLink()` |
+
+Os eventos tambem aceitam aliases em ingles em `onEvent()`: `app:ready`, `app:background`, `app:resumed`, `back:button`, `link:opened`, `network:changed`, `battery:changed`, `location:changed`, `notification:received` e `notification:clicked`.
+
+Como tratar retornos:
+
+- Use `await` dentro de `try/catch` quando a acao depender de Android, permissao ou outro app instalado.
+- Seletores de arquivo podem retornar `null`, array vazio ou objeto vazio quando o usuario cancela.
+- Funcoes que precisam de permissao pedem automaticamente quando sao chamadas, como `lanterna()`, `notificar()` e `ouvirMic()`.
+- Se o Android nao puder mostrar o pop-up de permissao, o html2apk abre a tela correta de configuracoes e retorna `settingsOpened: true`.
+- APIs manuais de permissao continuam existindo para quem quer explicar antes; elas retornam objetos com `granted`, `requiresSettings` e `settingsOpened`.
+- Eventos retornam uma funcao de cancelamento; guarde essa funcao e chame quando a tela/componente sair.
+- Medidas de memoria, armazenamento e apps abertos sao diagnosticas. Android moderno pode limitar dados de outros apps por privacidade.
+
+No seu JavaScript do app:
+
+```js
+toast("Mensagem");
+vibrar(250);
+
+await notificar({
+  titulo: "Pedido aprovado",
+  texto: "Toque para abrir o app"
+});
+
+notificar({
+  titulo: "Pedido aprovado",
+  texto: "Toque para abrir os detalhes",
+  acoes: [
+    {
+      id: "abrir",
+      titulo: "Abrir",
+      open: true,
+      aoClicar: { funcao: "abrirNoApp", argumentos: ["#/pedido/123"] }
+    },
+    {
+      id: "site",
+      titulo: "Ver site",
+      open: false,
+      aoClicar: { funcao: "abrirForaDoApp", argumentos: ["https://exemplo.com/pedido/123"], open: false }
+    }
+  ],
+  aoClicar: () => abrirForaDoApp("https://exemplo.com/pedido/123")
+});
+
+agendarNotificacao({
+  titulo: "Lembrete",
+  texto: "Hora de abrir o app",
+  quando: Date.now() + 60000,
+  aoClicar: {
+    funcao: "abrirNoApp",
+    argumentos: ["#/lembretes"]
+  }
+});
+
+await agendarNotificacoes([
+  { titulo: "Primeiro aviso", texto: "Daqui 1 minuto", quando: Date.now() + 60000 },
+  { titulo: "Segundo aviso", texto: "Daqui 2 minutos", quando: Date.now() + 120000 }
+]);
+
+const loop = await agendarLoopNotificacoes({
+  aCada: "12h",
+  notificacoes: [
+    {
+      titulo: "Hidrate-se",
+      texto: "Beba agua agora",
+      aoClicar: { acao: "abrir-hidratacao" }
+    },
+    {
+      titulo: "Alongamento",
+      texto: "Pausa rapida para alongar",
+      aoClicar: { acao: "abrir-alongamento" }
+    }
+  ]
+});
+
+fullscreen(true);
+```
+
+`notificar()` nao obriga clique, botao nem funcao. So `titulo` e `texto` ja geram uma notificacao normal. `aoClicar`, `acoes`/`actions` e `open` sao opcionais.
+
+`agendarNotificacao()` agenda uma notificacao. Se voce passar um array para ela, ou usar `agendarNotificacoes()`, o html2apk agenda varias em sequencia. Cada item recebe `id` automatico se voce nao informar um.
+
+Em `aoClicar`, voce pode passar uma funcao diretamente:
+
+```js
+await notificar({
+  titulo: "Pedido aprovado",
+  texto: "Toque para abrir os detalhes",
+  aoClicar: () => abrirForaDoApp("https://exemplo.com/pedido/123")
+});
+```
+
+Nao use `aoClicar: { acao: abrirForaDoApp("https://...") }`, porque os parenteses executam a funcao na hora em que a notificacao e criada. Para notificacao agendada, loop ou app fechado, prefira o formato serializavel:
+
+```js
+await agendarNotificacao({
+  titulo: "Pedido aprovado",
+  texto: "Toque para abrir os detalhes",
+  quando: Date.now() + 60000,
+  aoClicar: {
+    funcao: "abrirForaDoApp",
+    argumentos: ["https://exemplo.com/pedido/123"]
+  }
+});
+```
+
+Esse formato tambem aceita funcoes suas, desde que elas existam em `window` quando o app abrir:
+
+```js
+window.abrirPedido = (id) => abrirNoApp("#/pedido/" + id);
+
+await notificar({
+  titulo: "Pedido aprovado",
+  texto: "Toque para abrir os detalhes",
+  aoClicar: { funcao: "abrirPedido", argumentos: [123] }
+});
+```
+
+Para botoes na notificacao, use `acoes` ou `actions`. Cada botao tambem aceita `aoClicar`/`onClick`:
+
+```js
+window.marcarPedidoLido = (id) => {
+  localStorage.setItem("pedido:" + id, "lido");
+};
+
+await notificar({
+  titulo: "Pedido aprovado",
+  texto: "Escolha uma acao",
+  acoes: [
+    {
+      id: "abrir",
+      titulo: "Abrir",
+      open: true,
+      aoClicar: { funcao: "abrirNoApp", argumentos: ["#/pedido/123"] }
+    },
+    {
+      id: "lido",
+      titulo: "Marcar lido",
+      open: false,
+      aoClicar: { funcao: "marcarPedidoLido", argumentos: [123], open: false }
+    }
+  ]
+});
+```
+
+`open: false` evita trazer a tela do app para frente. Se o app ainda estiver vivo em segundo plano, o html2apk dispara o evento e executa a funcao JavaScript. Se o Android tiver matado o app, JavaScript de WebView nao consegue rodar sem abrir o app; nesse caso, acoes externas como `{ funcao: "abrirForaDoApp", argumentos: ["https://..."], open: false }` ainda funcionam por fallback nativo.
+
+`agendarLoopNotificacoes()` cria um loop recorrente que funciona com o app fechado. Use `aCada`, `intervalo`, `every` ou `interval` em milissegundos ou como texto (`"30min"`, `"12h"`, `"1d"`). A cada disparo, o Android mostra a proxima notificacao da lista. Para parar:
+
+```js
+await cancelarNotificacao(loop.id);
+```
+
+Cliques continuam chegando normalmente:
+
+```js
+aoClicarNotificacao((evento) => {
+  if ((evento.aoClicar || evento.onClick).acao === "abrir-hidratacao") {
+    abrirNoApp("#/hidratacao");
+  }
+});
+```
+
+As notificacoes usam o icone do APK gerado como icone nativo. No Android, esse icone pode aparecer monocromatico na barra de notificacoes por regra do sistema.
+
+OneSignal, quando `oneSignalAppId` esta preenchido:
+
+```js
+const permitido = await solicitarPermissaoPush();
+
+identificarUsuarioPush("user-123");
+adicionarTagPush("plano", "premium");
+
+const pararPush = aoClicarPush((evento) => {
+  console.log("Push clicado", evento);
+  abrirNoApp("#/notificacoes");
+});
+```
+
+Use OneSignal para pushes enviados remotamente pelo painel/API do OneSignal. Use `notificar()` e `agendarNotificacao()` para notificacoes locais criadas dentro do APK.
+
+Arquivos, galeria e compartilhamento:
+
+```js
+const imagem = await escolherImagem();
+const imagens = await escolherImagens({ multiplo: true });
+const pdf = await escolherArquivo({ tipos: ["application/pdf"] });
+const arquivos = await escolherArquivos({ multiplo: true });
+
+await salvarArquivo({
+  nome: "relatorio.txt",
+  mimeType: "text/plain",
+  conteudo: "Conteudo salvo pelo app"
+});
+
+await compartilhar({ texto: "Veja isso", url: "https://exemplo.com" });
+```
+
+`salvarArquivo()` tem dois modos:
+
+- `salvarArquivo({ nome, conteudo })` abre o seletor nativo para o usuario escolher onde salvar, como ja acontecia.
+- `salvarArquivo("nomeArquivo", minhaVariavel)` salva direto no armazenamento app-scoped do APK. Use esse formato para CRUD interno.
+
+CRUD de arquivos internos:
+
+```js
+await salvarArquivo("perfil.json", {
+  nome: "Ana",
+  plano: "premium"
+});
+
+const perfil = await lerArquivo("perfil.json");
+console.log(perfil.nome);
+
+const completo = await lerArquivoCompleto("perfil.json");
+console.log(completo.uri, completo.tamanho);
+
+const existe = await arquivoExiste("perfil.json");
+const arquivos = await listarArquivos();
+
+await abrirArquivo("perfil.json");
+await compartilharArquivo("perfil.json");
+await excluirArquivo("perfil.json");
+```
+
+Para baixar um arquivo e guardar no mesmo armazenamento:
+
+```js
+await baixarArquivo("https://exemplo.com/relatorio.pdf", "relatorio.pdf");
+await abrirArquivo("relatorio.pdf");
+
+await baixarBase64("foto.png", base64DaImagem, {
+  mimeType: "image/png"
+});
+
+const arquivo = await escolherArquivo();
+if (arquivo) {
+  await baixarArquivoLocal(arquivo, "copia-" + arquivo.name);
+}
+```
+
+Durante `baixarArquivo()`, `baixarBase64()` e `baixarArquivoLocal()`, o Android mostra uma notificacao de progresso quando a permissao `POST_NOTIFICATIONS` estiver liberada. No Android 13+, o html2apk pede essa permissao automaticamente; se o usuario negar, o download continua e o retorno vem com `notificationShown: false`.
+
+Papel de parede:
+
+```js
+const foto = await tirarFoto({ base64: true });
+
+await salvarArquivo("wallpaper.jpg", foto.base64, {
+  base64: true,
+  mimeType: "image/jpeg"
+});
+
+const resultado = await definirPapelParede("wallpaper.jpg", {
+  alvo: "inicio" // "inicio", "bloqueio" ou "ambos"
+});
+
+console.log(resultado.applied, resultado.systemApplied, resultado.lockApplied);
+```
+
+`definirPapelParede()` usa a API publica `WallpaperManager` do Android para imagem estatica. A entrada pode ser nome de arquivo salvo pelo app, `content://`/`file://`, data URL (`data:image/...;base64,...`) ou objeto `{ base64, mimeType }`. Video wallpaper e fundo de chamadas dependem do fluxo do sistema, live wallpaper ou app de telefone do fabricante; nesses casos use `infoPapelParede()` e `abrirConfiguracaoPapelParede()`.
+
+Camera, QR Code, localizacao, biometria e storage seguro:
+
+```js
+const foto = await tirarFoto({ base64: true });
+
+const qr = await escanearQRCode();
+if (qr) {
+  console.log(qr.text);
+}
+
+const local = await obterLocalizacao({ altaPrecisao: true, timeoutMs: 10000 });
+console.log(local.latitude, local.longitude);
+
+const watch = await acompanharLocalizacao({ intervaloMs: 5000 });
+const pararEvento = aoMudarLocalizacao((evento) => {
+  console.log(evento.latitude, evento.longitude);
+});
+
+await pararLocalizacao(watch.watchId);
+pararEvento();
+
+const bio = await autenticarBiometria({
+  titulo: "Confirmar acesso",
+  descricao: "Use a biometria do aparelho"
+});
+
+if (bio.authenticated) {
+  await salvarSeguro("token", "abc123");
+  const token = await lerSeguro("token");
+  await removerSeguro("token");
+}
+```
+
+O retorno de arquivos tem este formato:
+
+```json
+{
+  "uri": "content://...",
+  "name": "foto.png",
+  "nome": "foto.png",
+  "size": 12345,
+  "tamanho": 12345,
+  "mimeType": "image/png"
+}
+```
+
+Microfone:
+
+```js
+const inicio = await ouvirMic();
+if (inicio.settingsOpened) {
+  console.log("Libere Microfone nas configuracoes e tente novamente");
+} else {
+  // ... depois, quando quiser parar
+  const audio = await pararMic();
+  const audioUrl = `data:${audio.mimeType};base64,${audio.base64}`;
+
+  const player = new Audio(audioUrl);
+  player.play();
+}
+```
+
+`ouvirMic()` comeca a gravar e tambem pede permissao se ela ainda nao foi concedida. Se a permissao estiver bloqueada pelo Android, a tela de configuracoes do app e aberta automaticamente e o retorno traz `settingsOpened: true`.
+
+`pararMic()` encerra a gravacao e retorna:
+
+```json
+{
+  "base64": "AAAA...",
+  "mimeType": "audio/mp4",
+  "extension": "m4a",
+  "size": 12345,
+  "durationMs": 3200
+}
+```
+
+Para tratar o retorno, use `mimeType` e `base64` juntos em um Data URL quando quiser tocar, baixar ou enviar o audio. Se `pararMic()` for chamado rapido demais, o Android pode nao conseguir finalizar o arquivo; aguarde alguns instantes apos `ouvirMic()`.
+
+Lanterna, tela, clipboard e intents:
+
+```js
+const lanternaStatus = await lanterna(true);
+await alternarLanterna();
+
+await manterTelaLigada(true);
+await brilhoTela(0.8);
+
+await copiarTexto("codigo123");
+const texto = await lerTextoCopiado();
+
+await abrirNoApp("/sobre.html");
+await abrirNoApp("#/pedido/123", { substituir: true });
+await abrirForaDoApp("https://exemplo.com");
+await abrirWhatsapp("559999999999", "Oi");
+await discar("11999999999");
+await abrirMapa("Avenida Paulista, Sao Paulo");
+```
+
+Use `abrirNoApp()`/`openInApp()` quando a navegacao deve acontecer dentro do proprio APK/WebView. Use `abrirForaDoApp()`/`openOutsideApp()` ou `abrirUrlExterno()`/`openExternalUrl()` quando quer mandar o usuario para navegador, WhatsApp, Maps ou outro app Android.
+
+Informacoes e desempenho:
+
+```js
+const aparelho = await infoDispositivo();
+const rede = await infoRede();
+const bateria = await infoBateria();
+const memoria = await infoMemoria();
+const armazenamento = await infoArmazenamento();
+const desempenho = await infoDesempenho();
+const abertos = await appsAbertos();
+```
+
+`infoDesempenho()` agrupa memoria, armazenamento, bateria, rede e `timestamp`. Valores de memoria e armazenamento retornam bytes.
+
+`appsAbertos()` retorna os processos/apps que o Android permite o APK enxergar:
+
+```json
+{
+  "apps": [
+    {
+      "name": "MeuApp",
+      "packageName": "com.seuapp.meuapp",
+      "ramBytes": 12345678,
+      "ramMb": 11.77,
+      "importanceName": "foreground"
+    }
+  ],
+  "porNome": {
+    "MeuApp": {
+      "ramBytes": 12345678,
+      "ramMb": 11.77
+    }
+  },
+  "limited": true
+}
+```
+
+Por privacidade, Android moderno pode limitar essa lista ao proprio app e alguns processos visiveis ao APK. Entao essa funcao nao deve ser tratada como gerenciador completo de tarefas do sistema.
+
+Eventos nativos:
+
+```js
+const parar = aoEvento("app:background", (evento) => {
+  console.log("App saiu da frente", evento.timestamp);
+});
+
+aoEvento("app:voltou", console.log);
+aoEvento("botao:voltar", console.log);
+aoEvento("link:aberto", (evento) => console.log(evento.url));
+aoEvento("rede:mudou", console.log);
+aoEvento("bateria:mudou", console.log);
+aoEvento("notificacao:clicada", console.log);
+
+parar();
+```
+
+Deep links:
+
+```js
+const linkInicial = await obterLinkInicial();
+
+aoAbrirLink((evento) => {
+  console.log(evento.url, evento.path, evento.query);
+});
+```
+
+Clique em notificacao:
+
+```js
+aoClicarNotificacao((evento) => {
+  console.log(evento.id, evento.aoClicar || evento.onClick);
+});
+
+window.addEventListener("html2apk:notification", (event) => {
+  console.log(event.detail);
+});
+
+const inicial = await obterNotificacaoInicial();
+```
+
+Permissoes e alarmes:
+
+```js
+const status = await statusPermissaoNotificacoes();
+console.log(status.granted);
+
+const podeUsarAlarmeExato = await podeAgendarNotificacaoExata();
+if (!podeUsarAlarmeExato) {
+  await abrirConfiguracaoAlarmeExato();
+}
+```
+
+A bridge cria canal de notificacao, solicita `POST_NOTIFICATIONS` automaticamente quando `notificar()`/`agendarNotificacao()` precisam, abre configuracoes se o Android bloquear o pop-up, abre o app com payload quando a notificacao e clicada, persiste notificacoes agendadas e tenta reagendar apos reboot ou update do app. Se voce usar `exato: true`/`exact: true` em uma notificacao agendada e o Android exigir liberacao manual de alarme exato, o html2apk abre essa tela automaticamente.
+
+## Problemas Comuns
+
+### `doctor` mostra `ERR java` ou `ERR javac`
+
+Instale um JDK e configure `JAVA_HOME`.
+
+### `doctor` mostra erro no Android SDK
+
+Instale Android Studio ou Android command line tools. Depois instale:
+
+```bash
+sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+```
+
+### `build` diz que nao encontrou `index.html`
+
+Confira `entryFile` e `webRoot` no `app.json`.
+
+Exemplo:
+
+```json
+{
+  "entryFile": "index.html",
+  "webRoot": "."
+}
+```
+
+Se seu HTML fica em `public/index.html`:
+
+```json
+{
+  "entryFile": "index.html",
+  "webRoot": "public"
+}
+```
+
+### Quero ver a pasta Cordova gerada
+
+Rode:
+
+```bash
+html2apk build --debug
+```
+
+No fim, a CLI mostra o caminho da pasta temporaria.
+
+### O APK foi gerado, onde ele esta?
+
+Por padrao:
+
+```text
+dist/
+```
+
+Exemplo:
+
+```text
+dist/MeuApp-1.0.0-debug.apk
+```
+
+## Interface Visual Para Windows
+
+Tambem existe um app visual em Electron. O usuario abre o `html2apk.exe`, escolhe o idioma na primeira execucao, arrasta a pasta do projeto e acompanha tudo pela interface.
+
+Fluxo da interface:
+
+1. Arraste ou escolha a pasta do projeto.
+2. O app mostra `verificando ambiente` antes de liberar as proximas etapas.
+3. Se faltarem pacotes do Android SDK, ele pede permissao e tenta baixar/instalar mostrando logs.
+4. Preencha as configuracoes obrigatorias: nome do app, Package ID, versao e modo. Se voce nao escolher icone, o html2apk usa o icone padrao da ferramenta.
+5. Revise e clique em `Gerar APK` para salvar o APK em `dist`, ou `Testar no USB` para gerar debug, instalar e abrir direto em um celular conectado.
+6. Ao concluir, a tela final mostra o APK gerado e botoes para abrir a pasta `dist` ou localizar o arquivo.
+
+O PNG escolhido e usado como icone do aplicativo e tambem como imagem da tela inicial do Android, evitando o splash padrao do Cordova. Quando nenhum PNG e escolhido, o `html2apk.png` da propria ferramenta entra como fallback.
+
+Depois que a pasta foi escolhida, a interface acompanha mudancas nela automaticamente. Edicoes em HTML, CSS, JS e assets entram no proximo build sem arrastar a pasta de novo. Se `app.json` ou `config.json` mudar, os campos da tela de configuracoes sao recarregados.
+
+Para `Testar no USB`, o celular precisa estar com `Opcoes do desenvolvedor > Depuracao USB` ativa. Ao conectar, desbloqueie o aparelho e aceite a chave RSA. Se o Android aparecer como `unauthorized` ou `offline`, a interface mostra o que fazer nos logs.
+
+Os logs podem ser abertos em uma barra inferior durante qualquer etapa pelo botao `Mostrar logs`. Se atrapalhar a visualizacao, use `Ocultar logs` e a area principal volta a ocupar a altura da janela.
+
+Para rodar a interface em desenvolvimento:
+
+```bash
+npm run desktop
+```
+
+Para gerar o executavel portatil do Windows:
+
+```bash
+npm run build-desktop-win
+```
+
+O resultado fica em:
+
+```text
+dist-desktop/html2apk-portable/html2apk.exe
+```
+
+Esse portatil inclui a interface, o `html2apk`, Cordova e as dependencias Node do projeto. JDK, Gradle e Android SDK sao ferramentas grandes do sistema; quando possivel, a interface tenta completar os pacotes Android com permissao do usuario.
+
+## Executavel Da CLI
+
+O projeto tambem mantem scripts antigos para empacotar somente a CLI com `pkg`:
+
+```bash
+npm run build-win
+npm run build-linux
+npm run build-mac
+```

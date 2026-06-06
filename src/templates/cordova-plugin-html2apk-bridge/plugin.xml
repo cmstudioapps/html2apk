@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin id="cordova-plugin-html2apk-bridge" version="0.1.0" xmlns="http://apache.org/cordova/ns/plugins/1.0" xmlns:android="http://schemas.android.com/apk/res/android">
+  <name>Html2ApkBridge</name>
+
+  <js-module src="www/html2apk-bridge.js" name="Html2ApkBridge">
+    <clobbers target="Html2ApkNative" />
+  </js-module>
+
+  <platform name="android">
+    <config-file target="res/xml/config.xml" parent="/*">
+      <feature name="Html2ApkBridge">
+        <param name="android-package" value="dev.html2apk.bridge.Html2ApkBridge" />
+      </feature>
+    </config-file>
+
+    <config-file target="AndroidManifest.xml" parent="/manifest">
+      <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+      <uses-permission android:name="android.permission.VIBRATE" />
+      <uses-permission android:name="android.permission.CAMERA" />
+      <uses-permission android:name="android.permission.RECORD_AUDIO" />
+      <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+      <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+      <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+      <uses-permission android:name="android.permission.USE_FINGERPRINT" />
+      <uses-permission android:name="android.permission.SET_WALLPAPER" />
+      <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+      <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+      <uses-feature android:name="android.hardware.camera" android:required="false" />
+      <uses-feature android:name="android.hardware.camera.flash" android:required="false" />
+      <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+      <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    </config-file>
+
+    <config-file target="AndroidManifest.xml" parent="/manifest/application">
+      <provider
+        android:name="androidx.core.content.FileProvider"
+        android:authorities="${applicationId}.html2apk.fileprovider"
+        android:exported="false"
+        android:grantUriPermissions="true">
+        <meta-data
+          android:name="android.support.FILE_PROVIDER_PATHS"
+          android:resource="@xml/html2apk_file_paths" />
+      </provider>
+      <service android:name="dev.html2apk.bridge.FloatingIconService" android:exported="false" />
+      <receiver android:name="dev.html2apk.bridge.NotificationReceiver" android:exported="false" />
+      <receiver android:name="dev.html2apk.bridge.NotificationClickReceiver" android:exported="false" />
+      <receiver android:name="dev.html2apk.bridge.BootReceiver" android:enabled="true" android:exported="true">
+        <intent-filter>
+          <action android:name="android.intent.action.BOOT_COMPLETED" />
+          <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+        </intent-filter>
+      </receiver>
+    </config-file>
+
+    <source-file src="src/android/Html2ApkBridge.java" target-dir="app/src/main/java/dev/html2apk/bridge" />
+    <source-file src="src/android/FloatingIconService.java" target-dir="app/src/main/java/dev/html2apk/bridge" />
+    <source-file src="src/android/NotificationReceiver.java" target-dir="app/src/main/java/dev/html2apk/bridge" />
+    <source-file src="src/android/NotificationClickReceiver.java" target-dir="app/src/main/java/dev/html2apk/bridge" />
+    <source-file src="src/android/BootReceiver.java" target-dir="app/src/main/java/dev/html2apk/bridge" />
+    <source-file src="src/android/NotificationStore.java" target-dir="app/src/main/java/dev/html2apk/bridge" />
+    <resource-file src="src/android/xml/html2apk_file_paths.xml" target="res/xml/html2apk_file_paths.xml" />
+    <framework src="androidx.core:core:1.12.0" />
+  </platform>
+</plugin>
