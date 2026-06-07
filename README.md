@@ -978,6 +978,43 @@ if (!podeUsarAlarmeExato) {
 
 A bridge cria canal de notificacao, solicita `POST_NOTIFICATIONS` automaticamente quando `notificar()`/`agendarNotificacao()` precisam, abre configuracoes se o Android bloquear o pop-up, abre o app com payload quando a notificacao e clicada, persiste notificacoes agendadas e tenta reagendar apos reboot ou update do app. Se voce usar `exato: true`/`exact: true` em uma notificacao agendada e o Android exigir liberacao manual de alarme exato, o html2apk abre essa tela automaticamente.
 
+## Como contribuir sem quebrar o padrao
+
+O html2apk agora e um projeto aberto, mas a regra mais importante para novas features e simples: antes de implementar, entenda como o codigo atual trabalha. Evite criar uma segunda arquitetura para resolver algo que a ponte existente ja resolve.
+
+As funcoes interpretadas seguem um caminho bem definido:
+
+```text
+JavaScript do app
+  -> funcao global em portugues
+  -> aliases quando fizer sentido
+  -> normalizacao de argumentos
+  -> cordova.exec(action)
+  -> dispatcher Java
+  -> permissao/thread/subsistema Android
+  -> CallbackContext
+  -> Promise no JavaScript
+```
+
+Quando uma feature nova entra, ela deve atravessar esse caminho em vez de criar uma forma paralela de comunicacao. Isso evita duplicacao, bugs dificeis de testar e diferenca de comportamento entre o early bridge, o plugin Cordova, a interface desktop e o app final.
+
+Checklist antes de abrir PR ou commit:
+
+- Leia funcoes parecidas antes de escrever codigo novo. Se for arquivo, veja `salvarArquivo`, `baixarArquivo` e `FileProvider`. Se for permissao, veja camera, microfone, notificacao e localizacao. Se for evento, veja `aoEvento`, notificacao e compartilhamento recebido.
+- Mantenha nomes em PT-BR como API principal e aliases em ingles apenas quando combinarem com o padrao existente.
+- Adicione a funcao no early bridge e no plugin JS com a mesma assinatura publica.
+- Reuse normalizadores e helpers existentes; nao trate payload com string solta se o projeto ja usa objeto estruturado.
+- No Java, entre pelo dispatcher de `action` existente e retorne JSON consistente.
+- Se precisar permissao runtime, preserve callback pendente, busy state e abertura de configuracoes quando o Android exigir.
+- Se tocar arquivos, preserve sanitizacao de nome, armazenamento interno, MediaStore quando aplicavel e FileProvider.
+- Se tocar operacoes longas, use thread adequada e nao trave a WebView.
+- Atualize `plugin.xml` apenas com permissoes, intent filters ou dependencias realmente necessarias.
+- Atualize runtime console, aba "Codigos interpretados", laboratorio USB, README/SOBRE quando a feature for publica.
+- Adicione ou ajuste testes em `test/config.test.js` para provar que JS, Java, UI e docs continuam alinhados.
+- Rode `npm test` antes de enviar.
+
+O objetivo nao e impedir criatividade; e proteger o comportamento previsivel da ferramenta. Uma contribuicao boa parece nativa no projeto: usa os mesmos nomes, passa pelos mesmos pontos, retorna no mesmo formato e respeita as mesmas fronteiras entre build, desktop, bridge JS e Java Android.
+
 ## Problemas Comuns
 
 ### `doctor` mostra `ERR java` ou `ERR javac`

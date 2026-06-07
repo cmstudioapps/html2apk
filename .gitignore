@@ -18,6 +18,7 @@ pnpm-debug.log*
 *.swp
 *.apk
 *.aab
+*.zip
 *.ipa
 *.keystore
 *.jks
