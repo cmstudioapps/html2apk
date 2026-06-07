@@ -984,6 +984,8 @@ O html2apk agora e um projeto aberto, mas a regra mais importante para novas fea
 
 Antes de mandar qualquer feature nova, o contribuinte precisa estudar o fluxo atual da aplicacao e confirmar que a solucao segue a mesma estrategia das funcoes existentes. Nao envie codigo que cria atalhos, caminhos paralelos, outro padrao de bridge, outro jeito de tratar permissao ou outra forma de comunicar JavaScript com Java sem uma justificativa tecnica muito clara. Primeiro adapte a ideia ao desenho que ja funciona no projeto; so proponha uma abordagem nova se o padrao atual realmente nao atender.
 
+Exemplo de postura esperada: "quero colocar uma nova funcao no projeto; antes de escrever, vou ver como as outras funcoes foram colocadas, como o codigo lida com elas, qual e o fluxo completo e por que esse fluxo existe". Essa investigacao vem antes da implementacao. Ela mostra onde a nova funcao deve nascer, como deve normalizar argumentos, qual action deve chamar, como o Java deve responder, onde documentar e como testar. E esse cuidado que permite criar algo novo sem quebrar a aplicacao.
+
 As funcoes interpretadas seguem um caminho bem definido:
 
 ```text
