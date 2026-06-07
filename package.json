@@ -4,14 +4,15 @@
   "description": "Node CLI and library to turn an HTML/CSS/JS folder into an Android APK through Cordova.",
   "main": "index.js",
   "bin": {
-    "html2apk": "./bin/html2apk.js"
+    "html2apk": "bin/html2apk.js"
   },
   "type": "commonjs",
   "license": "MIT",
   "files": [
     "bin",
     "src",
-    "examples",
+    "examples/minimal/app.json",
+    "examples/minimal/index.html",
     "index.js",
     "html2apk.png",
     "README.md"

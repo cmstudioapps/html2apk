@@ -75,6 +75,16 @@ test("createPlaceholderConfig includes every editable app.json field safely", ()
   assert.deepEqual(config.deepLinks, { schemes: [], appLinks: [] });
 });
 
+test("npm package config excludes generated Android artifacts", async () => {
+  const packageJson = JSON.parse(await fs.readFile(path.resolve(__dirname, "..", "package.json"), "utf8"));
+
+  assert.equal(packageJson.bin.html2apk, "bin/html2apk.js");
+  assert.ok(packageJson.files.includes("examples/minimal/app.json"));
+  assert.ok(packageJson.files.includes("examples/minimal/index.html"));
+  assert.ok(!packageJson.files.includes("examples"));
+  assert.ok(!packageJson.files.some((entry) => /(^|\/)dist(\/|$)|\.apk$|\.aab$/i.test(entry)));
+});
+
 test("build injects optional runtime console between bridge and cordova", async () => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "html2apk-html-"));
   const htmlPath = path.join(dir, "index.html");
