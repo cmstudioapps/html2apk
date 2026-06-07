@@ -414,6 +414,8 @@ function nativeFunctionLabHtml() {
       --green: #18864b;
       --red: #c33b3b;
       --code: #0c1117;
+      --soft-green: #e8f7ef;
+      --soft-amber: #fff6dd;
     }
     * { box-sizing: border-box; }
     body {
@@ -421,6 +423,7 @@ function nativeFunctionLabHtml() {
       font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       background: var(--bg);
       color: var(--text);
+      line-height: 1.45;
     }
     header {
       position: sticky;
@@ -434,6 +437,7 @@ function nativeFunctionLabHtml() {
     h1 { margin: 0; font-size: 1.2rem; }
     header p { margin: 6px 0 0; color: var(--muted); line-height: 1.35; }
     main { display: grid; gap: 14px; padding: 14px; }
+    #groups { display: grid; gap: 14px; }
     section {
       border: 1px solid var(--line);
       border-radius: 8px;
@@ -445,6 +449,52 @@ function nativeFunctionLabHtml() {
       padding: 13px 14px;
       font-size: .98rem;
       border-bottom: 1px solid var(--line);
+    }
+    h2.with-action {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    h2.with-action button {
+      min-height: 32px;
+      width: auto;
+      padding: 6px 9px;
+      font-size: .78rem;
+      text-align: center;
+      white-space: nowrap;
+    }
+    .toolbar {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .toolbar input {
+      grid-column: 1 / -1;
+      min-height: 42px;
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      color: var(--text);
+      padding: 9px 11px;
+      font: inherit;
+    }
+    .stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .chip {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--muted);
+      background: var(--panel);
+      padding: 4px 9px;
+      font-size: .78rem;
+      font-weight: 800;
     }
     .grid {
       display: grid;
@@ -462,7 +512,15 @@ function nativeFunctionLabHtml() {
       font-weight: 800;
       text-align: left;
     }
+    button[disabled] { opacity: .68; }
     button:active { transform: translateY(1px); }
+    button.primary { background: var(--blue); border-color: var(--blue); color: #fff; }
+    button.safe { background: var(--soft-green); color: var(--green); }
+    button.listener { background: var(--soft-amber); color: #8a5f00; }
+    button.external { background: #f2edff; color: #6b46c1; }
+    button.running { outline: 2px solid var(--blue); }
+    button.ok { border-color: var(--green); }
+    button.fail { border-color: var(--red); }
     button small { display: block; margin-top: 4px; color: var(--muted); font-weight: 600; line-height: 1.3; }
     .danger { background: #fff0f0; color: var(--red); }
     .notice {
@@ -473,6 +531,57 @@ function nativeFunctionLabHtml() {
       color: #745400;
       line-height: 1.42;
     }
+    .output-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 12px;
+      border-bottom: 1px solid var(--line);
+    }
+    .output-head h2 { padding: 0; border: 0; }
+    .output-feed {
+      display: grid;
+      gap: 8px;
+      max-height: 360px;
+      overflow: auto;
+      padding: 12px;
+    }
+    .log-entry {
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--blue);
+      border-radius: 8px;
+      padding: 9px;
+      background: color-mix(in srgb, var(--panel) 96%, var(--blue));
+    }
+    .log-entry.ok { border-left-color: var(--green); }
+    .log-entry.error { border-left-color: var(--red); }
+    .log-entry strong { display: block; font-size: .9rem; }
+    .log-entry time { display: block; margin-top: 2px; color: var(--muted); font-size: .74rem; }
+    .log-entry pre {
+      margin: 8px 0 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: #dfe9f8;
+      background: var(--code);
+      border-radius: 7px;
+      padding: 8px;
+      font: .78rem/1.45 ui-monospace, SFMono-Regular, Consolas, monospace;
+    }
+    .guide {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 10px;
+      padding: 12px;
+    }
+    .guide article {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      background: color-mix(in srgb, var(--panel) 96%, var(--blue));
+    }
+    .guide strong { display: block; margin-bottom: 4px; }
+    .guide p { margin: 0; color: var(--muted); font-size: .88rem; }
     @media (prefers-color-scheme: dark) {
       :root {
         --bg: #10141b;
@@ -480,19 +589,51 @@ function nativeFunctionLabHtml() {
         --text: #e6edf7;
         --muted: #9aa8ba;
         --line: #283243;
+        --soft-green: #122d22;
+        --soft-amber: #332a12;
       }
       button { background: #172642; }
       .danger { background: #351c20; }
       .notice { background: #2d2816; color: #f2cc60; }
+    }
+    @media (max-width: 720px) {
+      .toolbar { grid-template-columns: 1fr 1fr; }
+      h2.with-action { align-items: flex-start; flex-direction: column; }
     }
   </style>
 </head>
 <body>
   <header>
     <h1>Teste de funcoes html2apk</h1>
-    <p>Toque nos botoes para chamar as funcoes interpretadas do APK. Algumas abrem permissoes, camera, seletor de arquivo ou outro app Android.</p>
+    <p>Use botoes manuais, lotes seguros e eventos passivos para testar as funcoes interpretadas do APK. Os resultados aparecem aqui e tambem no console runtime.</p>
+    <div class="toolbar" aria-label="Controles do laboratorio">
+      <button id="runSafeButton" class="primary" type="button">Rodar testes seguros</button>
+      <button id="runPrepareButton" type="button">Preparar dados</button>
+      <button id="registerEventsButton" type="button">Registrar eventos</button>
+      <button id="clearLogButton" type="button">Limpar resultados</button>
+      <input id="filterInput" type="search" placeholder="Filtrar funcao, evento ou categoria">
+    </div>
+    <div id="stats" class="stats" aria-live="polite"></div>
   </header>
-  <main id="groups"></main>
+  <main>
+    <section aria-label="Resultado ao vivo">
+      <div class="output-head">
+        <h2>Resultado ao vivo</h2>
+        <span class="chip">Novos no topo</span>
+      </div>
+      <div id="outputFeed" class="output-feed" aria-live="polite"></div>
+    </section>
+    <section aria-label="Como testar eventos passivos">
+      <h2>Eventos que nao dependem de botao</h2>
+      <div class="guide">
+        <article><strong>USB, fone e volume</strong><p>Conecte/desconecte cabo, fone ou mude o volume fisico. O evento aparece no resultado ao vivo.</p></article>
+        <article><strong>Teclado</strong><p>Toque no campo de filtro para abrir o teclado; feche o teclado para testar o evento inverso.</p></article>
+        <article><strong>Sensores</strong><p>Sacuda o aparelho, vire a tela para baixo ou aproxime a mao do sensor de proximidade.</p></article>
+        <article><strong>Notificacao e share</strong><p>Use os botoes de notificacao/compartilhamento e observe os callbacks registrados automaticamente.</p></article>
+      </div>
+    </section>
+    <div id="groups"></div>
+  </main>
   <script>
     (function () {
       var state = {
@@ -503,7 +644,10 @@ function nativeFunctionLabHtml() {
         lastImage: null,
         lastPhoto: null,
         micRecording: false,
-        eventsReady: false
+        eventsReady: false,
+        eventStops: [],
+        outputCount: 0,
+        sequenceRunning: false
       };
       var sampleImageBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=";
 
@@ -514,11 +658,78 @@ function nativeFunctionLabHtml() {
         return window[name];
       }
 
+      function delay(ms) {
+        return new Promise(function (resolve) {
+          setTimeout(resolve, ms);
+        });
+      }
+
+      function safeValue(value) {
+        if (value instanceof Error) {
+          return {
+            name: value.name,
+            message: value.message,
+            stack: value.stack
+          };
+        }
+        if (typeof value === "undefined") {
+          return undefined;
+        }
+        try {
+          return JSON.parse(JSON.stringify(value));
+        } catch (error) {
+          return String(value);
+        }
+      }
+
+      function valueToText(value) {
+        var normalized = safeValue(value);
+        if (typeof normalized === "undefined") {
+          return "";
+        }
+        if (typeof normalized === "string") {
+          return normalized;
+        }
+        return JSON.stringify(normalized, null, 2);
+      }
+
+      function appendOutput(title, value, kind) {
+        var feed = document.getElementById("outputFeed");
+        var entry;
+        var pre;
+        var textValue;
+
+        if (!feed) {
+          return;
+        }
+
+        state.outputCount += 1;
+        entry = document.createElement("article");
+        entry.className = "log-entry " + (kind === "error" ? "error" : (kind === "ok" ? "ok" : "info"));
+        entry.innerHTML = "<strong></strong><time></time>";
+        entry.querySelector("strong").textContent = title;
+        entry.querySelector("time").textContent = new Date().toLocaleTimeString();
+
+        textValue = valueToText(value);
+        if (textValue) {
+          pre = document.createElement("pre");
+          pre.textContent = textValue;
+          entry.appendChild(pre);
+        }
+
+        feed.prepend(entry);
+        while (feed.children.length > 80) {
+          feed.lastElementChild.remove();
+        }
+        updateStats();
+      }
+
       function log(title, value, kind) {
         var consoleKind = kind === "err" ? "error" : (kind === "ok" ? "ok" : "info");
         var hasValue = value !== "" && typeof value !== "undefined";
+        appendOutput(title, hasValue ? value : undefined, consoleKind);
         if (window.Html2ApkRuntimeConsole && typeof window.Html2ApkRuntimeConsole.log === "function") {
-          window.Html2ApkRuntimeConsole.log(consoleKind, title, hasValue ? value : undefined);
+          window.Html2ApkRuntimeConsole.log(consoleKind, title, hasValue ? safeValue(value) : undefined);
           return;
         }
         if (consoleKind === "error") {
@@ -532,44 +743,141 @@ function nativeFunctionLabHtml() {
 
       async function run(id) {
         var test = actions[id];
+        var button = document.querySelector("[data-action='" + id + "']");
+        var result;
         if (!test) {
           return;
         }
+        if (button) {
+          button.classList.remove("ok", "fail");
+          button.classList.add("running");
+          button.disabled = true;
+        }
         log("Executando " + test.title, "", "");
         try {
-          var result = await test.run();
+          result = await test.run();
           log("OK: " + test.title, result, "ok");
+          if (button) {
+            button.classList.add("ok");
+          }
+          return { ok: true, result: result };
         } catch (error) {
           log("ERRO: " + test.title, error, "err");
+          if (button) {
+            button.classList.add("fail");
+          }
+          return { ok: false, error: error };
+        } finally {
+          if (button) {
+            button.classList.remove("running");
+            button.disabled = false;
+          }
+        }
+      }
+
+      async function runSequence(ids, label) {
+        var index;
+        if (state.sequenceRunning) {
+          log("Lote ignorado", { motivo: "Ja existe um lote em execucao." }, "info");
+          return;
+        }
+        state.sequenceRunning = true;
+        log("Inicio do lote: " + label, { total: ids.length }, "info");
+        try {
+          for (index = 0; index < ids.length; index += 1) {
+            await run(ids[index]);
+            await delay(160);
+          }
+          log("Fim do lote: " + label, { total: ids.length }, "ok");
+        } finally {
+          state.sequenceRunning = false;
         }
       }
 
       function registerEvents() {
+        var registered = [];
+        var missing = [];
+        var failed = [];
+
+        function remember(stop) {
+          if (typeof stop === "function") {
+            state.eventStops.push(stop);
+          }
+        }
+
+        function listen(name, title) {
+          if (typeof window[name] !== "function") {
+            missing.push(name);
+            return;
+          }
+          try {
+            remember(window[name](function (event) {
+              log(title, event, "ok");
+            }));
+            registered.push(name);
+          } catch (error) {
+            failed.push({ name: name, message: error.message });
+            log("Falha ao registrar " + name, error, "err");
+          }
+        }
+
+        function event(type, title) {
+          if (typeof window.aoEvento !== "function") {
+            missing.push("aoEvento:" + type);
+            return;
+          }
+          try {
+            remember(window.aoEvento(type, function (detail) {
+              log(title, detail, "ok");
+            }));
+            registered.push("aoEvento:" + type);
+          } catch (error) {
+            failed.push({ name: "aoEvento:" + type, message: error.message });
+            log("Falha ao registrar evento " + type, error, "err");
+          }
+        }
+
         if (state.eventsReady) {
           return { registered: true, already: true };
         }
         state.eventsReady = true;
-        fn("aoEvento")("app:background", function (event) { log("evento app:background", event, "ok"); });
-        fn("aoEvento")("app:voltou", function (event) { log("evento app:voltou", event, "ok"); });
-        fn("aoEvento")("botao:voltar", function (event) { log("evento botao:voltar", event, "ok"); });
-        fn("aoEvento")("rede:mudou", function (event) { log("evento rede:mudou", event, "ok"); });
-        fn("aoEvento")("bateria:mudou", function (event) { log("evento bateria:mudou", event, "ok"); });
-        fn("aoConectarUSB")(function (event) { log("usb conectado", event, "ok"); });
-        fn("aoDesconectarUSB")(function (event) { log("usb desconectado", event, "ok"); });
-        fn("aoConectarFone")(function (event) { log("fone conectado", event, "ok"); });
-        fn("aoDesconectarFone")(function (event) { log("fone desconectado", event, "ok"); });
-        fn("aoMudarVolume")(function (event) { log("volume mudou", event, "ok"); });
-        fn("aoAbrirTeclado")(function (event) { log("teclado abriu", event, "ok"); });
-        fn("aoFecharTeclado")(function (event) { log("teclado fechou", event, "ok"); });
-        fn("aoMudarOrientacao")(function (event) { log("orientação mudou", event, "ok"); });
-        fn("aoSacudirCelular")(function (event) { log("celular sacudido", event, "ok"); });
-        fn("aoVirarCelularParaBaixo")(function (event) { log("tela para baixo", event, "ok"); });
-        fn("aoAproximarObjeto")(function (event) { log("objeto próximo", event, "ok"); });
-        fn("aoTirarPrint")(function (event) { log("print detectado", event, "ok"); });
-        fn("aoNFC")(function (event) { log("nfc recebido", event, "ok"); });
-        fn("aoReceberNotificacao")(function (event) { log("notificação recebida", event, "ok"); });
-        fn("aoClicarNotificacao")(function (event) { log("notificacao clicada", event, "ok"); });
-        return { registered: true };
+        event("app:background", "evento app:background");
+        event("app:voltou", "evento app:voltou");
+        event("botao:voltar", "evento botao:voltar");
+        event("rede:mudou", "evento rede:mudou");
+        event("bateria:mudou", "evento bateria:mudou");
+        [
+          ["aoMinimizar", "app minimizado"],
+          ["aoVoltarParaApp", "app voltou"],
+          ["aoAbrirLink", "link recebido"],
+          ["aoReceberCompartilhamento", "compartilhamento recebido"],
+          ["aoMudarRede", "rede mudou"],
+          ["aoMudarBateria", "bateria mudou"],
+          ["aoConectarUSB", "usb conectado"],
+          ["aoDesconectarUSB", "usb desconectado"],
+          ["aoConectarFone", "fone conectado"],
+          ["aoDesconectarFone", "fone desconectado"],
+          ["aoMudarVolume", "volume mudou"],
+          ["aoAbrirTeclado", "teclado abriu"],
+          ["aoFecharTeclado", "teclado fechou"],
+          ["aoMudarOrientacao", "orientacao mudou"],
+          ["aoSacudirCelular", "celular sacudido"],
+          ["aoVirarCelularParaBaixo", "tela para baixo"],
+          ["aoAproximarObjeto", "objeto proximo"],
+          ["aoTirarPrint", "print detectado"],
+          ["aoNFC", "nfc recebido"],
+          ["aoReceberNotificacao", "notificacao recebida"],
+          ["aoClicarNotificacao", "notificacao clicada"],
+          ["aoConectarBT", "bluetooth conectado"],
+          ["aoReceberDadosBT", "dados bluetooth"],
+          ["aoDarErroBT", "erro bluetooth"],
+          ["aoConectarWiFi", "wifi conectado"],
+          ["aoReceberDadosWiFi", "dados wifi"],
+          ["aoDarErroWiFi", "erro wifi"]
+        ].forEach(function (item) {
+          listen(item[0], item[1]);
+        });
+        return { registered: registered.length, missing: missing, failed: failed };
       }
 
       var actions = {
@@ -583,29 +891,33 @@ function nativeFunctionLabHtml() {
         compartilharApp: { title: "share_me()", run: function () { return fn("share_me")({ titulo: "Compartilhar app de teste" }); } },
         receberCompartilhamento: { title: "aoReceberCompartilhamento()", run: function () { if (state.stopShareEvent) { state.stopShareEvent(); } state.stopShareEvent = fn("aoReceberCompartilhamento")(function (event) { log("compartilhamento recebido", event, "ok"); }); return { listening: true }; } },
         compartilhamentoInicial: { title: "obterCompartilhamentoInicial()", run: function () { return fn("obterCompartilhamentoInicial")(); } },
-        iniciarBt: { title: "aoConectarBT()", run: function () { if (state.stopBtConnect) { state.stopBtConnect(); } state.stopBtConnect = fn("aoConectarBT")(function (event) { state.bluetoothConnected = true; log("bluetooth conectado", event, "ok"); }); if (state.stopBtData) { state.stopBtData(); } state.stopBtData = fn("aoReceberDadosBT")(function (data) { log("dados bluetooth", data, "ok"); }); if (state.stopBtError) { state.stopBtError(); } state.stopBtError = fn("aoDarErroBT")(function (error) { log("erro bluetooth", error, "error"); }); return { listening: true }; } },
+        iniciarBt: { title: "aoConectarBT()", run: function () { if (state.stopBtConnect) { state.stopBtConnect(); } state.stopBtConnect = fn("aoConectarBT")(function (event) { state.bluetoothConnected = true; log("bluetooth conectado", event, "ok"); }); if (state.stopBtData) { state.stopBtData(); } state.stopBtData = fn("aoReceberDadosBT")(function (data) { log("dados bluetooth", data, "ok"); }); if (state.stopBtError) { state.stopBtError(); } state.stopBtError = fn("aoDarErroBT")(function (error) { log("erro bluetooth", error, "err"); }); return { listening: true }; } },
         procurarBt: { title: "procurarBT()", run: async function () { var devices = await fn("procurarBT")({ timeoutMs: 10000 }); state.bluetoothDevices = devices || []; state.bluetoothDeviceId = state.bluetoothDevices[0] && state.bluetoothDevices[0].id; return devices; } },
         conectarBt: { title: "conectarBT()", run: async function () { if (!state.bluetoothDeviceId) { var devices = await fn("procurarBT")({ timeoutMs: 10000 }); state.bluetoothDevices = devices || []; state.bluetoothDeviceId = state.bluetoothDevices[0] && state.bluetoothDevices[0].id; } if (!state.bluetoothDeviceId) { return { connected: false, message: "Nenhum dispositivo encontrado." }; } return fn("conectarBT")(state.bluetoothDeviceId); } },
         enviarBt: { title: "enviarBT()", run: function () { return fn("enviarBT")({ origem: "laboratorio-html2apk", mensagem: "Ola via Bluetooth", quando: Date.now() }); } },
-        iniciarWifi: { title: "aoConectarWiFi()", run: function () { if (state.stopWifiConnect) { state.stopWifiConnect(); } state.stopWifiConnect = fn("aoConectarWiFi")(function (event) { state.wifiConnected = true; log("wifi conectado", event, "ok"); }); if (state.stopWifiData) { state.stopWifiData(); } state.stopWifiData = fn("aoReceberDadosWiFi")(function (data) { log("dados wifi", data, "ok"); }); if (state.stopWifiError) { state.stopWifiError(); } state.stopWifiError = fn("aoDarErroWiFi")(function (error) { log("erro wifi", error, "error"); }); return { listening: true }; } },
+        iniciarWifi: { title: "aoConectarWiFi()", run: function () { if (state.stopWifiConnect) { state.stopWifiConnect(); } state.stopWifiConnect = fn("aoConectarWiFi")(function (event) { state.wifiConnected = true; log("wifi conectado", event, "ok"); }); if (state.stopWifiData) { state.stopWifiData(); } state.stopWifiData = fn("aoReceberDadosWiFi")(function (data) { log("dados wifi", data, "ok"); }); if (state.stopWifiError) { state.stopWifiError(); } state.stopWifiError = fn("aoDarErroWiFi")(function (error) { log("erro wifi", error, "err"); }); return { listening: true }; } },
         procurarWifi: { title: "procurarWiFi()", run: async function () { var devices = await fn("procurarWiFi")({ timeoutMs: 10000 }); state.wifiDevices = devices || []; state.wifiDeviceId = state.wifiDevices[0] && state.wifiDevices[0].id; return devices; } },
         conectarWifi: { title: "conectarWiFi()", run: async function () { if (!state.wifiDeviceId) { var devices = await fn("procurarWiFi")({ timeoutMs: 10000 }); state.wifiDevices = devices || []; state.wifiDeviceId = state.wifiDevices[0] && state.wifiDevices[0].id; } if (!state.wifiDeviceId) { return { connected: false, message: "Nenhum dispositivo Wi-Fi encontrado." }; } return fn("conectarWiFi")(state.wifiDeviceId); } },
         enviarWifi: { title: "enviarWiFi()", run: function () { return fn("enviarWiFi")({ origem: "laboratorio-html2apk", mensagem: "Ola via Wi-Fi", quando: Date.now() }); } },
 
         notificar: { title: "notificar()", run: function () { return fn("notificar")({ titulo: "html2apk", texto: "Notificacao imediata", aoClicar: { funcao: "toast", argumentos: ["Notificacao clicada"] } }); } },
         agendarNotificacao: { title: "agendarNotificacao()", run: async function () { var result = await fn("agendarNotificacao")({ titulo: "html2apk", texto: "Agendada para 10 segundos", quando: Date.now() + 10000 }); state.scheduledId = result && result.id; return result; } },
+        agendarNotificacoes: { title: "agendarNotificacoes()", run: function () { return fn("agendarNotificacoes")([{ titulo: "Lista 1", texto: "Primeira notificacao", quando: Date.now() + 12000 }, { titulo: "Lista 2", texto: "Segunda notificacao", quando: Date.now() + 18000 }]); } },
         cancelarNotificacao: { title: "cancelarNotificacao()", run: function () { return fn("cancelarNotificacao")(state.scheduledId || 0); } },
         agendarLoopNotificacoes: { title: "agendarLoopNotificacoes()", run: async function () { var result = await fn("agendarLoopNotificacoes")({ aCada: "30s", notificacoes: [{ titulo: "Loop 1", texto: "Primeiro item" }, { titulo: "Loop 2", texto: "Segundo item" }] }); state.loopId = result && result.id; return result; } },
         cancelarLoopNotificacoes: { title: "cancelarLoopNotificacoes()", run: function () { return fn("cancelarLoopNotificacoes")(state.loopId || 0); } },
         pushInfo: { title: "Push OneSignal", run: function () { if (typeof window.solicitarPermissaoPush !== "function") { return { available: false, message: "Configure OneSignal App ID no app real para testar push remoto." }; } return window.solicitarPermissaoPush(); } },
 
-        statusPermissoes: { title: "statusPermissoes()", run: function () { return fn("statusPermissoes")(["CAMERA", "RECORD_AUDIO", "ACCESS_FINE_LOCATION", "POST_NOTIFICATIONS", "SET_WALLPAPER"]); } },
+        statusPermissoes: { title: "statusPermissoes()", run: function () { return fn("statusPermissoes")(["CAMERA", "RECORD_AUDIO", "ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION", "POST_NOTIFICATIONS", "SET_WALLPAPER", "BLUETOOTH_SCAN", "BLUETOOTH_CONNECT", "NFC", "SYSTEM_ALERT_WINDOW"]); } },
         permissaoNotificacao: { title: "solicitarPermissaoNotificacoes()", run: function () { return fn("solicitarPermissaoNotificacoes")(); } },
+        statusPermissaoNotificacoes: { title: "statusPermissaoNotificacoes()", run: function () { return fn("statusPermissaoNotificacoes")(); } },
         permissaoCamera: { title: "solicitarPermissaoCamera()", run: function () { return fn("solicitarPermissaoCamera")(); } },
         permissaoMicrofone: { title: "solicitarPermissaoMicrofone()", run: function () { return fn("solicitarPermissaoMicrofone")(); } },
+        statusMicrofone: { title: "statusMicrofone()", run: function () { return fn("statusMicrofone")(); } },
         alarmeExato: { title: "podeAgendarNotificacaoExata()", run: function () { return fn("podeAgendarNotificacaoExata")(); } },
         abrirAlarmeExato: { title: "abrirConfiguracaoAlarmeExato()", run: function () { return fn("abrirConfiguracaoAlarmeExato")(); } },
         statusSobreposicao: { title: "statusPermissaoSobreposicao()", run: function () { return fn("statusPermissaoSobreposicao")(); } },
+        solicitarSobreposicao: { title: "solicitarPermissaoSobreposicao()", run: function () { return fn("solicitarPermissaoSobreposicao")(); } },
         abrirSobreposicao: { title: "abrirConfiguracaoSobreposicao()", run: function () { return fn("abrirConfiguracaoSobreposicao")(); } },
 
         fullscreenOn: { title: "fullscreen(true)", run: function () { return fn("fullscreen")(true); } },
@@ -614,15 +926,20 @@ function nativeFunctionLabHtml() {
         telaAcordadaOff: { title: "manterTelaAcordada(false)", run: function () { return fn("manterTelaAcordada")(false); } },
         brilhoTela: { title: "brilhoTela()", run: function () { return fn("brilhoTela")(0.72); } },
         corTema: { title: "definirCorTema()", run: function () { return fn("definirCorTema")({ statusBarColor: "#126fff", navigationBarColor: "#10141b", darkIcons: false }); } },
+        corBarrasSistema: { title: "definirCorBarrasSistema()", run: function () { return fn("definirCorBarrasSistema")({ statusBarColor: "#18864b", navigationBarColor: "#10141b", darkIcons: false }); } },
+        lanternaOn: { title: "lanterna(true)", run: function () { return fn("lanterna")(true); } },
+        lanternaOff: { title: "lanterna(false)", run: function () { return fn("lanterna")(false); } },
         lanterna: { title: "alternarLanterna()", run: function () { return fn("alternarLanterna")(); } },
         statusLanterna: { title: "statusLanterna()", run: function () { return fn("statusLanterna")(); } },
         capturarTela: { title: "capturarTela()", run: function () { return fn("capturarTela")({ formato: "png" }); } },
+        tirarPrint: { title: "tirarPrint()", run: function () { return fn("tirarPrint")({ formato: "png" }); } },
         volumeAtual: { title: "volumeAtual()", run: function () { return fn("volumeAtual")(); } },
         definirVolume: { title: "definirVolume('midia', 0.5)", run: function () { return fn("definirVolume")("midia", 0.5, { mostrarUI: true }); } },
         aumentarVolume: { title: "aumentarVolume()", run: function () { return fn("aumentarVolume")("midia", 1, { mostrarUI: true }); } },
         diminuirVolume: { title: "diminuirVolume()", run: function () { return fn("diminuirVolume")("midia", 1, { mostrarUI: true }); } },
         iniciarIconeFlutuante: { title: "iniciarIconeFlutuante()", run: function () { return fn("iniciarIconeFlutuante")({ opacidade: 0.85 }); } },
-        configurarIconeFlutuante: { title: "definirOpacidadeIconeFlutuante()", run: function () { return fn("definirOpacidadeIconeFlutuante")(0.55); } },
+        configurarIconeFlutuante: { title: "configurarIconeFlutuante()", run: function () { return fn("configurarIconeFlutuante")({ opacidade: 0.65, tamanho: 58 }); } },
+        definirOpacidadeIconeFlutuante: { title: "definirOpacidadeIconeFlutuante()", run: function () { return fn("definirOpacidadeIconeFlutuante")(0.55); } },
         pararIconeFlutuante: { title: "pararIconeFlutuante()", run: function () { return fn("pararIconeFlutuante")(); } },
         minimizarApp: { title: "minimizarApp()", run: function () { return fn("minimizarApp")(); } },
         fecharApp: { title: "fecharApp()", run: function () { return fn("fecharApp")(); } },
@@ -653,13 +970,14 @@ function nativeFunctionLabHtml() {
         abrirArquivo: { title: "abrirArquivo()", run: function () { return fn("abrirArquivo")("lab.json"); } },
         compartilharArquivo: { title: "compartilharArquivo()", run: function () { return fn("compartilharArquivo")("lab.json"); } },
         baixarArquivo: { title: "baixarArquivo()", run: function () { return fn("baixarArquivo")("https://example.com/", "example.html"); } },
-        baixarBase64: { title: "baixarBase64()", run: function () { return fn("baixarBase64")("pixel-download.png", sampleImageBase64, { mimeType: "image/png", galeria: true }); } },
+        baixarBase64: { title: "baixarBase64()", run: function () { return fn("baixarBase64")("pixel-download.png", sampleImageBase64, { mimeType: "image/png" }); } },
         baixarArquivoLocal: { title: "baixarArquivoLocal()", run: async function () { var file = await fn("escolherArquivo")(); if (!file) { return { canceled: true }; } return fn("baixarArquivoLocal")(file, "copia-" + (file.name || file.nome || "arquivo")); } },
         excluirArquivo: { title: "excluirArquivo()", run: function () { return fn("excluirArquivo")("lab.json"); } },
 
         abrirNoApp: { title: "abrirNoApp()", run: function () { return fn("abrirNoApp")("#teste-funcoes"); } },
         abrirForaDoApp: { title: "abrirForaDoApp()", run: function () { return fn("abrirForaDoApp")("https://example.com"); } },
         abrirUrl: { title: "abrirUrl()", run: function () { return fn("abrirUrl")("https://example.com"); } },
+        abrirUrlExterno: { title: "abrirUrlExterno()", run: function () { return fn("abrirUrlExterno")("https://example.com"); } },
         discar: { title: "discar()", run: function () { return fn("discar")("11999999999"); } },
         abrirMapa: { title: "abrirMapa()", run: function () { return fn("abrirMapa")("Sao Paulo"); } },
         abrirWhatsapp: { title: "abrirWhatsapp()", run: function () { return fn("abrirWhatsapp")("5511999999999", "Teste html2apk"); } },
@@ -671,6 +989,7 @@ function nativeFunctionLabHtml() {
         infoArmazenamento: { title: "infoArmazenamento()", run: function () { return fn("infoArmazenamento")(); } },
         infoDesempenho: { title: "infoDesempenho()", run: function () { return fn("infoDesempenho")(); } },
         appsAbertos: { title: "appsAbertos()", run: function () { return fn("appsAbertos")(); } },
+        infoAppsAbertos: { title: "infoAppsAbertos()", run: function () { return fn("infoAppsAbertos")(); } },
 
         obterLocalizacao: { title: "obterLocalizacao()", run: function () { return fn("obterLocalizacao")({ altaPrecisao: true, timeoutMs: 10000 }); } },
         acompanharLocalizacao: { title: "acompanharLocalizacao()", run: async function () { var result = await fn("acompanharLocalizacao")({ intervaloMs: 5000 }); state.watchId = result && result.watchId; return result; } },
@@ -698,38 +1017,196 @@ function nativeFunctionLabHtml() {
         { title: "Feedback e compartilhamento", ids: ["toast", "vibrar", "aguardar", "copiarTexto", "lerTextoCopiado", "compartilharTexto", "compartilhar", "compartilharApp", "receberCompartilhamento", "compartilhamentoInicial"] },
         { title: "Bluetooth", ids: ["iniciarBt", "procurarBt", "conectarBt", "enviarBt"] },
         { title: "Wi-Fi local", ids: ["iniciarWifi", "procurarWifi", "conectarWifi", "enviarWifi"] },
-        { title: "Notificacoes", ids: ["notificar", "agendarNotificacao", "cancelarNotificacao", "agendarLoopNotificacoes", "cancelarLoopNotificacoes", "pushInfo"] },
-        { title: "Permissoes e configuracoes", ids: ["statusPermissoes", "permissaoNotificacao", "permissaoCamera", "permissaoMicrofone", "alarmeExato", "abrirAlarmeExato", "statusSobreposicao", "abrirSobreposicao"] },
-        { title: "Tela e hardware", ids: ["fullscreenOn", "fullscreenOff", "telaAcordadaOn", "telaAcordadaOff", "brilhoTela", "corTema", "lanterna", "statusLanterna", "capturarTela", "volumeAtual", "definirVolume", "aumentarVolume", "diminuirVolume", "iniciarIconeFlutuante", "configurarIconeFlutuante", "pararIconeFlutuante", "minimizarApp", "fecharApp"] },
+        { title: "Notificacoes", ids: ["notificar", "agendarNotificacao", "agendarNotificacoes", "cancelarNotificacao", "agendarLoopNotificacoes", "cancelarLoopNotificacoes", "pushInfo"] },
+        { title: "Permissoes e configuracoes", ids: ["statusPermissoes", "permissaoNotificacao", "statusPermissaoNotificacoes", "permissaoCamera", "permissaoMicrofone", "statusMicrofone", "alarmeExato", "abrirAlarmeExato", "statusSobreposicao", "solicitarSobreposicao", "abrirSobreposicao"] },
+        { title: "Tela e hardware", ids: ["fullscreenOn", "fullscreenOff", "telaAcordadaOn", "telaAcordadaOff", "brilhoTela", "corTema", "corBarrasSistema", "lanternaOn", "lanternaOff", "lanterna", "statusLanterna", "capturarTela", "tirarPrint", "volumeAtual", "definirVolume", "aumentarVolume", "diminuirVolume", "iniciarIconeFlutuante", "configurarIconeFlutuante", "definirOpacidadeIconeFlutuante", "pararIconeFlutuante", "minimizarApp", "fecharApp"] },
         { title: "Camera, QR Code e microfone", ids: ["tirarFoto", "capturarVideo", "escanearQRCode", "ouvirMic", "pararMic"] },
         { title: "Texto e voz", ids: ["ocr", "falar", "pararFala", "ouvir"] },
         { title: "Arquivos e midia", ids: ["escolherImagem", "escolherImagens", "escolherArquivo", "escolherArquivos", "escolherVideo", "escolherPasta", "salvarArquivoPicker", "salvarArquivoCrud", "lerArquivo", "lerArquivoCompleto", "listarArquivos", "infoArquivo", "arquivoExiste", "abrirArquivo", "compartilharArquivo", "baixarArquivo", "baixarBase64", "baixarArquivoLocal", "excluirArquivo"] },
-        { title: "Abrir apps externos", ids: ["abrirNoApp", "abrirForaDoApp", "abrirUrl", "discar", "abrirMapa", "abrirWhatsapp"] },
-        { title: "Diagnostico", ids: ["infoDispositivo", "infoRede", "infoBateria", "infoMemoria", "infoArmazenamento", "infoDesempenho", "appsAbertos"] },
+        { title: "Abrir apps externos", ids: ["abrirNoApp", "abrirForaDoApp", "abrirUrl", "abrirUrlExterno", "discar", "abrirMapa", "abrirWhatsapp"] },
+        { title: "Diagnostico", ids: ["infoDispositivo", "infoRede", "infoBateria", "infoMemoria", "infoArmazenamento", "infoDesempenho", "appsAbertos", "infoAppsAbertos"] },
         { title: "Localizacao e seguranca", ids: ["obterLocalizacao", "acompanharLocalizacao", "pararLocalizacao", "aoMudarLocalizacao", "autenticarBiometria", "salvarSeguro", "lerSeguro", "lerSeguroCompleto", "listarSeguro", "removerSeguro", "limparSeguro"] },
         { title: "Papel de parede", ids: ["infoPapelParede", "definirPapelParede", "abrirConfigPapel", "definirImagemEscolhida"] },
         { title: "Eventos", ids: ["registrarEventos", "obterNotificacaoInicial", "obterLinkInicial"] }
       ];
 
+      var safeActionIds = [
+        "registrarEventos", "statusPermissoes", "statusPermissaoNotificacoes", "statusMicrofone",
+        "alarmeExato", "statusSobreposicao", "statusLanterna", "volumeAtual",
+        "infoDispositivo", "infoRede", "infoBateria", "infoMemoria", "infoArmazenamento",
+        "infoDesempenho", "appsAbertos", "infoAppsAbertos", "listarArquivos", "arquivoExiste",
+        "compartilhamentoInicial", "obterNotificacaoInicial", "obterLinkInicial", "infoPapelParede",
+        "aguardar", "lerTextoCopiado"
+      ];
+      var setupActionIds = [
+        "salvarArquivoCrud", "lerArquivo", "lerArquivoCompleto", "infoArquivo", "salvarSeguro",
+        "lerSeguro", "lerSeguroCompleto", "listarSeguro", "baixarBase64"
+      ];
+      var listenerActionIds = [
+        "registrarEventos", "receberCompartilhamento", "iniciarBt", "iniciarWifi", "aoMudarLocalizacao"
+      ];
+      var externalActionIds = [
+        "compartilharTexto", "compartilhar", "compartilharApp", "abrirForaDoApp", "abrirUrl",
+        "abrirUrlExterno", "discar", "abrirMapa", "abrirWhatsapp", "abrirAlarmeExato",
+        "abrirSobreposicao", "abrirConfigPapel", "escolherImagem", "escolherImagens",
+        "escolherArquivo", "escolherArquivos", "escolherVideo", "escolherPasta",
+        "salvarArquivoPicker", "baixarArquivoLocal", "tirarFoto", "capturarVideo",
+        "escanearQRCode", "ouvir", "autenticarBiometria"
+      ];
+      var dangerActionIds = ["fecharApp", "minimizarApp", "limparSeguro", "excluirArquivo", "pararIconeFlutuante"];
+      var initialSmokeIds = ["registrarEventos", "statusPermissoes", "infoDispositivo", "infoRede", "infoBateria", "volumeAtual"];
+
+      function toSet(ids) {
+        return ids.reduce(function (map, id) {
+          map[id] = true;
+          return map;
+        }, {});
+      }
+
+      var safeActionSet = toSet(safeActionIds);
+      var setupActionSet = toSet(setupActionIds);
+      var listenerActionSet = toSet(listenerActionIds);
+      var externalActionSet = toSet(externalActionIds);
+      var dangerActionSet = toSet(dangerActionIds);
+
+      function actionMode(id) {
+        if (listenerActionSet[id]) {
+          return "listener";
+        }
+        if (safeActionSet[id]) {
+          return "safe";
+        }
+        if (setupActionSet[id]) {
+          return "setup";
+        }
+        if (externalActionSet[id]) {
+          return "external";
+        }
+        return "manual";
+      }
+
+      function actionHint(id) {
+        var mode = actionMode(id);
+        if (mode === "listener") {
+          return "Registra e fica escutando";
+        }
+        if (mode === "safe") {
+          return "Pode rodar no lote seguro";
+        }
+        if (mode === "setup") {
+          return "Prepara ou consulta dados de teste";
+        }
+        if (mode === "external") {
+          return "Abre permissao, seletor ou app externo";
+        }
+        if (dangerActionSet[id]) {
+          return "Afeta estado do app";
+        }
+        return "Toque para executar";
+      }
+
+      function groupRunnableIds(group) {
+        return group.ids.filter(function (id) {
+          return safeActionSet[id] || setupActionSet[id];
+        });
+      }
+
+      function updateStats() {
+        var stats = document.getElementById("stats");
+        var total = Object.keys(actions).length;
+        if (!stats) {
+          return;
+        }
+        stats.innerHTML = [
+          "<span class='chip'>" + total + " testes no laboratorio</span>",
+          "<span class='chip'>" + safeActionIds.length + " seguros em lote</span>",
+          "<span class='chip'>" + listenerActionIds.length + " grupos de escuta</span>",
+          "<span class='chip'>" + state.outputCount + " resultados</span>"
+        ].join("");
+      }
+
+      function applyFilter() {
+        var filter = document.getElementById("filterInput");
+        var term = filter ? filter.value.trim().toLowerCase() : "";
+        document.querySelectorAll("#groups section").forEach(function (section) {
+          var visible = 0;
+          var groupTitle = section.querySelector("h2").textContent.toLowerCase();
+          section.querySelectorAll("[data-action]").forEach(function (button) {
+            var text = button.textContent.toLowerCase();
+            var match = !term || text.indexOf(term) !== -1 || groupTitle.indexOf(term) !== -1;
+            button.hidden = !match;
+            if (match) {
+              visible += 1;
+            }
+          });
+          section.hidden = visible === 0;
+        });
+      }
+
       function render() {
         var root = document.getElementById("groups");
+        var notice = "<p class='notice'>Os lotes seguros evitam camera, seletores, apps externos e acoes que fecham/minimizam. Para eventos passivos, deixe o app aberto e provoque o evento fisico no aparelho.</p>";
         root.innerHTML = groups.map(function (group) {
-          return "<section><h2>" + group.title + "</h2><div class='grid'>" + group.ids.map(function (id) {
+          var runnable = groupRunnableIds(group);
+          var runButton = runnable.length
+            ? "<button type='button' data-run-group='" + runnable.join(",") + "'>Rodar seguros (" + runnable.length + ")</button>"
+            : "";
+          return "<section><h2 class='with-action'><span>" + group.title + "</span>" + runButton + "</h2><div class='grid'>" + group.ids.map(function (id) {
             var item = actions[id];
-            return "<button type='button' data-action='" + id + "'>" + item.title + "<small>Toque para executar</small></button>";
+            var mode = actionMode(id);
+            var classes = [mode];
+            if (dangerActionSet[id]) {
+              classes.push("danger");
+            }
+            return "<button type='button' class='" + classes.join(" ") + "' data-action='" + id + "'><span>" + item.title + "</span><small>" + actionHint(id) + "</small></button>";
           }).join("") + "</div></section>";
-        }).join("") + "<p class='notice'>Video wallpaper, push remoto e fundo de chamadas dependem de configuracao do sistema, OneSignal ou fabricante. O app mostra o retorno real quando a funcao nao puder agir direto.</p>";
+        }).join("") + notice;
+        updateStats();
+        applyFilter();
       }
 
       document.addEventListener("click", function (event) {
+        var groupButton = event.target.closest("[data-run-group]");
         var button = event.target.closest("[data-action]");
+        if (groupButton) {
+          runSequence(groupButton.getAttribute("data-run-group").split(","), "grupo");
+          return;
+        }
         if (button) {
           run(button.getAttribute("data-action"));
         }
       });
 
+      document.addEventListener("input", function (event) {
+        if (event.target && event.target.id === "filterInput") {
+          applyFilter();
+        }
+      });
+
+      document.getElementById("runSafeButton").addEventListener("click", function () {
+        runSequence(safeActionIds, "testes seguros");
+      });
+
+      document.getElementById("runPrepareButton").addEventListener("click", function () {
+        runSequence(setupActionIds, "preparar dados");
+      });
+
+      document.getElementById("registerEventsButton").addEventListener("click", function () {
+        run("registrarEventos");
+      });
+
+      document.getElementById("clearLogButton").addEventListener("click", function () {
+        var feed = document.getElementById("outputFeed");
+        if (feed) {
+          feed.innerHTML = "";
+        }
+        state.outputCount = 0;
+        updateStats();
+      });
+
       document.addEventListener("deviceready", function () {
         log("deviceready", { ready: true }, "ok");
+        runSequence(initialSmokeIds, "diagnostico inicial");
       }, false);
 
       render();
@@ -760,7 +1237,15 @@ async function createNativeFunctionLabProject() {
       "RECORD_AUDIO",
       "ACCESS_FINE_LOCATION",
       "ACCESS_COARSE_LOCATION",
-      "SET_WALLPAPER"
+      "SET_WALLPAPER",
+      "BLUETOOTH_SCAN",
+      "BLUETOOTH_CONNECT",
+      "NFC",
+      "MODIFY_AUDIO_SETTINGS",
+      "SYSTEM_ALERT_WINDOW",
+      "ACCESS_NETWORK_STATE",
+      "ACCESS_WIFI_STATE",
+      "CHANGE_WIFI_MULTICAST_STATE"
     ]
   };
 
