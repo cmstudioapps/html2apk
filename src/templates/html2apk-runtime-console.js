@@ -205,7 +205,19 @@
       target.removeChild(target.firstChild);
     }
 
+    scrollListToBottom(target);
+  }
+
+  function scrollListToBottom(target) {
+    if (!target) {
+      return;
+    }
     target.scrollTop = target.scrollHeight;
+    if (typeof window.requestAnimationFrame === "function") {
+      window.requestAnimationFrame(function () {
+        target.scrollTop = target.scrollHeight;
+      });
+    }
   }
 
   function renderNetworkEntry(entry) {
@@ -606,7 +618,7 @@
       ".html2apk-console-controls{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}.html2apk-console-tabs,.html2apk-console-actions{display:flex;gap:8px;flex-wrap:wrap}.html2apk-console-actions{justify-content:flex-start}",
       ".html2apk-console-header button{border:1px solid rgba(148,163,184,.28);background:#1e293b;color:#e2e8f0;border-radius:9px;padding:8px 10px;font:800 12px system-ui,Segoe UI,Arial}",
       ".html2apk-console-header button.active{background:#126fff;border-color:#60a5fa;color:#fff}.html2apk-console-header button:hover{border-color:#93c5fd}.html2apk-console-header button:disabled{opacity:.72}",
-      ".html2apk-console-body{height:min(58vh,560px);background:#050816}.html2apk-console-list{display:none;height:100%;overflow:auto;padding:10px}.html2apk-console-list.active{display:block}",
+      ".html2apk-console-body{height:min(58vh,560px);background:#050816;overflow:hidden}.html2apk-console-list{display:none;height:100%;box-sizing:border-box;overflow:auto;padding:10px 10px 30px;scroll-padding-bottom:30px;overscroll-behavior:contain}.html2apk-console-list:after{content:'';display:block;height:14px}.html2apk-console-list.active{display:block}",
       ".html2apk-console-entry{border:1px solid rgba(148,163,184,.16);border-left:4px solid #64748b;border-radius:11px;padding:9px 10px;margin-bottom:8px;background:#0f172a}",
       ".html2apk-console-entry.error{border-left-color:#ef4444;background:#1b1117}.html2apk-console-entry.warn{border-left-color:#f59e0b;background:#1a1610}.html2apk-console-entry.call,.html2apk-console-entry.network{border-left-color:#60a5fa}.html2apk-console-entry.ok{border-left-color:#22c55e;background:#0f1a15}.html2apk-console-entry.info{border-left-color:#94a3b8}",
       ".html2apk-console-meta{display:flex;align-items:center;justify-content:space-between;gap:10px;color:#94a3b8;font-size:11px;font-weight:900;margin-bottom:6px}.html2apk-console-kind{color:#e2e8f0}.html2apk-console-entry pre{white-space:pre-wrap;word-break:break-word;margin:0;color:#dbeafe;font:12px ui-monospace,SFMono-Regular,Consolas,monospace;line-height:1.48}",

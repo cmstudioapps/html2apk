@@ -2438,6 +2438,9 @@ function appendLogTo(container, line, kind) {
   }
 
   container.scrollTop = container.scrollHeight;
+  requestAnimationFrame(() => {
+    container.scrollTop = container.scrollHeight;
+  });
 }
 
 function appendLog(line, kind = "raw") {

@@ -1027,15 +1027,24 @@ h2 {
 
 .log-console {
   height: min(620px, calc(100vh - 230px));
+  min-height: 0;
+  box-sizing: border-box;
   overflow: auto;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #0c1117;
   color: #d6e4f7;
-  padding: 18px;
+  padding: 18px 18px 34px;
+  scroll-padding-bottom: 34px;
   font-family: "Cascadia Mono", Consolas, monospace;
   font-size: 13px;
   line-height: 1.55;
+}
+
+.log-console::after {
+  content: "";
+  display: block;
+  height: 12px;
 }
 
 .log-line {
@@ -1407,9 +1416,10 @@ body.logs-visible .bottom-log-bar {
 }
 
 .bottom-log-console {
-  height: auto;
+  height: 100%;
   min-height: 0;
-  padding: 10px 12px;
+  padding: 10px 12px 26px;
+  scroll-padding-bottom: 26px;
   font-size: 12px;
   line-height: 1.4;
 }

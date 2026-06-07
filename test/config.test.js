@@ -768,6 +768,14 @@ test("desktop codes tab exposes USB interpreted-function lab", async () => {
     path.resolve(__dirname, "..", "src", "desktop", "main.js"),
     "utf8"
   );
+  const styles = await fs.readFile(
+    path.resolve(__dirname, "..", "src", "desktop", "renderer", "styles.css"),
+    "utf8"
+  );
+  const runtimeConsole = await fs.readFile(
+    path.resolve(__dirname, "..", "src", "templates", "html2apk-runtime-console.js"),
+    "utf8"
+  );
 
   assert.match(index, /nativeFunctionLabButton/);
   assert.match(renderer, /runNativeFunctionLabFlow/);
@@ -842,6 +850,13 @@ test("desktop codes tab exposes USB interpreted-function lab", async () => {
   assert.match(main, /infoAppsAbertos/);
   assert.match(main, /Html2ApkRuntimeConsole\.log/);
   assert.doesNotMatch(main, /logPanel/);
+  assert.match(runtimeConsole, /function scrollListToBottom\(target\)/);
+  assert.match(runtimeConsole, /requestAnimationFrame/);
+  assert.match(runtimeConsole, /box-sizing:border-box;overflow:auto;padding:10px 10px 30px;scroll-padding-bottom:30px/);
+  assert.match(styles, /\.log-console::after/);
+  assert.match(styles, /scroll-padding-bottom: 34px/);
+  assert.match(styles, /scroll-padding-bottom: 26px/);
+  assert.match(renderer, /requestAnimationFrame\(\(\) => \{/);
 });
 
 test("OneSignal template exposes Portuguese and English helpers", async () => {
