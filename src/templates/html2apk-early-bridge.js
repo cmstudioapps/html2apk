@@ -7,6 +7,8 @@
 
   var deviceReady = typeof document === "undefined";
   var readyCallbacks = [];
+  var bluetoothServerStartPromise = null;
+  var wifiServerStartPromise = null;
   var scheduledNotificationCounter = 0;
   var notificationActionCounter = 0;
   var notificationActionCallbacks = {};
@@ -29,6 +31,25 @@
     "bluetooth:data": "bluetooth:dados",
     "bt:disconnected": "bluetooth:desconectado",
     "bluetooth:disconnected": "bluetooth:desconectado",
+    "bt:error": "bluetooth:erro",
+    "bluetooth:error": "bluetooth:erro",
+    "wifi:connected": "wifi:conectado",
+    "wifi:data": "wifi:dados",
+    "wifi:disconnected": "wifi:desconectado",
+    "wifi:error": "wifi:erro",
+    "usb:connected": "usb:conectado",
+    "usb:disconnected": "usb:desconectado",
+    "headphone:connected": "fone:conectado",
+    "headphone:disconnected": "fone:desconectado",
+    "volume:changed": "volume:mudou",
+    "keyboard:opened": "teclado:abriu",
+    "keyboard:closed": "teclado:fechou",
+    "phone:shaken": "celular:sacudido",
+    "phone:faceDown": "celular:tela_para_baixo",
+    "proximity:near": "proximidade:perto",
+    "screenshot:taken": "print:tela",
+    "orientation:changed": "orientacao:mudou",
+    "nfc:received": "nfc:recebido",
     "notification:received": "notificacao:recebida",
     "notification:clicked": "notificacao:clicada"
   };
@@ -591,8 +612,73 @@
     return detail;
   }
 
+  function bluetoothErrorDetail(errorOrDetail) {
+    var detail = errorOrDetail && typeof errorOrDetail === "object"
+      ? cloneSerializable(errorOrDetail) || {}
+      : {};
+    var message = detail.message || detail.mensagem || detail.error || detail.erro ||
+      (errorOrDetail && (errorOrDetail.message || errorOrDetail.mensagem || errorOrDetail.error || errorOrDetail.erro)) ||
+      String(errorOrDetail || "");
+    detail.ok = false;
+    detail.message = message;
+    detail.mensagem = message;
+    detail.error = message;
+    detail.erro = message;
+    detail.timestamp = detail.timestamp || Date.now();
+    return detail;
+  }
+
   function startBluetoothServerSilently() {
-    call("startBluetoothServer").catch(function () {});
+    if (bluetoothServerStartPromise) {
+      return bluetoothServerStartPromise;
+    }
+
+    bluetoothServerStartPromise = call("startBluetoothServer").catch(function (error) {
+      bluetoothServerStartPromise = null;
+      emitEvent("bluetooth:erro", bluetoothErrorDetail(error));
+    });
+    return bluetoothServerStartPromise;
+  }
+
+  function wifiReceivedData(detail) {
+    if (!detail || typeof detail !== "object") {
+      return detail;
+    }
+    if (Object.prototype.hasOwnProperty.call(detail, "dados")) {
+      return detail.dados;
+    }
+    if (Object.prototype.hasOwnProperty.call(detail, "data")) {
+      return detail.data;
+    }
+    return detail;
+  }
+
+  function wifiErrorDetail(errorOrDetail) {
+    var detail = errorOrDetail && typeof errorOrDetail === "object"
+      ? cloneSerializable(errorOrDetail) || {}
+      : {};
+    var message = detail.message || detail.mensagem || detail.error || detail.erro ||
+      (errorOrDetail && (errorOrDetail.message || errorOrDetail.mensagem || errorOrDetail.error || errorOrDetail.erro)) ||
+      String(errorOrDetail || "");
+    detail.ok = false;
+    detail.message = message;
+    detail.mensagem = message;
+    detail.error = message;
+    detail.erro = message;
+    detail.timestamp = detail.timestamp || Date.now();
+    return detail;
+  }
+
+  function startWifiServerSilently() {
+    if (wifiServerStartPromise) {
+      return wifiServerStartPromise;
+    }
+
+    wifiServerStartPromise = call("startWifiServer").catch(function (error) {
+      wifiServerStartPromise = null;
+      emitEvent("wifi:erro", wifiErrorDetail(error));
+    });
+    return wifiServerStartPromise;
   }
 
   function wallpaperOptions(sourceOrOptions, options) {
@@ -637,6 +723,61 @@
       normalized.alvo = normalized.target;
     }
     return normalized;
+  }
+
+  function volumeOptions(streamOrOptions, value, options) {
+    var normalized = {};
+    if (streamOrOptions && typeof streamOrOptions === "object" && !Array.isArray(streamOrOptions)) {
+      normalized = cloneSerializable(streamOrOptions) || {};
+    } else {
+      if (typeof streamOrOptions === "number") {
+        normalized.value = streamOrOptions;
+        normalized.valor = streamOrOptions;
+      } else if (typeof streamOrOptions === "string") {
+        normalized.stream = streamOrOptions;
+        normalized.tipo = streamOrOptions;
+      }
+      if (typeof value !== "undefined" && value !== null && typeof value !== "object") {
+        normalized.value = value;
+        normalized.valor = value;
+      }
+      if (value && typeof value === "object" && !Array.isArray(value)) {
+        Object.assign(normalized, cloneSerializable(value) || {});
+      }
+      if (options && typeof options === "object" && !Array.isArray(options)) {
+        Object.assign(normalized, cloneSerializable(options) || {});
+      }
+    }
+    return normalized;
+  }
+
+  function adjustVolumeOptions(streamOrOptions, amountOrOptions, options, direction) {
+    var normalized = volumeOptions(streamOrOptions);
+    if (typeof amountOrOptions === "number") {
+      normalized.amount = amountOrOptions;
+      normalized.quantidade = amountOrOptions;
+    } else if (amountOrOptions && typeof amountOrOptions === "object" && !Array.isArray(amountOrOptions)) {
+      Object.assign(normalized, cloneSerializable(amountOrOptions) || {});
+    }
+    if (options && typeof options === "object" && !Array.isArray(options)) {
+      Object.assign(normalized, cloneSerializable(options) || {});
+    }
+    normalized.direction = direction;
+    normalized.direcao = direction;
+    return normalized;
+  }
+
+  function floatingIconOptions(optionsOrOpacity) {
+    if (optionsOrOpacity && typeof optionsOrOpacity === "object" && !Array.isArray(optionsOrOpacity)) {
+      return cloneSerializable(optionsOrOpacity) || {};
+    }
+    if (typeof optionsOrOpacity === "number" || typeof optionsOrOpacity === "string") {
+      return {
+        opacity: Number(optionsOrOpacity),
+        opacidade: Number(optionsOrOpacity)
+      };
+    }
+    return {};
   }
 
   function secureItemOptions(keyOrOptions, value, options) {
@@ -974,6 +1115,47 @@
         listener(bluetoothReceivedData(detail));
       });
     },
+    aoDarErroBT: function (listener) {
+      if (typeof listener !== "function") {
+        throw new TypeError("listener must be a function");
+      }
+      return onEvent("bluetooth:erro", function (detail) {
+        listener(bluetoothErrorDetail(detail));
+      });
+    },
+    procurarWiFi: function (options) {
+      return call("scanWifi", [options || {}]);
+    },
+    conectarWiFi: function (idDispositivo) {
+      return call("connectWifi", [String(idDispositivo || "")]);
+    },
+    enviarWiFi: function (data) {
+      return call("sendWifi", [data]);
+    },
+    aoConectarWiFi: function (listener) {
+      if (typeof listener !== "function") {
+        throw new TypeError("listener must be a function");
+      }
+      startWifiServerSilently();
+      return onEvent("wifi:conectado", listener);
+    },
+    aoReceberDadosWiFi: function (listener) {
+      if (typeof listener !== "function") {
+        throw new TypeError("listener must be a function");
+      }
+      startWifiServerSilently();
+      return onEvent("wifi:dados", function (detail) {
+        listener(wifiReceivedData(detail));
+      });
+    },
+    aoDarErroWiFi: function (listener) {
+      if (typeof listener !== "function") {
+        throw new TypeError("listener must be a function");
+      }
+      return onEvent("wifi:erro", function (detail) {
+        listener(wifiErrorDetail(detail));
+      });
+    },
     ocr: function (sourceOrOptions) {
       return call("ocr", [ocrOptions(sourceOrOptions)]);
     },
@@ -1072,6 +1254,12 @@
     abrirConfiguracaoPapelParede: function () {
       return call("openWallpaperSettings");
     },
+    capturarTela: function (options) {
+      return call("captureScreen", [options || {}]);
+    },
+    tirarPrint: function (options) {
+      return call("captureScreen", [options || {}]);
+    },
     infoDispositivo: function () {
       return call("deviceInfo");
     },
@@ -1089,6 +1277,18 @@
     },
     infoDesempenho: function () {
       return call("performanceInfo");
+    },
+    volumeAtual: function () {
+      return call("getVolume");
+    },
+    definirVolume: function (streamOrOptions, value, options) {
+      return call("setVolume", [volumeOptions(streamOrOptions, value, options)]);
+    },
+    aumentarVolume: function (streamOrOptions, amountOrOptions, options) {
+      return call("adjustVolume", [adjustVolumeOptions(streamOrOptions, amountOrOptions, options, "up")]);
+    },
+    diminuirVolume: function (streamOrOptions, amountOrOptions, options) {
+      return call("adjustVolume", [adjustVolumeOptions(streamOrOptions, amountOrOptions, options, "down")]);
     },
     appsAbertos: function () {
       return call("openAppsMemory");
@@ -1153,11 +1353,23 @@
     abrirConfiguracaoSobreposicao: function () {
       return call("openOverlaySettings");
     },
-    iniciarIconeFlutuante: function () {
-      return call("startFloatingIcon");
+    iniciarIconeFlutuante: function (options) {
+      return call("startFloatingIcon", [floatingIconOptions(options)]);
     },
     pararIconeFlutuante: function () {
       return call("stopFloatingIcon");
+    },
+    configurarIconeFlutuante: function (options) {
+      return call("configureFloatingIcon", [floatingIconOptions(options)]);
+    },
+    definirOpacidadeIconeFlutuante: function (opacity) {
+      return call("configureFloatingIcon", [floatingIconOptions(opacity)]);
+    },
+    minimizarApp: function () {
+      return call("minimizeApp");
+    },
+    fecharApp: function () {
+      return call("closeApp");
     },
     obterNotificacaoInicial: function () {
       return call("getInitialNotification").then(function (notification) {
@@ -1210,6 +1422,48 @@
     },
     aoMudarBateria: function (listener) {
       return onEvent("bateria:mudou", listener);
+    },
+    aoConectarUSB: function (listener) {
+      return onEvent("usb:conectado", listener);
+    },
+    aoDesconectarUSB: function (listener) {
+      return onEvent("usb:desconectado", listener);
+    },
+    aoConectarFone: function (listener) {
+      return onEvent("fone:conectado", listener);
+    },
+    aoDesconectarFone: function (listener) {
+      return onEvent("fone:desconectado", listener);
+    },
+    aoMudarVolume: function (listener) {
+      return onEvent("volume:mudou", listener);
+    },
+    aoAbrirTeclado: function (listener) {
+      return onEvent("teclado:abriu", listener);
+    },
+    aoFecharTeclado: function (listener) {
+      return onEvent("teclado:fechou", listener);
+    },
+    aoSacudirCelular: function (listener) {
+      return onEvent("celular:sacudido", listener);
+    },
+    aoVirarCelularParaBaixo: function (listener) {
+      return onEvent("celular:tela_para_baixo", listener);
+    },
+    aoAproximarObjeto: function (listener) {
+      return onEvent("proximidade:perto", listener);
+    },
+    aoTirarPrint: function (listener) {
+      return onEvent("print:tela", listener);
+    },
+    aoMudarOrientacao: function (listener) {
+      return onEvent("orientacao:mudou", listener);
+    },
+    aoNFC: function (listener) {
+      return onEvent("nfc:recebido", listener);
+    },
+    aoReceberNotificacao: function (listener) {
+      return onEvent("notificacao:recebida", listener);
     },
     aoClicarNotificacao: function (listener) {
       if (typeof listener !== "function") {
@@ -1274,6 +1528,25 @@
     onBluetoothConnected: api.aoConectarBT,
     onBluetoothData: api.aoReceberDadosBT,
     onBTData: api.aoReceberDadosBT,
+    onBluetoothError: api.aoDarErroBT,
+    onBTError: api.aoDarErroBT,
+    scanWiFi: api.procurarWiFi,
+    scanWifi: api.procurarWiFi,
+    procurarWifi: api.procurarWiFi,
+    connectWiFi: api.conectarWiFi,
+    connectWifi: api.conectarWiFi,
+    conectarWifi: api.conectarWiFi,
+    sendWiFi: api.enviarWiFi,
+    sendWifi: api.enviarWiFi,
+    enviarWifi: api.enviarWiFi,
+    onWiFiConnect: api.aoConectarWiFi,
+    onWifiConnect: api.aoConectarWiFi,
+    onWiFiConnected: api.aoConectarWiFi,
+    onWifiConnected: api.aoConectarWiFi,
+    onWiFiData: api.aoReceberDadosWiFi,
+    onWifiData: api.aoReceberDadosWiFi,
+    onWiFiError: api.aoDarErroWiFi,
+    onWifiError: api.aoDarErroWiFi,
     recognizeText: api.ocr,
     textFromImage: api.ocr,
     speak: api.falar,
@@ -1328,12 +1601,20 @@
     wallpaper: api.definirPapelParede,
     wallpaperInfo: api.infoPapelParede,
     openWallpaperSettings: api.abrirConfiguracaoPapelParede,
+    captureScreen: api.capturarTela,
+    takeScreenshot: api.capturarTela,
+    screenshot: api.capturarTela,
     deviceInfo: api.infoDispositivo,
     networkInfo: api.infoRede,
     batteryInfo: api.infoBateria,
     memoryInfo: api.infoMemoria,
     storageInfo: api.infoArmazenamento,
     performanceInfo: api.infoDesempenho,
+    currentVolume: api.volumeAtual,
+    getVolume: api.volumeAtual,
+    setVolume: api.definirVolume,
+    increaseVolume: api.aumentarVolume,
+    decreaseVolume: api.diminuirVolume,
     openAppsMemory: api.appsAbertos,
     openAppsInfo: api.infoAppsAbertos,
     getLocation: api.obterLocalizacao,
@@ -1360,7 +1641,12 @@
     requestOverlayPermission: api.solicitarPermissaoSobreposicao,
     openOverlaySettings: api.abrirConfiguracaoSobreposicao,
     startFloatingIcon: api.iniciarIconeFlutuante,
+    configureFloatingIcon: api.configurarIconeFlutuante,
+    setFloatingIconOpacity: api.definirOpacidadeIconeFlutuante,
     stopFloatingIcon: api.pararIconeFlutuante,
+    minimizeApp: api.minimizarApp,
+    closeApp: api.fecharApp,
+    exitApp: api.fecharApp,
     getInitialNotification: api.obterNotificacaoInicial,
     getInitialLink: api.obterLinkInicial,
     getInitialShare: api.obterCompartilhamentoInicial,
@@ -1372,6 +1658,34 @@
     onOpenLink: api.aoAbrirLink,
     onNetworkChange: api.aoMudarRede,
     onBatteryChange: api.aoMudarBateria,
+    onUSBConnect: api.aoConectarUSB,
+    onUsbConnect: api.aoConectarUSB,
+    onUSBDisconnect: api.aoDesconectarUSB,
+    onUsbDisconnect: api.aoDesconectarUSB,
+    onHeadphoneConnect: api.aoConectarFone,
+    onHeadphoneConnected: api.aoConectarFone,
+    onHeadphoneDisconnect: api.aoDesconectarFone,
+    onHeadphoneDisconnected: api.aoDesconectarFone,
+    onVolumeChange: api.aoMudarVolume,
+    onKeyboardOpen: api.aoAbrirTeclado,
+    onKeyboardOpened: api.aoAbrirTeclado,
+    onKeyboardClose: api.aoFecharTeclado,
+    onKeyboardClosed: api.aoFecharTeclado,
+    onPhoneShake: api.aoSacudirCelular,
+    onShake: api.aoSacudirCelular,
+    onPhoneFaceDown: api.aoVirarCelularParaBaixo,
+    onFaceDown: api.aoVirarCelularParaBaixo,
+    onProximityNear: api.aoAproximarObjeto,
+    onObjectNear: api.aoAproximarObjeto,
+    onScreenshot: api.aoTirarPrint,
+    onScreenshotTaken: api.aoTirarPrint,
+    onOrientationChange: api.aoMudarOrientacao,
+    onNFC: api.aoNFC,
+    onNfc: api.aoNFC,
+    onNFCReceived: api.aoNFC,
+    onNfcReceived: api.aoNFC,
+    onNotificationReceived: api.aoReceberNotificacao,
+    onReceiveNotification: api.aoReceberNotificacao,
     onNotificationClick: api.aoClicarNotificacao
   });
 

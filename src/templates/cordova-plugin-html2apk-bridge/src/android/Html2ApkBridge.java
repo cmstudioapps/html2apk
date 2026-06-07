@@ -18,27 +18,47 @@ import android.content.BroadcastReceiver;
 import android.content.ContentValues;
 import android.content.ClipData;
 import android.content.ClipboardManager;
+import android.content.res.Configuration;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.database.ContentObserver;
 import android.database.Cursor;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraManager;
 import android.hardware.biometrics.BiometricPrompt;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
+import android.hardware.usb.UsbDevice;
+import android.hardware.usb.UsbManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Rect;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.media.AudioDeviceCallback;
+import android.media.AudioDeviceInfo;
+import android.media.AudioManager;
 import android.media.MediaRecorder;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.Uri;
+import android.net.nsd.NsdManager;
+import android.net.nsd.NsdServiceInfo;
+import android.net.wifi.WifiManager;
+import android.nfc.NdefMessage;
+import android.nfc.NdefRecord;
+import android.nfc.NfcAdapter;
+import android.nfc.Tag;
 import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -47,6 +67,7 @@ import android.os.Debug;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.Parcelable;
 import android.os.StatFs;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
@@ -60,6 +81,7 @@ import android.speech.RecognizerIntent;
 import android.speech.tts.TextToSpeech;
 import android.util.Base64;
 import android.view.View;
+import android.view.ViewTreeObserver;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Toast;
@@ -93,6 +115,10 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.nio.charset.Charset;
 import java.security.KeyStore;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -133,7 +159,9 @@ public class Html2ApkBridge extends CordovaPlugin {
     private static final String SECURE_VALUE_PREFIX = "value:";
     private static final String SECURE_IV_PREFIX = "iv:";
     private static final String SECURE_TYPE_PREFIX = "type:";
+    private static final String FLOATING_ICON_OPACITY_KEY = "floating_icon_opacity";
     private static final UUID BLUETOOTH_UUID = UUID.fromString("00001101-0000-1000-8000-00805f9b34fb");
+    private static final String WIFI_SERVICE_TYPE = "_html2apk._tcp.";
     private static Html2ApkBridge activeBridge;
 
     private CallbackContext notificationPermissionCallback;
@@ -152,6 +180,7 @@ public class Html2ApkBridge extends CordovaPlugin {
     private CallbackContext speechRecognitionCallback;
     private CallbackContext pendingSpeakCallback;
     private CallbackContext bluetoothDiscoveryCallback;
+    private CallbackContext wifiDiscoveryCallback;
     private CallbackContext pendingBluetoothCallback;
     private JSONObject pendingSaveFile;
     private JSONObject pendingMediaCaptureOptions;
@@ -180,18 +209,53 @@ public class Html2ApkBridge extends CordovaPlugin {
     private File micRecordingFile;
     private long micRecordingStartedAt;
     private BroadcastReceiver systemReceiver;
+    private BroadcastReceiver usbReceiver;
+    private BroadcastReceiver headphoneReceiver;
     private BroadcastReceiver bluetoothDiscoveryReceiver;
+    private AudioDeviceCallback audioDeviceCallback;
+    private ContentObserver volumeObserver;
+    private ContentObserver screenshotObserver;
+    private ViewTreeObserver.OnGlobalLayoutListener layoutListener;
     private CancellationSignal biometricCancellationSignal;
     private TextToSpeech textToSpeech;
+    private SensorManager sensorManager;
+    private SensorEventListener motionSensorListener;
+    private SensorEventListener proximitySensorListener;
+    private NfcAdapter nfcAdapter;
+    private PendingIntent nfcPendingIntent;
     private boolean textToSpeechReady;
     private boolean bluetoothServerRunning;
     private BluetoothServerSocket bluetoothServerSocket;
     private BluetoothSocket bluetoothSocket;
     private OutputStream bluetoothOutputStream;
+    private ServerSocket wifiServerSocket;
+    private Socket wifiSocket;
+    private OutputStream wifiOutputStream;
     private Thread bluetoothServerThread;
     private Thread bluetoothReadThread;
+    private Thread wifiServerThread;
+    private Thread wifiReadThread;
     private Handler bluetoothDiscoveryTimeout;
+    private Handler wifiDiscoveryTimeout;
+    private NsdManager.DiscoveryListener wifiDiscoveryListener;
+    private NsdManager.RegistrationListener wifiRegistrationListener;
+    private WifiManager.MulticastLock wifiMulticastLock;
+    private boolean wifiServerRunning;
+    private int wifiServerPort;
+    private String wifiServiceName;
+    private Boolean usbPowerConnected;
+    private Boolean headphoneConnected;
+    private Boolean keyboardOpen;
+    private Boolean proximityNear;
+    private boolean faceDownDispatched;
+    private long lastShakeAt;
+    private long faceDownStartedAt;
+    private long lastScreenshotAt;
+    private String currentOrientation;
+    private String lastScreenshotUri;
+    private JSONObject lastVolumeState;
     private final Map<String, JSONObject> bluetoothDiscoveredDevices = new HashMap<String, JSONObject>();
+    private final Map<String, JSONObject> wifiDiscoveredDevices = new HashMap<String, JSONObject>();
     private final Map<String, LocationListener> locationListeners = new HashMap<String, LocationListener>();
 
     @Override
@@ -201,7 +265,13 @@ public class Html2ApkBridge extends CordovaPlugin {
         handleNotificationIntent(cordova.getActivity().getIntent(), false);
         handleLinkIntent(cordova.getActivity().getIntent(), false);
         handleSharedIntent(cordova.getActivity().getIntent(), false);
+        handleNfcIntent(cordova.getActivity().getIntent(), false);
         registerSystemReceiver();
+        registerUsbReceiver();
+        registerHeadphoneWatchers();
+        registerVolumeObserver();
+        registerScreenshotObserver();
+        registerLayoutListener();
         startFloatingModeIfNeeded();
     }
 
@@ -210,12 +280,15 @@ public class Html2ApkBridge extends CordovaPlugin {
         handleNotificationIntent(intent, true);
         handleLinkIntent(intent, true);
         handleSharedIntent(intent, true);
+        handleNfcIntent(intent, true);
     }
 
     @Override
     public void onResume(boolean multitasking) {
         super.onResume(multitasking);
         dispatchEvent("app:voltou", baseEvent("app:voltou"));
+        registerSensorListeners();
+        enableNfcForegroundDispatch();
         startFloatingModeIfNeeded();
     }
 
@@ -223,6 +296,8 @@ public class Html2ApkBridge extends CordovaPlugin {
     public void onPause(boolean multitasking) {
         dispatchEvent("app:pausado", baseEvent("app:pausado"));
         dispatchEvent("app:background", baseEvent("app:background"));
+        disableNfcForegroundDispatch();
+        unregisterSensorListeners();
         super.onPause(multitasking);
     }
 
@@ -233,7 +308,15 @@ public class Html2ApkBridge extends CordovaPlugin {
         cancelBiometricPrompt();
         shutdownTextToSpeech();
         shutdownBluetooth();
+        shutdownWifi();
+        unregisterSensorListeners();
+        disableNfcForegroundDispatch();
+        unregisterLayoutListener();
+        unregisterScreenshotObserver();
+        unregisterVolumeObserver();
+        unregisterHeadphoneWatchers();
         unregisterSystemReceiver();
+        unregisterUsbReceiver();
         dispatchEvent("app:fechado", baseEvent("app:fechado"));
         if (activeBridge == this) {
             activeBridge = null;
@@ -398,6 +481,26 @@ public class Html2ApkBridge extends CordovaPlugin {
 
             if ("startBluetoothServer".equals(action)) {
                 startBluetoothServerWithPermission(callbackContext);
+                return true;
+            }
+
+            if ("scanWifi".equals(action)) {
+                scanWifi(args.optJSONObject(0), callbackContext);
+                return true;
+            }
+
+            if ("connectWifi".equals(action)) {
+                connectWifi(args.optString(0, ""), callbackContext);
+                return true;
+            }
+
+            if ("sendWifi".equals(action)) {
+                sendWifi(args.opt(0), callbackContext);
+                return true;
+            }
+
+            if ("startWifiServer".equals(action)) {
+                callbackContext.success(startWifiServer());
                 return true;
             }
 
@@ -605,6 +708,26 @@ public class Html2ApkBridge extends CordovaPlugin {
                 return true;
             }
 
+            if ("captureScreen".equals(action)) {
+                captureScreen(args.optJSONObject(0), callbackContext);
+                return true;
+            }
+
+            if ("getVolume".equals(action)) {
+                callbackContext.success(volumeState());
+                return true;
+            }
+
+            if ("setVolume".equals(action)) {
+                callbackContext.success(setVolume(args.optJSONObject(0)));
+                return true;
+            }
+
+            if ("adjustVolume".equals(action)) {
+                callbackContext.success(adjustVolume(args.optJSONObject(0)));
+                return true;
+            }
+
             if ("requestOverlayPermission".equals(action) || "openOverlaySettings".equals(action)) {
                 openOverlaySettings();
                 JSONObject result = overlayPermissionStatus();
@@ -623,14 +746,38 @@ public class Html2ApkBridge extends CordovaPlugin {
                     callbackContext.success(result);
                     return true;
                 }
-                startFloatingIcon();
-                callbackContext.success(overlayPermissionStatus());
+                startFloatingIcon(args.optJSONObject(0));
+                callbackContext.success(floatingIconStatus());
+                return true;
+            }
+
+            if ("configureFloatingIcon".equals(action)) {
+                if (!canDrawOverlays()) {
+                    openOverlaySettings();
+                    JSONObject result = floatingIconStatus();
+                    result.put("requested", true);
+                    result.put("requiresSettings", true);
+                    callbackContext.success(result);
+                    return true;
+                }
+                startFloatingIcon(args.optJSONObject(0));
+                callbackContext.success(floatingIconStatus());
                 return true;
             }
 
             if ("stopFloatingIcon".equals(action)) {
                 stopFloatingIcon();
                 callbackContext.success();
+                return true;
+            }
+
+            if ("minimizeApp".equals(action)) {
+                minimizeApp(callbackContext);
+                return true;
+            }
+
+            if ("closeApp".equals(action)) {
+                closeApp(callbackContext);
                 return true;
             }
 
@@ -1097,18 +1244,157 @@ public class Html2ApkBridge extends CordovaPlugin {
     }
 
     private void startFloatingIcon() throws Exception {
+        startFloatingIcon(new JSONObject());
+    }
+
+    private void startFloatingIcon(JSONObject options) throws Exception {
         if (!canDrawOverlays()) {
             openOverlaySettings();
             throw new Exception("SYSTEM_ALERT_WINDOW permission is not granted.");
         }
 
+        double opacity = floatingIconOpacity(options);
         Intent intent = new Intent(context(), FloatingIconService.class);
+        intent.putExtra("opacity", (float) opacity);
         context().startService(intent);
     }
 
     private void stopFloatingIcon() {
         Intent intent = new Intent(context(), FloatingIconService.class);
         context().stopService(intent);
+    }
+
+    private JSONObject floatingIconStatus() throws Exception {
+        JSONObject result = overlayPermissionStatus();
+        double opacity = preferencesStore().getFloat(FLOATING_ICON_OPACITY_KEY, 1f);
+        result.put("opacity", opacity);
+        result.put("opacidade", opacity);
+        return result;
+    }
+
+    private double floatingIconOpacity(JSONObject options) {
+        double current = preferencesStore().getFloat(FLOATING_ICON_OPACITY_KEY, 1f);
+        if (options == null) {
+            return current;
+        }
+
+        Object raw = options.opt("opacity");
+        if (raw == null || raw == JSONObject.NULL) {
+            raw = options.opt("opacidade");
+        }
+        if (raw == null || raw == JSONObject.NULL) {
+            return current;
+        }
+
+        double next = numberOrDefault(raw, current);
+        if (next > 1 && next <= 100) {
+            next = next / 100;
+        }
+        next = Math.max(0.1, Math.min(1, next));
+        preferencesStore().edit().putFloat(FLOATING_ICON_OPACITY_KEY, (float) next).apply();
+        return next;
+    }
+
+    private void captureScreen(final JSONObject options, final CallbackContext callbackContext) {
+        cordova.getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    callbackContext.success(captureScreenOnUiThread(options == null ? new JSONObject() : options));
+                } catch (Exception error) {
+                    callbackContext.error(error.getMessage());
+                }
+            }
+        });
+    }
+
+    private JSONObject captureScreenOnUiThread(JSONObject options) throws Exception {
+        View root = cordova.getActivity().getWindow().getDecorView().getRootView();
+        int width = root.getWidth();
+        int height = root.getHeight();
+        if (width <= 0 || height <= 0) {
+            throw new Exception("Screen is not ready to capture.");
+        }
+
+        Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        try {
+            Canvas canvas = new Canvas(bitmap);
+            root.draw(canvas);
+
+            String formatText = options.optString("formato", options.optString("format", "png")).toLowerCase(Locale.US);
+            boolean jpeg = "jpg".equals(formatText) || "jpeg".equals(formatText);
+            Bitmap.CompressFormat format = jpeg ? Bitmap.CompressFormat.JPEG : Bitmap.CompressFormat.PNG;
+            String mimeType = jpeg ? "image/jpeg" : "image/png";
+            int quality = Math.max(1, Math.min(100, options.optInt("qualidade", options.optInt("quality", jpeg ? 92 : 100))));
+            bitmap.compress(format, quality, output);
+
+            String base64 = Base64.encodeToString(output.toByteArray(), Base64.NO_WRAP);
+            JSONObject result = new JSONObject();
+            result.put("ok", true);
+            result.put("captured", true);
+            result.put("capturado", true);
+            result.put("width", width);
+            result.put("largura", width);
+            result.put("height", height);
+            result.put("altura", height);
+            result.put("format", jpeg ? "jpeg" : "png");
+            result.put("formato", jpeg ? "jpeg" : "png");
+            result.put("mimeType", mimeType);
+            result.put("base64", base64);
+            result.put("dataUrl", "data:" + mimeType + ";base64," + base64);
+            return result;
+        } finally {
+            bitmap.recycle();
+            try {
+                output.close();
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
+    private void minimizeApp(final CallbackContext callbackContext) {
+        cordova.getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    JSONObject result = new JSONObject();
+                    result.put("minimized", true);
+                    result.put("minimizado", true);
+                    callbackContext.success(result);
+                    cordova.getActivity().moveTaskToBack(true);
+                } catch (Exception error) {
+                    callbackContext.error(error.getMessage());
+                }
+            }
+        });
+    }
+
+    private void closeApp(final CallbackContext callbackContext) {
+        cordova.getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    JSONObject result = new JSONObject();
+                    result.put("closed", true);
+                    result.put("fechado", true);
+                    callbackContext.success(result);
+                    new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            Activity activity = cordova.getActivity();
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                                activity.finishAndRemoveTask();
+                            } else {
+                                activity.finish();
+                            }
+                        }
+                    }, 120);
+                } catch (Exception error) {
+                    callbackContext.error(error.getMessage());
+                }
+            }
+        });
     }
 
     static void ensureNotificationChannel(Context context) {
@@ -2545,6 +2831,559 @@ public class Html2ApkBridge extends CordovaPlugin {
             } catch (Exception ignored) {
             }
             bluetoothSocket = null;
+        }
+    }
+
+    private void scanWifi(JSONObject options, CallbackContext callbackContext) {
+        JSONObject safeOptions = options == null ? new JSONObject() : options;
+        if (wifiDiscoveryCallback != null) {
+            rejectBusyCallback(callbackContext, "Wi-Fi discovery");
+            return;
+        }
+
+        try {
+            wifiDiscoveredDevices.clear();
+            wifiDiscoveryCallback = callbackContext;
+            acquireWifiMulticastLock();
+            registerWifiDiscoveryListener();
+
+            long timeoutMs = Math.max(3000, safeOptions.optLong("timeoutMs", safeOptions.optLong("tempoMs", 8000)));
+            wifiDiscoveryTimeout = new Handler(Looper.getMainLooper());
+            wifiDiscoveryTimeout.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    finishWifiDiscovery();
+                }
+            }, timeoutMs);
+
+            nsdManager().discoverServices(WIFI_SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, wifiDiscoveryListener);
+        } catch (Exception error) {
+            failWifiDiscovery(error.getMessage());
+        }
+    }
+
+    private void connectWifi(final String deviceId, final CallbackContext callbackContext) {
+        final String id = deviceId == null ? "" : deviceId.trim();
+        if (id.length() == 0) {
+            callbackContext.error("Wi-Fi device id is required.");
+            return;
+        }
+
+        cordova.getThreadPool().execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    JSONObject endpoint = wifiEndpointFromId(id);
+                    String host = endpoint.optString("host", endpoint.optString("ip", ""));
+                    int port = endpoint.optInt("port", endpoint.optInt("porta", 0));
+                    if (host.length() == 0 || port <= 0) {
+                        callbackContext.error("Invalid Wi-Fi endpoint.");
+                        return;
+                    }
+
+                    Socket socket = new Socket(host, port);
+                    socket.setTcpNoDelay(true);
+                    JSONObject info = bindWifiSocket(socket, false, endpoint);
+                    callbackContext.success(info);
+                } catch (Exception error) {
+                    callbackContext.error(error.getMessage());
+                }
+            }
+        });
+    }
+
+    private void sendWifi(Object data, final CallbackContext callbackContext) {
+        final Object payload = data == null ? JSONObject.NULL : data;
+        cordova.getThreadPool().execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    OutputStream output;
+                    synchronized (Html2ApkBridge.this) {
+                        output = wifiOutputStream;
+                    }
+                    if (output == null) {
+                        callbackContext.error("Wi-Fi is not connected.");
+                        return;
+                    }
+
+                    JSONObject message = new JSONObject();
+                    message.put("dados", payload);
+                    message.put("data", payload);
+                    message.put("timestamp", System.currentTimeMillis());
+                    byte[] bytes = (message.toString() + "\n").getBytes("UTF-8");
+                    synchronized (Html2ApkBridge.this) {
+                        output.write(bytes);
+                        output.flush();
+                    }
+
+                    JSONObject result = new JSONObject();
+                    result.put("ok", true);
+                    result.put("sent", true);
+                    result.put("enviado", true);
+                    result.put("bytes", bytes.length);
+                    callbackContext.success(result);
+                } catch (Exception error) {
+                    callbackContext.error(error.getMessage());
+                }
+            }
+        });
+    }
+
+    private JSONObject startWifiServer() throws Exception {
+        synchronized (this) {
+            if (wifiServerRunning) {
+                return wifiServerStatus(true);
+            }
+            wifiServerSocket = new ServerSocket(0);
+            wifiServerPort = wifiServerSocket.getLocalPort();
+            wifiServerRunning = true;
+        }
+
+        registerWifiService(wifiServerPort);
+        wifiServerThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (wifiServerRunning) {
+                    try {
+                        ServerSocket server;
+                        synchronized (Html2ApkBridge.this) {
+                            server = wifiServerSocket;
+                        }
+                        if (server == null) {
+                            return;
+                        }
+                        Socket socket = server.accept();
+                        if (socket != null) {
+                            socket.setTcpNoDelay(true);
+                            bindWifiSocket(socket, true, null);
+                        }
+                    } catch (Exception error) {
+                        if (wifiServerRunning) {
+                            dispatchWifiError(error.getMessage());
+                        }
+                        return;
+                    }
+                }
+            }
+        }, "html2apk-wifi-server");
+        wifiServerThread.start();
+        return wifiServerStatus(true);
+    }
+
+    private JSONObject wifiServerStatus(boolean started) throws Exception {
+        JSONObject result = new JSONObject();
+        result.put("ok", true);
+        result.put("started", started);
+        result.put("iniciado", started);
+        result.put("listening", wifiServerRunning);
+        result.put("escutando", wifiServerRunning);
+        result.put("serviceType", WIFI_SERVICE_TYPE);
+        result.put("tipoServico", WIFI_SERVICE_TYPE);
+        result.put("serviceName", wifiServiceName == null ? "" : wifiServiceName);
+        result.put("nomeServico", result.optString("serviceName"));
+        result.put("port", wifiServerPort);
+        result.put("porta", wifiServerPort);
+        return result;
+    }
+
+    private NsdManager nsdManager() throws Exception {
+        NsdManager manager = (NsdManager) context().getSystemService(Context.NSD_SERVICE);
+        if (manager == null) {
+            throw new Exception("Network service discovery is not available on this device.");
+        }
+        return manager;
+    }
+
+    private void registerWifiService(int port) throws Exception {
+        unregisterWifiService();
+        wifiServiceName = wifiServiceNameBase();
+        NsdServiceInfo serviceInfo = new NsdServiceInfo();
+        serviceInfo.setServiceName(wifiServiceName);
+        serviceInfo.setServiceType(WIFI_SERVICE_TYPE);
+        serviceInfo.setPort(port);
+        wifiRegistrationListener = new NsdManager.RegistrationListener() {
+            @Override
+            public void onServiceRegistered(NsdServiceInfo registeredServiceInfo) {
+                wifiServiceName = registeredServiceInfo.getServiceName();
+            }
+
+            @Override
+            public void onRegistrationFailed(NsdServiceInfo serviceInfo, int errorCode) {
+                dispatchWifiError("Wi-Fi service registration failed: " + errorCode);
+            }
+
+            @Override
+            public void onServiceUnregistered(NsdServiceInfo serviceInfo) {
+            }
+
+            @Override
+            public void onUnregistrationFailed(NsdServiceInfo serviceInfo, int errorCode) {
+            }
+        };
+        nsdManager().registerService(serviceInfo, NsdManager.PROTOCOL_DNS_SD, wifiRegistrationListener);
+    }
+
+    private String wifiServiceNameBase() {
+        String packageName = context().getPackageName();
+        String safeName = packageName == null ? "app" : packageName.replaceAll("[^A-Za-z0-9-]", "-");
+        return "html2apk-" + safeName + "-" + System.currentTimeMillis();
+    }
+
+    private void unregisterWifiService() {
+        if (wifiRegistrationListener == null) {
+            return;
+        }
+        try {
+            nsdManager().unregisterService(wifiRegistrationListener);
+        } catch (Exception ignored) {
+        }
+        wifiRegistrationListener = null;
+    }
+
+    private void registerWifiDiscoveryListener() {
+        unregisterWifiDiscoveryListener();
+        wifiDiscoveryListener = new NsdManager.DiscoveryListener() {
+            @Override
+            public void onStartDiscoveryFailed(String serviceType, int errorCode) {
+                failWifiDiscovery("Wi-Fi discovery failed: " + errorCode);
+            }
+
+            @Override
+            public void onStopDiscoveryFailed(String serviceType, int errorCode) {
+            }
+
+            @Override
+            public void onDiscoveryStarted(String serviceType) {
+            }
+
+            @Override
+            public void onDiscoveryStopped(String serviceType) {
+            }
+
+            @Override
+            public void onServiceFound(NsdServiceInfo serviceInfo) {
+                if (serviceInfo == null || !WIFI_SERVICE_TYPE.equals(serviceInfo.getServiceType())) {
+                    return;
+                }
+                String serviceName = serviceInfo.getServiceName();
+                if (serviceName != null && serviceName.equals(wifiServiceName)) {
+                    return;
+                }
+                resolveWifiService(serviceInfo);
+            }
+
+            @Override
+            public void onServiceLost(NsdServiceInfo serviceInfo) {
+            }
+        };
+    }
+
+    private void resolveWifiService(final NsdServiceInfo serviceInfo) {
+        try {
+            nsdManager().resolveService(serviceInfo, new NsdManager.ResolveListener() {
+                @Override
+                public void onResolveFailed(NsdServiceInfo failedServiceInfo, int errorCode) {
+                }
+
+                @Override
+                public void onServiceResolved(NsdServiceInfo resolvedServiceInfo) {
+                    try {
+                        addWifiDevice(resolvedServiceInfo);
+                    } catch (Exception ignored) {
+                    }
+                }
+            });
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void unregisterWifiDiscoveryListener() {
+        if (wifiDiscoveryListener == null) {
+            return;
+        }
+        try {
+            nsdManager().stopServiceDiscovery(wifiDiscoveryListener);
+        } catch (Exception ignored) {
+        }
+        wifiDiscoveryListener = null;
+    }
+
+    private void finishWifiDiscovery() {
+        CallbackContext callback = wifiDiscoveryCallback;
+        wifiDiscoveryCallback = null;
+        if (wifiDiscoveryTimeout != null) {
+            wifiDiscoveryTimeout.removeCallbacksAndMessages(null);
+            wifiDiscoveryTimeout = null;
+        }
+        unregisterWifiDiscoveryListener();
+        releaseWifiMulticastLock();
+        if (callback != null) {
+            callback.success(wifiDeviceList());
+        }
+    }
+
+    private void failWifiDiscovery(String message) {
+        CallbackContext callback = wifiDiscoveryCallback;
+        wifiDiscoveryCallback = null;
+        if (wifiDiscoveryTimeout != null) {
+            wifiDiscoveryTimeout.removeCallbacksAndMessages(null);
+            wifiDiscoveryTimeout = null;
+        }
+        unregisterWifiDiscoveryListener();
+        releaseWifiMulticastLock();
+        if (callback != null) {
+            callback.error(message == null ? "Wi-Fi discovery failed." : message);
+        }
+    }
+
+    private void addWifiDevice(NsdServiceInfo serviceInfo) throws Exception {
+        if (serviceInfo == null || serviceInfo.getHost() == null || serviceInfo.getPort() <= 0) {
+            return;
+        }
+        JSONObject info = wifiDeviceInfo(serviceInfo);
+        String id = info.optString("id");
+        if (id.length() > 0) {
+            wifiDiscoveredDevices.put(id, info);
+        }
+        String serviceName = info.optString("serviceName");
+        if (serviceName.length() > 0) {
+            wifiDiscoveredDevices.put(serviceName, info);
+        }
+    }
+
+    private JSONArray wifiDeviceList() {
+        JSONArray list = new JSONArray();
+        Map<String, Boolean> seen = new HashMap<String, Boolean>();
+        for (JSONObject item : wifiDiscoveredDevices.values()) {
+            String id = item.optString("id");
+            if (id.length() == 0 || seen.containsKey(id)) {
+                continue;
+            }
+            seen.put(id, Boolean.TRUE);
+            list.put(item);
+        }
+        return list;
+    }
+
+    private JSONObject wifiDeviceInfo(NsdServiceInfo serviceInfo) throws Exception {
+        InetAddress host = serviceInfo.getHost();
+        String address = host == null ? "" : host.getHostAddress();
+        int port = serviceInfo.getPort();
+        JSONObject info = new JSONObject();
+        info.put("id", address + ":" + port);
+        info.put("idDispositivo", info.optString("id"));
+        info.put("host", address);
+        info.put("ip", address);
+        info.put("port", port);
+        info.put("porta", port);
+        info.put("name", serviceInfo.getServiceName());
+        info.put("nome", serviceInfo.getServiceName());
+        info.put("serviceName", serviceInfo.getServiceName());
+        info.put("nomeServico", serviceInfo.getServiceName());
+        info.put("serviceType", serviceInfo.getServiceType());
+        info.put("tipoServico", serviceInfo.getServiceType());
+        info.put("wifi", true);
+        return info;
+    }
+
+    private JSONObject wifiEndpointFromId(String input) throws Exception {
+        String id = input == null ? "" : input.trim();
+        JSONObject known = wifiDiscoveredDevices.get(id);
+        if (known != null) {
+            return new JSONObject(known.toString());
+        }
+
+        int separator = id.lastIndexOf(":");
+        if (separator <= 0 || separator >= id.length() - 1) {
+            throw new Exception("Wi-Fi endpoint must be host:port.");
+        }
+
+        String host = id.substring(0, separator).replace("[", "").replace("]", "");
+        int port = Integer.parseInt(id.substring(separator + 1));
+        JSONObject endpoint = new JSONObject();
+        endpoint.put("id", host + ":" + port);
+        endpoint.put("idDispositivo", endpoint.optString("id"));
+        endpoint.put("host", host);
+        endpoint.put("ip", host);
+        endpoint.put("port", port);
+        endpoint.put("porta", port);
+        endpoint.put("name", endpoint.optString("id"));
+        endpoint.put("nome", endpoint.optString("name"));
+        endpoint.put("wifi", true);
+        return endpoint;
+    }
+
+    private JSONObject bindWifiSocket(final Socket socket, boolean incoming, JSONObject endpoint) throws Exception {
+        JSONObject device = endpoint == null ? new JSONObject() : new JSONObject(endpoint.toString());
+        String host = socket.getInetAddress() == null ? device.optString("host") : socket.getInetAddress().getHostAddress();
+        int port = socket.getPort();
+        if (!device.has("id")) {
+            device.put("id", host + ":" + port);
+            device.put("idDispositivo", device.optString("id"));
+        }
+        device.put("host", host);
+        device.put("ip", host);
+        device.put("port", device.optInt("port", port));
+        device.put("porta", device.optInt("port"));
+        device.put("name", device.optString("name", device.optString("id")));
+        device.put("nome", device.optString("name"));
+        device.put("connected", true);
+        device.put("conectado", true);
+        device.put("incoming", incoming);
+        device.put("entrada", incoming);
+        device.put("wifi", true);
+        synchronized (this) {
+            closeWifiConnectionLocked();
+            wifiSocket = socket;
+            wifiOutputStream = socket.getOutputStream();
+        }
+        startWifiReadThread(socket, device);
+        dispatchEvent("wifi:conectado", device);
+        return device;
+    }
+
+    private void startWifiReadThread(final Socket socket, final JSONObject device) {
+        wifiReadThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), "UTF-8"));
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        JSONObject detail = new JSONObject();
+                        Object data = parseWifiData(line);
+                        detail.put("dados", data);
+                        detail.put("data", data);
+                        detail.put("raw", line);
+                        detail.put("bruto", line);
+                        detail.put("device", device);
+                        detail.put("dispositivo", device);
+                        detail.put("timestamp", System.currentTimeMillis());
+                        dispatchEvent("wifi:dados", detail);
+                    }
+                } catch (Exception ignored) {
+                } finally {
+                    handleWifiDisconnected(socket, device);
+                }
+            }
+        }, "html2apk-wifi-read");
+        wifiReadThread.start();
+    }
+
+    private Object parseWifiData(String line) {
+        String text = line == null ? "" : line;
+        try {
+            JSONObject object = new JSONObject(text);
+            if (object.has("dados")) {
+                return object.opt("dados");
+            }
+            if (object.has("data")) {
+                return object.opt("data");
+            }
+            return object;
+        } catch (Exception ignored) {
+        }
+        try {
+            return new JSONArray(text);
+        } catch (Exception ignored) {
+        }
+        return text;
+    }
+
+    private void handleWifiDisconnected(Socket socket, JSONObject device) {
+        boolean wasCurrent = false;
+        synchronized (this) {
+            if (socket == wifiSocket) {
+                closeWifiConnectionLocked();
+                wasCurrent = true;
+            }
+        }
+        if (wasCurrent) {
+            try {
+                JSONObject detail = device == null ? new JSONObject() : new JSONObject(device.toString());
+                detail.put("connected", false);
+                detail.put("conectado", false);
+                detail.put("timestamp", System.currentTimeMillis());
+                dispatchEvent("wifi:desconectado", detail);
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
+    private void dispatchWifiError(String message) {
+        try {
+            JSONObject detail = new JSONObject();
+            detail.put("message", message == null ? "" : message);
+            detail.put("mensagem", detail.optString("message"));
+            detail.put("timestamp", System.currentTimeMillis());
+            dispatchEvent("wifi:erro", detail);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void acquireWifiMulticastLock() {
+        try {
+            WifiManager manager = (WifiManager) context().getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+            if (manager == null) {
+                return;
+            }
+            if (wifiMulticastLock == null) {
+                wifiMulticastLock = manager.createMulticastLock("html2apk-wifi-discovery");
+                wifiMulticastLock.setReferenceCounted(false);
+            }
+            if (!wifiMulticastLock.isHeld()) {
+                wifiMulticastLock.acquire();
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void releaseWifiMulticastLock() {
+        try {
+            if (wifiMulticastLock != null && wifiMulticastLock.isHeld()) {
+                wifiMulticastLock.release();
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void shutdownWifi() {
+        wifiServerRunning = false;
+        wifiDiscoveryCallback = null;
+        if (wifiDiscoveryTimeout != null) {
+            wifiDiscoveryTimeout.removeCallbacksAndMessages(null);
+            wifiDiscoveryTimeout = null;
+        }
+        unregisterWifiDiscoveryListener();
+        unregisterWifiService();
+        releaseWifiMulticastLock();
+        synchronized (this) {
+            closeWifiConnectionLocked();
+            if (wifiServerSocket != null) {
+                try {
+                    wifiServerSocket.close();
+                } catch (Exception ignored) {
+                }
+                wifiServerSocket = null;
+            }
+        }
+    }
+
+    private void closeWifiConnectionLocked() {
+        if (wifiOutputStream != null) {
+            try {
+                wifiOutputStream.close();
+            } catch (Exception ignored) {
+            }
+            wifiOutputStream = null;
+        }
+        if (wifiSocket != null) {
+            try {
+                wifiSocket.close();
+            } catch (Exception ignored) {
+            }
+            wifiSocket = null;
         }
     }
 
@@ -5378,6 +6217,7 @@ public class Html2ApkBridge extends CordovaPlugin {
             return;
         }
 
+        rememberUsbPowerState();
         systemReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
@@ -5388,6 +6228,7 @@ public class Html2ApkBridge extends CordovaPlugin {
                 try {
                     if (Intent.ACTION_BATTERY_CHANGED.equals(intent.getAction())) {
                         dispatchEvent("bateria:mudou", batteryInfo());
+                        dispatchUsbPowerChangeIfNeeded(intent);
                     } else if (ConnectivityManager.CONNECTIVITY_ACTION.equals(intent.getAction())) {
                         dispatchEvent("rede:mudou", networkInfo());
                     }
@@ -5412,6 +6253,1095 @@ public class Html2ApkBridge extends CordovaPlugin {
         } catch (Exception ignored) {
         }
         systemReceiver = null;
+    }
+
+    private void registerUsbReceiver() {
+        if (usbReceiver != null) {
+            return;
+        }
+
+        usbReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                if (intent == null || intent.getAction() == null) {
+                    return;
+                }
+
+                try {
+                    if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(intent.getAction())) {
+                        dispatchEvent("usb:conectado", usbEventDetail(intent, true, "device"));
+                    } else if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(intent.getAction())) {
+                        dispatchEvent("usb:desconectado", usbEventDetail(intent, false, "device"));
+                    }
+                } catch (Exception ignored) {
+                }
+            }
+        };
+
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
+        filter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
+        ContextCompat.registerReceiver(context(), usbReceiver, filter, ContextCompat.RECEIVER_EXPORTED);
+    }
+
+    private void unregisterUsbReceiver() {
+        if (usbReceiver == null) {
+            return;
+        }
+
+        try {
+            context().unregisterReceiver(usbReceiver);
+        } catch (Exception ignored) {
+        }
+        usbReceiver = null;
+    }
+
+    private void rememberUsbPowerState() {
+        try {
+            Intent intent = context().registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+            if (intent != null) {
+                usbPowerConnected = isUsbPowerConnected(intent);
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void dispatchUsbPowerChangeIfNeeded(Intent intent) {
+        boolean connected = isUsbPowerConnected(intent);
+        if (usbPowerConnected != null && usbPowerConnected.booleanValue() == connected) {
+            return;
+        }
+        usbPowerConnected = connected;
+        try {
+            dispatchEvent(connected ? "usb:conectado" : "usb:desconectado", usbEventDetail(intent, connected, "power"));
+        } catch (Exception ignored) {
+        }
+    }
+
+    private boolean isUsbPowerConnected(Intent intent) {
+        int plugged = intent == null ? 0 : intent.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0);
+        return (plugged & BatteryManager.BATTERY_PLUGGED_USB) != 0;
+    }
+
+    private JSONObject usbEventDetail(Intent intent, boolean connected, String source) throws Exception {
+        JSONObject detail = baseEvent(connected ? "usb:conectado" : "usb:desconectado");
+        detail.put("connected", connected);
+        detail.put("conectado", connected);
+        detail.put("source", source);
+        detail.put("origem", source);
+
+        if ("power".equals(source)) {
+            detail.put("power", true);
+            detail.put("energia", true);
+            detail.put("plugged", "usb");
+            detail.put("conector", "usb");
+        }
+
+        UsbDevice device = usbDeviceFromIntent(intent);
+        if (device != null) {
+            JSONObject deviceInfo = usbDeviceInfo(device);
+            detail.put("device", deviceInfo);
+            detail.put("dispositivo", deviceInfo);
+        }
+        return detail;
+    }
+
+    private UsbDevice usbDeviceFromIntent(Intent intent) {
+        if (intent == null) {
+            return null;
+        }
+        try {
+            return (UsbDevice) intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private JSONObject usbDeviceInfo(UsbDevice device) throws Exception {
+        JSONObject info = new JSONObject();
+        info.put("id", device.getDeviceName());
+        info.put("idDispositivo", device.getDeviceName());
+        info.put("name", device.getDeviceName());
+        info.put("nome", device.getDeviceName());
+        info.put("deviceName", device.getDeviceName());
+        info.put("nomeDispositivo", device.getDeviceName());
+        info.put("vendorId", device.getVendorId());
+        info.put("idFornecedor", device.getVendorId());
+        info.put("productId", device.getProductId());
+        info.put("idProduto", device.getProductId());
+        info.put("deviceClass", device.getDeviceClass());
+        info.put("classeDispositivo", device.getDeviceClass());
+        info.put("deviceSubclass", device.getDeviceSubclass());
+        info.put("subclasseDispositivo", device.getDeviceSubclass());
+        info.put("deviceProtocol", device.getDeviceProtocol());
+        info.put("protocoloDispositivo", device.getDeviceProtocol());
+        info.put("configurationCount", device.getConfigurationCount());
+        info.put("quantidadeConfiguracoes", device.getConfigurationCount());
+        info.put("interfaceCount", device.getInterfaceCount());
+        info.put("quantidadeInterfaces", device.getInterfaceCount());
+        try {
+            info.put("manufacturerName", device.getManufacturerName());
+            info.put("fabricante", device.getManufacturerName());
+        } catch (Exception ignored) {
+        }
+        try {
+            info.put("productName", device.getProductName());
+            info.put("nomeProduto", device.getProductName());
+        } catch (Exception ignored) {
+        }
+        try {
+            info.put("serialNumber", device.getSerialNumber());
+            info.put("numeroSerial", device.getSerialNumber());
+        } catch (Exception ignored) {
+        }
+        return info;
+    }
+
+    private void registerHeadphoneWatchers() {
+        rememberHeadphoneState();
+
+        if (headphoneReceiver == null) {
+            headphoneReceiver = new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    if (intent == null || intent.getAction() == null) {
+                        return;
+                    }
+
+                    if (!Intent.ACTION_HEADSET_PLUG.equals(intent.getAction())) {
+                        return;
+                    }
+
+                    JSONObject device = new JSONObject();
+                    try {
+                        device.put("source", "headset_plug");
+                        device.put("origem", "headset_plug");
+                        device.put("name", intent.getStringExtra("name"));
+                        device.put("nome", intent.getStringExtra("name"));
+                        device.put("microphone", intent.getIntExtra("microphone", 0) == 1);
+                        device.put("microfone", intent.getIntExtra("microphone", 0) == 1);
+                    } catch (Exception ignored) {
+                    }
+                    dispatchHeadphoneChangeIfNeeded(intent.getIntExtra("state", 0) == 1, device);
+                }
+            };
+
+            IntentFilter filter = new IntentFilter(Intent.ACTION_HEADSET_PLUG);
+            ContextCompat.registerReceiver(context(), headphoneReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && audioDeviceCallback == null) {
+            audioDeviceCallback = new AudioDeviceCallback() {
+                @Override
+                public void onAudioDevicesAdded(AudioDeviceInfo[] addedDevices) {
+                    dispatchHeadphoneChangeIfNeeded(isHeadphoneConnected(), firstAudioDeviceInfo(addedDevices, "audio_devices_added"));
+                }
+
+                @Override
+                public void onAudioDevicesRemoved(AudioDeviceInfo[] removedDevices) {
+                    dispatchHeadphoneChangeIfNeeded(isHeadphoneConnected(), firstAudioDeviceInfo(removedDevices, "audio_devices_removed"));
+                }
+            };
+
+            try {
+                audioManager().registerAudioDeviceCallback(audioDeviceCallback, new Handler(Looper.getMainLooper()));
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
+    private void unregisterHeadphoneWatchers() {
+        if (headphoneReceiver != null) {
+            try {
+                context().unregisterReceiver(headphoneReceiver);
+            } catch (Exception ignored) {
+            }
+            headphoneReceiver = null;
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && audioDeviceCallback != null) {
+            try {
+                audioManager().unregisterAudioDeviceCallback(audioDeviceCallback);
+            } catch (Exception ignored) {
+            }
+            audioDeviceCallback = null;
+        }
+    }
+
+    private AudioManager audioManager() {
+        return (AudioManager) context().getSystemService(Context.AUDIO_SERVICE);
+    }
+
+    private void rememberHeadphoneState() {
+        try {
+            headphoneConnected = isHeadphoneConnected();
+        } catch (Exception ignored) {
+        }
+    }
+
+    private boolean isHeadphoneConnected() {
+        AudioManager manager = audioManager();
+        if (manager == null) {
+            return false;
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            AudioDeviceInfo[] devices = manager.getDevices(AudioManager.GET_DEVICES_OUTPUTS);
+            for (AudioDeviceInfo device : devices) {
+                if (isHeadphoneDeviceType(device.getType())) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        return manager.isWiredHeadsetOn();
+    }
+
+    private boolean isHeadphoneDeviceType(int type) {
+        return type == AudioDeviceInfo.TYPE_WIRED_HEADPHONES
+            || type == AudioDeviceInfo.TYPE_WIRED_HEADSET
+            || type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP
+            || type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO
+            || type == AudioDeviceInfo.TYPE_USB_HEADSET
+            || (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && type == AudioDeviceInfo.TYPE_HEARING_AID);
+    }
+
+    private JSONObject firstAudioDeviceInfo(AudioDeviceInfo[] devices, String source) {
+        JSONObject detail = new JSONObject();
+        try {
+            detail.put("source", source);
+            detail.put("origem", source);
+            if (devices != null && devices.length > 0) {
+                AudioDeviceInfo device = devices[0];
+                detail.put("id", device.getId());
+                detail.put("type", device.getType());
+                detail.put("tipoDispositivo", device.getType());
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    detail.put("name", String.valueOf(device.getProductName()));
+                    detail.put("nome", String.valueOf(device.getProductName()));
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return detail;
+    }
+
+    private void dispatchHeadphoneChangeIfNeeded(boolean connected, JSONObject device) {
+        if (headphoneConnected != null && headphoneConnected.booleanValue() == connected) {
+            return;
+        }
+        headphoneConnected = connected;
+
+        try {
+            JSONObject detail = baseEvent(connected ? "fone:conectado" : "fone:desconectado");
+            detail.put("connected", connected);
+            detail.put("conectado", connected);
+            if (device != null) {
+                detail.put("device", device);
+                detail.put("dispositivo", device);
+            }
+            dispatchEvent(connected ? "fone:conectado" : "fone:desconectado", detail);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void registerVolumeObserver() {
+        if (volumeObserver != null) {
+            return;
+        }
+
+        try {
+            lastVolumeState = volumeState();
+        } catch (Exception ignored) {
+        }
+
+        volumeObserver = new ContentObserver(new Handler(Looper.getMainLooper())) {
+            @Override
+            public void onChange(boolean selfChange) {
+                dispatchVolumeChangeIfNeeded();
+            }
+
+            @Override
+            public void onChange(boolean selfChange, Uri uri) {
+                dispatchVolumeChangeIfNeeded();
+            }
+        };
+
+        context().getContentResolver().registerContentObserver(Settings.System.CONTENT_URI, true, volumeObserver);
+    }
+
+    private void unregisterVolumeObserver() {
+        if (volumeObserver == null) {
+            return;
+        }
+
+        try {
+            context().getContentResolver().unregisterContentObserver(volumeObserver);
+        } catch (Exception ignored) {
+        }
+        volumeObserver = null;
+    }
+
+    private JSONObject volumeState() throws Exception {
+        AudioManager manager = audioManager();
+        JSONObject result = baseEvent("volume:mudou");
+        addStreamVolume(result, manager, "music", "midia", AudioManager.STREAM_MUSIC);
+        addStreamVolume(result, manager, "ring", "toque", AudioManager.STREAM_RING);
+        addStreamVolume(result, manager, "notification", "notificacao", AudioManager.STREAM_NOTIFICATION);
+        addStreamVolume(result, manager, "alarm", "alarme", AudioManager.STREAM_ALARM);
+        addStreamVolume(result, manager, "voice", "voz", AudioManager.STREAM_VOICE_CALL);
+        return result;
+    }
+
+    private void addStreamVolume(JSONObject result, AudioManager manager, String key, String ptKey, int stream) throws Exception {
+        JSONObject info = new JSONObject();
+        int current = manager == null ? 0 : manager.getStreamVolume(stream);
+        int max = manager == null ? 0 : manager.getStreamMaxVolume(stream);
+        info.put("current", current);
+        info.put("atual", current);
+        info.put("max", max);
+        info.put("maximo", max);
+        result.put(key, info);
+        result.put(ptKey, info);
+    }
+
+    private static Object firstOption(JSONObject options, String... keys) {
+        if (options == null || keys == null) {
+            return null;
+        }
+        for (String key : keys) {
+            Object value = options.opt(key);
+            if (value != null && value != JSONObject.NULL) {
+                return value;
+            }
+        }
+        return null;
+    }
+
+    private static double numberOrDefault(Object value, double fallback) {
+        if (value == null || value == JSONObject.NULL) {
+            return fallback;
+        }
+        if (value instanceof Number) {
+            return ((Number) value).doubleValue();
+        }
+        try {
+            return Double.parseDouble(String.valueOf(value).trim().replace(",", "."));
+        } catch (Exception ignored) {
+            return fallback;
+        }
+    }
+
+    private JSONObject setVolume(JSONObject options) throws Exception {
+        JSONObject safeOptions = options == null ? new JSONObject() : options;
+        AudioManager manager = audioManager();
+        if (manager == null) {
+            throw new Exception("AudioManager is not available.");
+        }
+
+        int stream = audioStream(safeOptions);
+        int max = manager.getStreamMaxVolume(stream);
+        int current = manager.getStreamVolume(stream);
+        Object raw = firstOption(safeOptions, "value", "valor", "volume", "nivel", "level");
+        Object percentRaw = firstOption(safeOptions, "percent", "porcentagem");
+        boolean percentKey = raw == null && percentRaw != null;
+        int next = targetVolume(percentKey ? percentRaw : raw, current, max, percentKey);
+        int flags = safeOptions.optBoolean("mostrarUI", safeOptions.optBoolean("showUi", false)) ? AudioManager.FLAG_SHOW_UI : 0;
+        manager.setStreamVolume(stream, next, flags);
+
+        JSONObject result = volumeState();
+        result.put("changed", true);
+        result.put("alterado", true);
+        result.put("stream", audioStreamName(stream));
+        result.put("tipo", audioStreamName(stream));
+        result.put("volume", next);
+        result.put("max", max);
+        result.put("maximo", max);
+        return result;
+    }
+
+    private JSONObject adjustVolume(JSONObject options) throws Exception {
+        JSONObject safeOptions = options == null ? new JSONObject() : options;
+        AudioManager manager = audioManager();
+        if (manager == null) {
+            throw new Exception("AudioManager is not available.");
+        }
+
+        int stream = audioStream(safeOptions);
+        int max = manager.getStreamMaxVolume(stream);
+        int current = manager.getStreamVolume(stream);
+        double rawAmount = Math.abs(numberOrDefault(firstOption(safeOptions, "amount", "quantidade", "passos", "steps", "valor", "value"), 1));
+        int amount = rawAmount > 0 && rawAmount <= 1 ? Math.max(1, (int) Math.round(rawAmount * max)) : Math.max(1, (int) Math.round(rawAmount));
+        String direction = safeOptions.optString("direction", safeOptions.optString("direcao", "up")).toLowerCase(Locale.US);
+        boolean down = "down".equals(direction)
+            || "decrease".equals(direction)
+            || "diminuir".equals(direction)
+            || "baixo".equals(direction)
+            || "menos".equals(direction);
+        int next = Math.max(0, Math.min(max, current + (down ? -amount : amount)));
+        int flags = safeOptions.optBoolean("mostrarUI", safeOptions.optBoolean("showUi", false)) ? AudioManager.FLAG_SHOW_UI : 0;
+        manager.setStreamVolume(stream, next, flags);
+
+        JSONObject result = volumeState();
+        result.put("changed", true);
+        result.put("alterado", true);
+        result.put("stream", audioStreamName(stream));
+        result.put("tipo", audioStreamName(stream));
+        result.put("volume", next);
+        result.put("amount", amount);
+        result.put("quantidade", amount);
+        result.put("direction", down ? "down" : "up");
+        result.put("direcao", down ? "down" : "up");
+        return result;
+    }
+
+    private int targetVolume(Object raw, int current, int max, boolean percentKey) {
+        double value = numberOrDefault(raw, current);
+        if (percentKey) {
+            value = value > 1 ? value / 100 : value;
+            return Math.max(0, Math.min(max, (int) Math.round(value * max)));
+        }
+        if (value >= 0 && value <= 1) {
+            return Math.max(0, Math.min(max, (int) Math.round(value * max)));
+        }
+        if (value > max && value <= 100) {
+            return Math.max(0, Math.min(max, (int) Math.round((value / 100) * max)));
+        }
+        return Math.max(0, Math.min(max, (int) Math.round(value)));
+    }
+
+    private int audioStream(JSONObject options) {
+        Object raw = firstOption(options, "stream", "tipo", "canal");
+        String stream = raw == null || raw == JSONObject.NULL ? "music" : String.valueOf(raw).toLowerCase(Locale.US);
+        if ("ring".equals(stream) || "ringer".equals(stream) || "toque".equals(stream)) {
+            return AudioManager.STREAM_RING;
+        }
+        if ("notification".equals(stream) || "notificacao".equals(stream) || "notice".equals(stream)) {
+            return AudioManager.STREAM_NOTIFICATION;
+        }
+        if ("alarm".equals(stream) || "alarme".equals(stream)) {
+            return AudioManager.STREAM_ALARM;
+        }
+        if ("voice".equals(stream) || "call".equals(stream) || "voz".equals(stream) || "chamada".equals(stream)) {
+            return AudioManager.STREAM_VOICE_CALL;
+        }
+        if ("system".equals(stream) || "sistema".equals(stream)) {
+            return AudioManager.STREAM_SYSTEM;
+        }
+        return AudioManager.STREAM_MUSIC;
+    }
+
+    private String audioStreamName(int stream) {
+        if (stream == AudioManager.STREAM_RING) {
+            return "ring";
+        }
+        if (stream == AudioManager.STREAM_NOTIFICATION) {
+            return "notification";
+        }
+        if (stream == AudioManager.STREAM_ALARM) {
+            return "alarm";
+        }
+        if (stream == AudioManager.STREAM_VOICE_CALL) {
+            return "voice";
+        }
+        if (stream == AudioManager.STREAM_SYSTEM) {
+            return "system";
+        }
+        return "music";
+    }
+
+    private void dispatchVolumeChangeIfNeeded() {
+        try {
+            JSONObject current = volumeState();
+            if (lastVolumeState != null && lastVolumeState.toString().equals(current.toString())) {
+                return;
+            }
+            lastVolumeState = current;
+            dispatchEvent("volume:mudou", current);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void registerLayoutListener() {
+        if (layoutListener != null) {
+            return;
+        }
+
+        cordova.getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                final View root = cordova.getActivity().getWindow().getDecorView().getRootView();
+                layoutListener = new ViewTreeObserver.OnGlobalLayoutListener() {
+                    @Override
+                    public void onGlobalLayout() {
+                        handleRootLayout(root);
+                    }
+                };
+                root.getViewTreeObserver().addOnGlobalLayoutListener(layoutListener);
+                handleRootLayout(root);
+            }
+        });
+    }
+
+    private void unregisterLayoutListener() {
+        if (layoutListener == null) {
+            return;
+        }
+
+        cordova.getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    View root = cordova.getActivity().getWindow().getDecorView().getRootView();
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+                        root.getViewTreeObserver().removeOnGlobalLayoutListener(layoutListener);
+                    } else {
+                        root.getViewTreeObserver().removeGlobalOnLayoutListener(layoutListener);
+                    }
+                } catch (Exception ignored) {
+                }
+                layoutListener = null;
+            }
+        });
+    }
+
+    private void handleRootLayout(View root) {
+        if (root == null || root.getHeight() <= 0 || root.getWidth() <= 0) {
+            return;
+        }
+
+        Rect visibleFrame = new Rect();
+        root.getWindowVisibleDisplayFrame(visibleFrame);
+        int rootHeight = root.getRootView().getHeight();
+        int keyboardHeight = Math.max(0, rootHeight - visibleFrame.bottom);
+        boolean open = keyboardHeight > Math.max(120, rootHeight * 15 / 100);
+        dispatchKeyboardChangeIfNeeded(open, keyboardHeight, root.getWidth(), rootHeight);
+
+        String orientation = orientationName(root.getWidth(), rootHeight);
+        dispatchOrientationChangeIfNeeded(orientation, root.getWidth(), rootHeight);
+    }
+
+    private void dispatchKeyboardChangeIfNeeded(boolean open, int keyboardHeight, int width, int height) {
+        if (keyboardOpen == null) {
+            keyboardOpen = open;
+            return;
+        }
+        if (keyboardOpen.booleanValue() == open) {
+            return;
+        }
+        keyboardOpen = open;
+
+        try {
+            JSONObject detail = baseEvent(open ? "teclado:abriu" : "teclado:fechou");
+            detail.put("open", open);
+            detail.put("aberto", open);
+            detail.put("keyboardHeight", keyboardHeight);
+            detail.put("alturaTeclado", keyboardHeight);
+            detail.put("width", width);
+            detail.put("largura", width);
+            detail.put("height", height);
+            detail.put("altura", height);
+            dispatchEvent(open ? "teclado:abriu" : "teclado:fechou", detail);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private String orientationName(int width, int height) {
+        if (width > height) {
+            return "landscape";
+        }
+        if (height > width) {
+            return "portrait";
+        }
+
+        int orientation = context().getResources().getConfiguration().orientation;
+        return orientation == Configuration.ORIENTATION_LANDSCAPE ? "landscape" : "portrait";
+    }
+
+    private void dispatchOrientationChangeIfNeeded(String orientation, int width, int height) {
+        if (orientation == null || orientation.length() == 0) {
+            return;
+        }
+        if (currentOrientation == null) {
+            currentOrientation = orientation;
+            return;
+        }
+        if (currentOrientation.equals(orientation)) {
+            return;
+        }
+        currentOrientation = orientation;
+
+        try {
+            JSONObject detail = baseEvent("orientacao:mudou");
+            detail.put("orientation", orientation);
+            detail.put("orientacao", orientation);
+            detail.put("width", width);
+            detail.put("largura", width);
+            detail.put("height", height);
+            detail.put("altura", height);
+            dispatchEvent("orientacao:mudou", detail);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void registerSensorListeners() {
+        if (sensorManager == null) {
+            sensorManager = (SensorManager) context().getSystemService(Context.SENSOR_SERVICE);
+        }
+        if (sensorManager == null) {
+            return;
+        }
+
+        if (motionSensorListener == null) {
+            motionSensorListener = new SensorEventListener() {
+                @Override
+                public void onSensorChanged(SensorEvent event) {
+                    handleMotionSensor(event);
+                }
+
+                @Override
+                public void onAccuracyChanged(Sensor sensor, int accuracy) {
+                }
+            };
+        }
+
+        Sensor accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        if (accelerometer != null) {
+            sensorManager.registerListener(motionSensorListener, accelerometer, SensorManager.SENSOR_DELAY_UI);
+        }
+
+        if (proximitySensorListener == null) {
+            proximitySensorListener = new SensorEventListener() {
+                @Override
+                public void onSensorChanged(SensorEvent event) {
+                    handleProximitySensor(event);
+                }
+
+                @Override
+                public void onAccuracyChanged(Sensor sensor, int accuracy) {
+                }
+            };
+        }
+
+        Sensor proximity = sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY);
+        if (proximity != null) {
+            sensorManager.registerListener(proximitySensorListener, proximity, SensorManager.SENSOR_DELAY_NORMAL);
+        }
+    }
+
+    private void unregisterSensorListeners() {
+        if (sensorManager == null) {
+            return;
+        }
+
+        try {
+            if (motionSensorListener != null) {
+                sensorManager.unregisterListener(motionSensorListener);
+            }
+            if (proximitySensorListener != null) {
+                sensorManager.unregisterListener(proximitySensorListener);
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void handleMotionSensor(SensorEvent event) {
+        if (event == null || event.values == null || event.values.length < 3) {
+            return;
+        }
+
+        float x = event.values[0];
+        float y = event.values[1];
+        float z = event.values[2];
+        double force = Math.sqrt((x * x) + (y * y) + (z * z));
+        long now = System.currentTimeMillis();
+
+        if (force > 22.0 && now - lastShakeAt > 900) {
+            lastShakeAt = now;
+            try {
+                JSONObject detail = baseEvent("celular:sacudido");
+                detail.put("x", x);
+                detail.put("y", y);
+                detail.put("z", z);
+                detail.put("force", force);
+                detail.put("forca", force);
+                dispatchEvent("celular:sacudido", detail);
+            } catch (Exception ignored) {
+            }
+        }
+
+        boolean faceDown = z < -8.0 && Math.abs(x) < 5.5 && Math.abs(y) < 5.5;
+        if (faceDown) {
+            if (faceDownStartedAt == 0) {
+                faceDownStartedAt = now;
+            }
+            if (!faceDownDispatched && now - faceDownStartedAt > 300) {
+                faceDownDispatched = true;
+                try {
+                    JSONObject detail = baseEvent("celular:tela_para_baixo");
+                    detail.put("x", x);
+                    detail.put("y", y);
+                    detail.put("z", z);
+                    detail.put("screenDown", true);
+                    detail.put("telaParaBaixo", true);
+                    dispatchEvent("celular:tela_para_baixo", detail);
+                } catch (Exception ignored) {
+                }
+            }
+            return;
+        }
+
+        faceDownStartedAt = 0;
+        faceDownDispatched = false;
+    }
+
+    private void handleProximitySensor(SensorEvent event) {
+        if (event == null || event.values == null || event.values.length == 0 || event.sensor == null) {
+            return;
+        }
+
+        boolean near = event.values[0] < event.sensor.getMaximumRange();
+        if (proximityNear == null) {
+            proximityNear = near;
+            return;
+        }
+        if (proximityNear.booleanValue() == near) {
+            return;
+        }
+        proximityNear = near;
+
+        if (!near) {
+            return;
+        }
+
+        try {
+            JSONObject detail = baseEvent("proximidade:perto");
+            detail.put("near", true);
+            detail.put("perto", true);
+            detail.put("distance", event.values[0]);
+            detail.put("distancia", event.values[0]);
+            detail.put("maximumRange", event.sensor.getMaximumRange());
+            detail.put("alcanceMaximo", event.sensor.getMaximumRange());
+            dispatchEvent("proximidade:perto", detail);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void registerScreenshotObserver() {
+        if (screenshotObserver != null) {
+            return;
+        }
+
+        screenshotObserver = new ContentObserver(new Handler(Looper.getMainLooper())) {
+            @Override
+            public void onChange(boolean selfChange) {
+                handleScreenshotChange(null);
+            }
+
+            @Override
+            public void onChange(boolean selfChange, Uri uri) {
+                handleScreenshotChange(uri);
+            }
+        };
+
+        try {
+            context().getContentResolver().registerContentObserver(
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                true,
+                screenshotObserver
+            );
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void unregisterScreenshotObserver() {
+        if (screenshotObserver == null) {
+            return;
+        }
+
+        try {
+            context().getContentResolver().unregisterContentObserver(screenshotObserver);
+        } catch (Exception ignored) {
+        }
+        screenshotObserver = null;
+    }
+
+    private void handleScreenshotChange(Uri uri) {
+        try {
+            JSONObject detail = screenshotDetail(uri);
+            if (detail == null) {
+                return;
+            }
+
+            String screenshotUri = detail.optString("uri", "");
+            long now = System.currentTimeMillis();
+            if (screenshotUri.length() > 0 && screenshotUri.equals(lastScreenshotUri) && now - lastScreenshotAt < 2500) {
+                return;
+            }
+            lastScreenshotUri = screenshotUri;
+            lastScreenshotAt = now;
+            dispatchEvent("print:tela", detail);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private JSONObject screenshotDetail(Uri changedUri) throws Exception {
+        JSONObject direct = changedUri == null ? null : queryScreenshotCandidate(changedUri, true);
+        if (direct != null) {
+            return direct;
+        }
+        return queryScreenshotCandidate(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, false);
+    }
+
+    private JSONObject queryScreenshotCandidate(Uri uri, boolean direct) throws Exception {
+        if (uri == null) {
+            return null;
+        }
+
+        Cursor cursor = null;
+        try {
+            String[] projection = screenshotProjection();
+            String selection = direct ? null : MediaStore.Images.Media.DATE_ADDED + ">=?";
+            String[] args = direct ? null : new String[] { String.valueOf((System.currentTimeMillis() / 1000) - 15) };
+            String sort = direct ? null : MediaStore.Images.Media.DATE_ADDED + " DESC";
+            cursor = context().getContentResolver().query(uri, projection, selection, args, sort);
+            if (cursor == null || !cursor.moveToFirst()) {
+                return null;
+            }
+
+            String displayName = cursorString(cursor, MediaStore.Images.Media.DISPLAY_NAME);
+            String path = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+                ? cursorString(cursor, MediaStore.Images.Media.RELATIVE_PATH)
+                : cursorString(cursor, MediaStore.Images.Media.DATA);
+            if (!looksLikeScreenshot(displayName, path)) {
+                return null;
+            }
+
+            JSONObject detail = baseEvent("print:tela");
+            String id = cursorString(cursor, MediaStore.Images.Media._ID);
+            Uri itemUri = direct ? uri : Uri.withAppendedPath(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id);
+            detail.put("uri", itemUri.toString());
+            detail.put("name", displayName);
+            detail.put("nome", displayName);
+            detail.put("path", path);
+            detail.put("caminho", path);
+            detail.put("source", direct ? "media_observer" : "media_observer_recent");
+            detail.put("origem", direct ? "media_observer" : "media_observer_recent");
+            return detail;
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+    }
+
+    private String[] screenshotProjection() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            return new String[] {
+                MediaStore.Images.Media._ID,
+                MediaStore.Images.Media.DISPLAY_NAME,
+                MediaStore.Images.Media.DATE_ADDED,
+                MediaStore.Images.Media.RELATIVE_PATH
+            };
+        }
+        return new String[] {
+            MediaStore.Images.Media._ID,
+            MediaStore.Images.Media.DISPLAY_NAME,
+            MediaStore.Images.Media.DATE_ADDED,
+            MediaStore.Images.Media.DATA
+        };
+    }
+
+    private String cursorString(Cursor cursor, String column) {
+        try {
+            int index = cursor.getColumnIndex(column);
+            if (index < 0) {
+                return "";
+            }
+            String value = cursor.getString(index);
+            return value == null ? "" : value;
+        } catch (Exception ignored) {
+            return "";
+        }
+    }
+
+    private boolean looksLikeScreenshot(String displayName, String path) {
+        String value = ((displayName == null ? "" : displayName) + " " + (path == null ? "" : path)).toLowerCase(Locale.ROOT);
+        return value.contains("screenshot")
+            || value.contains("screen_shot")
+            || value.contains("screen shot")
+            || value.contains("captura")
+            || value.contains("capturas de tela")
+            || value.contains("screenshots");
+    }
+
+    private void enableNfcForegroundDispatch() {
+        Activity activity = cordova.getActivity();
+        if (activity == null) {
+            return;
+        }
+
+        if (nfcAdapter == null) {
+            nfcAdapter = NfcAdapter.getDefaultAdapter(activity);
+        }
+        if (nfcAdapter == null || !nfcAdapter.isEnabled()) {
+            return;
+        }
+
+        try {
+            if (nfcPendingIntent == null) {
+                Intent intent = new Intent(activity, activity.getClass()).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    flags |= PendingIntent.FLAG_MUTABLE;
+                }
+                nfcPendingIntent = PendingIntent.getActivity(activity, 0, intent, flags);
+            }
+            nfcAdapter.enableForegroundDispatch(activity, nfcPendingIntent, null, null);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void disableNfcForegroundDispatch() {
+        if (nfcAdapter == null) {
+            return;
+        }
+
+        try {
+            nfcAdapter.disableForegroundDispatch(cordova.getActivity());
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void handleNfcIntent(Intent intent, boolean dispatchToJs) {
+        if (intent == null || !isNfcAction(intent.getAction())) {
+            return;
+        }
+
+        JSONObject detail = parseNfcIntent(intent);
+        if (detail != null && dispatchToJs) {
+            dispatchEvent("nfc:recebido", detail);
+        }
+    }
+
+    private boolean isNfcAction(String action) {
+        return NfcAdapter.ACTION_NDEF_DISCOVERED.equals(action)
+            || NfcAdapter.ACTION_TECH_DISCOVERED.equals(action)
+            || NfcAdapter.ACTION_TAG_DISCOVERED.equals(action);
+    }
+
+    private JSONObject parseNfcIntent(Intent intent) {
+        try {
+            JSONObject detail = baseEvent("nfc:recebido");
+            detail.put("action", intent.getAction());
+            detail.put("acao", intent.getAction());
+
+            Tag tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
+            if (tag != null) {
+                detail.put("id", bytesToHex(tag.getId()));
+                JSONArray techs = new JSONArray();
+                String[] techList = tag.getTechList();
+                if (techList != null) {
+                    for (String tech : techList) {
+                        techs.put(tech);
+                    }
+                }
+                detail.put("technologies", techs);
+                detail.put("tecnologias", techs);
+            }
+
+            JSONArray messages = nfcMessages(intent);
+            detail.put("messages", messages);
+            detail.put("mensagens", messages);
+            return detail;
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private JSONArray nfcMessages(Intent intent) throws Exception {
+        JSONArray messages = new JSONArray();
+        Parcelable[] rawMessages = intent.getParcelableArrayExtra(NfcAdapter.EXTRA_NDEF_MESSAGES);
+        if (rawMessages == null) {
+            return messages;
+        }
+
+        for (Parcelable raw : rawMessages) {
+            if (!(raw instanceof NdefMessage)) {
+                continue;
+            }
+            NdefMessage message = (NdefMessage) raw;
+            JSONArray records = new JSONArray();
+            for (NdefRecord record : message.getRecords()) {
+                records.put(nfcRecordInfo(record));
+            }
+            JSONObject item = new JSONObject();
+            item.put("records", records);
+            item.put("registros", records);
+            messages.put(item);
+        }
+        return messages;
+    }
+
+    private JSONObject nfcRecordInfo(NdefRecord record) throws Exception {
+        JSONObject info = new JSONObject();
+        info.put("tnf", record.getTnf());
+        info.put("type", bytesToUtf8(record.getType()));
+        info.put("tipo", bytesToUtf8(record.getType()));
+        info.put("id", bytesToHex(record.getId()));
+        info.put("payload", Base64.encodeToString(record.getPayload(), Base64.NO_WRAP));
+
+        String text = nfcTextPayload(record);
+        if (text != null) {
+            info.put("text", text);
+            info.put("texto", text);
+        }
+        return info;
+    }
+
+    private String nfcTextPayload(NdefRecord record) {
+        try {
+            if (record.getTnf() != NdefRecord.TNF_WELL_KNOWN || !"T".equals(bytesToUtf8(record.getType()))) {
+                return null;
+            }
+            byte[] payload = record.getPayload();
+            if (payload == null || payload.length < 2) {
+                return null;
+            }
+            int status = payload[0] & 0xFF;
+            int languageLength = status & 0x3F;
+            String encoding = (status & 0x80) == 0 ? "UTF-8" : "UTF-16";
+            int textStart = 1 + languageLength;
+            if (textStart >= payload.length) {
+                return "";
+            }
+            return new String(payload, textStart, payload.length - textStart, Charset.forName(encoding));
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private String bytesToUtf8(byte[] bytes) {
+        if (bytes == null || bytes.length == 0) {
+            return "";
+        }
+        try {
+            return new String(bytes, Charset.forName("UTF-8"));
+        } catch (Exception ignored) {
+            return "";
+        }
+    }
+
+    private String bytesToHex(byte[] bytes) {
+        if (bytes == null || bytes.length == 0) {
+            return "";
+        }
+        StringBuilder builder = new StringBuilder();
+        for (byte value : bytes) {
+            builder.append(String.format(Locale.US, "%02X", value));
+        }
+        return builder.toString();
     }
 
     private void handleLinkIntent(Intent intent, boolean dispatchToJs) {

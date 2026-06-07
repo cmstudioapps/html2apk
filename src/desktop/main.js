@@ -554,6 +554,20 @@ function nativeFunctionLabHtml() {
         fn("aoEvento")("botao:voltar", function (event) { log("evento botao:voltar", event, "ok"); });
         fn("aoEvento")("rede:mudou", function (event) { log("evento rede:mudou", event, "ok"); });
         fn("aoEvento")("bateria:mudou", function (event) { log("evento bateria:mudou", event, "ok"); });
+        fn("aoConectarUSB")(function (event) { log("usb conectado", event, "ok"); });
+        fn("aoDesconectarUSB")(function (event) { log("usb desconectado", event, "ok"); });
+        fn("aoConectarFone")(function (event) { log("fone conectado", event, "ok"); });
+        fn("aoDesconectarFone")(function (event) { log("fone desconectado", event, "ok"); });
+        fn("aoMudarVolume")(function (event) { log("volume mudou", event, "ok"); });
+        fn("aoAbrirTeclado")(function (event) { log("teclado abriu", event, "ok"); });
+        fn("aoFecharTeclado")(function (event) { log("teclado fechou", event, "ok"); });
+        fn("aoMudarOrientacao")(function (event) { log("orientação mudou", event, "ok"); });
+        fn("aoSacudirCelular")(function (event) { log("celular sacudido", event, "ok"); });
+        fn("aoVirarCelularParaBaixo")(function (event) { log("tela para baixo", event, "ok"); });
+        fn("aoAproximarObjeto")(function (event) { log("objeto próximo", event, "ok"); });
+        fn("aoTirarPrint")(function (event) { log("print detectado", event, "ok"); });
+        fn("aoNFC")(function (event) { log("nfc recebido", event, "ok"); });
+        fn("aoReceberNotificacao")(function (event) { log("notificação recebida", event, "ok"); });
         fn("aoClicarNotificacao")(function (event) { log("notificacao clicada", event, "ok"); });
         return { registered: true };
       }
@@ -569,10 +583,14 @@ function nativeFunctionLabHtml() {
         compartilharApp: { title: "share_me()", run: function () { return fn("share_me")({ titulo: "Compartilhar app de teste" }); } },
         receberCompartilhamento: { title: "aoReceberCompartilhamento()", run: function () { if (state.stopShareEvent) { state.stopShareEvent(); } state.stopShareEvent = fn("aoReceberCompartilhamento")(function (event) { log("compartilhamento recebido", event, "ok"); }); return { listening: true }; } },
         compartilhamentoInicial: { title: "obterCompartilhamentoInicial()", run: function () { return fn("obterCompartilhamentoInicial")(); } },
-        iniciarBt: { title: "aoConectarBT()", run: function () { if (state.stopBtConnect) { state.stopBtConnect(); } state.stopBtConnect = fn("aoConectarBT")(function (event) { state.bluetoothConnected = true; log("bluetooth conectado", event, "ok"); }); if (state.stopBtData) { state.stopBtData(); } state.stopBtData = fn("aoReceberDadosBT")(function (data) { log("dados bluetooth", data, "ok"); }); return { listening: true }; } },
+        iniciarBt: { title: "aoConectarBT()", run: function () { if (state.stopBtConnect) { state.stopBtConnect(); } state.stopBtConnect = fn("aoConectarBT")(function (event) { state.bluetoothConnected = true; log("bluetooth conectado", event, "ok"); }); if (state.stopBtData) { state.stopBtData(); } state.stopBtData = fn("aoReceberDadosBT")(function (data) { log("dados bluetooth", data, "ok"); }); if (state.stopBtError) { state.stopBtError(); } state.stopBtError = fn("aoDarErroBT")(function (error) { log("erro bluetooth", error, "error"); }); return { listening: true }; } },
         procurarBt: { title: "procurarBT()", run: async function () { var devices = await fn("procurarBT")({ timeoutMs: 10000 }); state.bluetoothDevices = devices || []; state.bluetoothDeviceId = state.bluetoothDevices[0] && state.bluetoothDevices[0].id; return devices; } },
         conectarBt: { title: "conectarBT()", run: async function () { if (!state.bluetoothDeviceId) { var devices = await fn("procurarBT")({ timeoutMs: 10000 }); state.bluetoothDevices = devices || []; state.bluetoothDeviceId = state.bluetoothDevices[0] && state.bluetoothDevices[0].id; } if (!state.bluetoothDeviceId) { return { connected: false, message: "Nenhum dispositivo encontrado." }; } return fn("conectarBT")(state.bluetoothDeviceId); } },
         enviarBt: { title: "enviarBT()", run: function () { return fn("enviarBT")({ origem: "laboratorio-html2apk", mensagem: "Ola via Bluetooth", quando: Date.now() }); } },
+        iniciarWifi: { title: "aoConectarWiFi()", run: function () { if (state.stopWifiConnect) { state.stopWifiConnect(); } state.stopWifiConnect = fn("aoConectarWiFi")(function (event) { state.wifiConnected = true; log("wifi conectado", event, "ok"); }); if (state.stopWifiData) { state.stopWifiData(); } state.stopWifiData = fn("aoReceberDadosWiFi")(function (data) { log("dados wifi", data, "ok"); }); if (state.stopWifiError) { state.stopWifiError(); } state.stopWifiError = fn("aoDarErroWiFi")(function (error) { log("erro wifi", error, "error"); }); return { listening: true }; } },
+        procurarWifi: { title: "procurarWiFi()", run: async function () { var devices = await fn("procurarWiFi")({ timeoutMs: 10000 }); state.wifiDevices = devices || []; state.wifiDeviceId = state.wifiDevices[0] && state.wifiDevices[0].id; return devices; } },
+        conectarWifi: { title: "conectarWiFi()", run: async function () { if (!state.wifiDeviceId) { var devices = await fn("procurarWiFi")({ timeoutMs: 10000 }); state.wifiDevices = devices || []; state.wifiDeviceId = state.wifiDevices[0] && state.wifiDevices[0].id; } if (!state.wifiDeviceId) { return { connected: false, message: "Nenhum dispositivo Wi-Fi encontrado." }; } return fn("conectarWiFi")(state.wifiDeviceId); } },
+        enviarWifi: { title: "enviarWiFi()", run: function () { return fn("enviarWiFi")({ origem: "laboratorio-html2apk", mensagem: "Ola via Wi-Fi", quando: Date.now() }); } },
 
         notificar: { title: "notificar()", run: function () { return fn("notificar")({ titulo: "html2apk", texto: "Notificacao imediata", aoClicar: { funcao: "toast", argumentos: ["Notificacao clicada"] } }); } },
         agendarNotificacao: { title: "agendarNotificacao()", run: async function () { var result = await fn("agendarNotificacao")({ titulo: "html2apk", texto: "Agendada para 10 segundos", quando: Date.now() + 10000 }); state.scheduledId = result && result.id; return result; } },
@@ -598,8 +616,16 @@ function nativeFunctionLabHtml() {
         corTema: { title: "definirCorTema()", run: function () { return fn("definirCorTema")({ statusBarColor: "#126fff", navigationBarColor: "#10141b", darkIcons: false }); } },
         lanterna: { title: "alternarLanterna()", run: function () { return fn("alternarLanterna")(); } },
         statusLanterna: { title: "statusLanterna()", run: function () { return fn("statusLanterna")(); } },
-        iniciarIconeFlutuante: { title: "iniciarIconeFlutuante()", run: function () { return fn("iniciarIconeFlutuante")(); } },
+        capturarTela: { title: "capturarTela()", run: function () { return fn("capturarTela")({ formato: "png" }); } },
+        volumeAtual: { title: "volumeAtual()", run: function () { return fn("volumeAtual")(); } },
+        definirVolume: { title: "definirVolume('midia', 0.5)", run: function () { return fn("definirVolume")("midia", 0.5, { mostrarUI: true }); } },
+        aumentarVolume: { title: "aumentarVolume()", run: function () { return fn("aumentarVolume")("midia", 1, { mostrarUI: true }); } },
+        diminuirVolume: { title: "diminuirVolume()", run: function () { return fn("diminuirVolume")("midia", 1, { mostrarUI: true }); } },
+        iniciarIconeFlutuante: { title: "iniciarIconeFlutuante()", run: function () { return fn("iniciarIconeFlutuante")({ opacidade: 0.85 }); } },
+        configurarIconeFlutuante: { title: "definirOpacidadeIconeFlutuante()", run: function () { return fn("definirOpacidadeIconeFlutuante")(0.55); } },
         pararIconeFlutuante: { title: "pararIconeFlutuante()", run: function () { return fn("pararIconeFlutuante")(); } },
+        minimizarApp: { title: "minimizarApp()", run: function () { return fn("minimizarApp")(); } },
+        fecharApp: { title: "fecharApp()", run: function () { return fn("fecharApp")(); } },
 
         tirarFoto: { title: "tirarFoto()", run: async function () { var result = await fn("tirarFoto")({ base64: true }); state.lastPhoto = result; return result; } },
         capturarVideo: { title: "capturarVideo()", run: function () { return fn("capturarVideo")({ duracaoSegundos: 5 }); } },
@@ -671,9 +697,10 @@ function nativeFunctionLabHtml() {
       var groups = [
         { title: "Feedback e compartilhamento", ids: ["toast", "vibrar", "aguardar", "copiarTexto", "lerTextoCopiado", "compartilharTexto", "compartilhar", "compartilharApp", "receberCompartilhamento", "compartilhamentoInicial"] },
         { title: "Bluetooth", ids: ["iniciarBt", "procurarBt", "conectarBt", "enviarBt"] },
+        { title: "Wi-Fi local", ids: ["iniciarWifi", "procurarWifi", "conectarWifi", "enviarWifi"] },
         { title: "Notificacoes", ids: ["notificar", "agendarNotificacao", "cancelarNotificacao", "agendarLoopNotificacoes", "cancelarLoopNotificacoes", "pushInfo"] },
         { title: "Permissoes e configuracoes", ids: ["statusPermissoes", "permissaoNotificacao", "permissaoCamera", "permissaoMicrofone", "alarmeExato", "abrirAlarmeExato", "statusSobreposicao", "abrirSobreposicao"] },
-        { title: "Tela e hardware", ids: ["fullscreenOn", "fullscreenOff", "telaAcordadaOn", "telaAcordadaOff", "brilhoTela", "corTema", "lanterna", "statusLanterna", "iniciarIconeFlutuante", "pararIconeFlutuante"] },
+        { title: "Tela e hardware", ids: ["fullscreenOn", "fullscreenOff", "telaAcordadaOn", "telaAcordadaOff", "brilhoTela", "corTema", "lanterna", "statusLanterna", "capturarTela", "volumeAtual", "definirVolume", "aumentarVolume", "diminuirVolume", "iniciarIconeFlutuante", "configurarIconeFlutuante", "pararIconeFlutuante", "minimizarApp", "fecharApp"] },
         { title: "Camera, QR Code e microfone", ids: ["tirarFoto", "capturarVideo", "escanearQRCode", "ouvirMic", "pararMic"] },
         { title: "Texto e voz", ids: ["ocr", "falar", "pararFala", "ouvir"] },
         { title: "Arquivos e midia", ids: ["escolherImagem", "escolherImagens", "escolherArquivo", "escolherArquivos", "escolherVideo", "escolherPasta", "salvarArquivoPicker", "salvarArquivoCrud", "lerArquivo", "lerArquivoCompleto", "listarArquivos", "infoArquivo", "arquivoExiste", "abrirArquivo", "compartilharArquivo", "baixarArquivo", "baixarBase64", "baixarArquivoLocal", "excluirArquivo"] },

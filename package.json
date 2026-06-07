@@ -1,6 +1,6 @@
 {
   "name": "html2apk",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Node CLI and library to turn an HTML/CSS/JS folder into an Android APK through Cordova.",
   "main": "index.js",
   "bin": {

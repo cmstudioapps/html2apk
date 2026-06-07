@@ -2,9 +2,9 @@
 
 Criacao, direcao, propriedade e creditos: **Caio Multiversando**.
 
-Versão observada no projeto: `0.10.0`.
+Versão observada no projeto: `0.11.0`.
 
-Download da versão desktop observada: gere o executável local em `dist-desktop` e publique o pacote `0.10.0` no canal de distribuição escolhido.
+Download da versão desktop observada: gere o executável local em `dist-desktop` e publique o pacote `0.11.0` no canal de distribuição escolhido.
 
 Este documento explica o html2apk em dois modos:
 
@@ -547,6 +547,10 @@ aoReceberDadosBT((dados) => {
   console.log("Recebido", dados);
 });
 
+aoDarErroBT((erro) => {
+  console.log("Erro Bluetooth", erro.mensagem || erro.message);
+});
+
 const dispositivos = await procurarBT();
 
 if (dispositivos[0]) {
@@ -558,7 +562,35 @@ if (dispositivos[0]) {
 }
 ```
 
-A bridge usa Bluetooth classico RFCOMM. `aoConectarBT()` inicia o servidor interno do app. `procurarBT()` lista aparelhos pareados e aparelhos visiveis durante a busca. `enviarBT()` serializa o objeto como JSON; no outro lado, `aoReceberDadosBT()` entrega o objeto original.
+A bridge usa Bluetooth clássico RFCOMM. `aoConectarBT()` inicia o servidor interno do app. `aoDarErroBT()` recebe falhas de escuta/conexão Bluetooth. `procurarBT()` lista aparelhos pareados e aparelhos visíveis durante a busca. `enviarBT()` serializa o objeto como JSON; no outro lado, `aoReceberDadosBT()` entrega o objeto original.
+
+Wi-Fi local entre apps:
+
+```js
+aoConectarWiFi((dispositivo) => {
+  console.log("Conectado por Wi-Fi", dispositivo.nome || dispositivo.host);
+});
+
+aoReceberDadosWiFi((dados) => {
+  console.log("Recebido por Wi-Fi", dados);
+});
+
+aoDarErroWiFi((erro) => {
+  console.log("Erro Wi-Fi", erro.mensagem || erro.message);
+});
+
+const dispositivosWifi = await procurarWiFi();
+
+if (dispositivosWifi[0]) {
+  await conectarWiFi(dispositivosWifi[0].id);
+  await enviarWiFi({
+    tipo: "ping",
+    enviadoEm: Date.now()
+  });
+}
+```
+
+A bridge usa descoberta NSD e socket TCP local. `aoConectarWiFi()` inicia o servidor interno e anuncia o app na rede. `procurarWiFi()` lista apps html2apk encontrados na mesma rede local ou hotspot. `enviarWiFi()` serializa o objeto como JSON; no outro lado, `aoReceberDadosWiFi()` entrega o objeto original. Isso nao e Wi-Fi Direct: os aparelhos precisam estar na mesma rede.
 
 Clipboard:
 
@@ -707,6 +739,33 @@ await brilhoTela(0.8);
 await brilhoTela(-1); // restaura comportamento padrao
 ```
 
+Volume:
+
+```js
+const volume = await volumeAtual();
+console.log(volume.midia.atual, volume.midia.maximo);
+
+await definirVolume("midia", 0.5, { mostrarUI: true });
+await aumentarVolume("midia", 1);
+await diminuirVolume("midia", 1);
+```
+
+Captura da tela do app:
+
+```js
+const imagem = await capturarTela();
+document.querySelector("img.preview").src = imagem.dataUrl;
+```
+
+Controle da Activity:
+
+```js
+await minimizarApp();
+
+// Depois de salvar estado importante:
+// await fecharApp();
+```
+
 Barras do Android:
 
 ```js
@@ -742,6 +801,8 @@ for (const app of resultado.apps) {
 Cuidados:
 
 - `brilhoTela()` afeta a janela do app, nao o sistema inteiro;
+- `capturarTela()` captura o proprio APK/WebView, nao outros apps ou areas protegidas do sistema;
+- `fecharApp()` finaliza a Activity, entao salve estado antes de chamar;
 - `appsAbertos()` e limitado por privacidade do Android moderno;
 - diagnostico deve atualizar em intervalo moderado, nao a cada frame.
 
@@ -850,11 +911,13 @@ if (!info.videoSupported) {
 Icone flutuante:
 
 ```js
-const status = await iniciarIconeFlutuante();
+const status = await iniciarIconeFlutuante({ opacidade: 0.85 });
 
 if (status.requiresSettings) {
   console.log("O Android abriu a tela de sobreposicao");
 }
+
+await definirOpacidadeIconeFlutuante(0.55);
 
 // Para desligar:
 // await pararIconeFlutuante();
@@ -866,6 +929,7 @@ Cuidados:
 - video wallpaper precisa fluxo de live wallpaper/configuracao do Android;
 - fundo de chamada depende do app de telefone/fabricante;
 - overlay exige permissao especial `SYSTEM_ALERT_WINDOW`;
+- opacidade do icone flutuante aceita valor entre `0.1` e `1`;
 - depois de permitir sobreposicao, chame `iniciarIconeFlutuante()` novamente.
 
 ## O que a ferramenta adiciona ao app
@@ -2112,6 +2176,17 @@ Eventos incluem:
 - rede mudou;
 - bateria mudou;
 - localizacao mudou;
+- USB conectado/desconectado;
+- fone conectado/desconectado;
+- volume mudou;
+- teclado abriu/fechou;
+- orientação mudou;
+- celular sacudido;
+- celular com tela para baixo;
+- proximidade perto;
+- print detectado;
+- NFC recebido;
+- notificação recebida;
 - notificacao clicada.
 
 ### Vantagem

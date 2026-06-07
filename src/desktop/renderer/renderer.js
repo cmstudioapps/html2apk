@@ -578,7 +578,7 @@ const nativeCodeEntries = [
   {
     syntax: { pt: "aoEvento('app:background', fn)", en: "onEvent('app:background', fn)" },
     java: "dispatchEvent",
-    description: { pt: "Escuta eventos nativos: app:pronto, app:background, app:voltou, botao:voltar, link:aberto, rede:mudou, bateria:mudou, notificacao:recebida e notificacao:clicada.", en: "Listens to native events: app:ready, app:background, app:resumed, back:button, link:opened, network:changed, battery:changed, notification:received and notification:clicked." },
+    description: { pt: "Escuta eventos nativos: app:pronto, app:background, app:voltou, botao:voltar, link:aberto, rede:mudou, bateria:mudou, usb:conectado, fone:conectado, volume:mudou, teclado:abriu, orientacao:mudou, celular:sacudido, print:tela, nfc:recebido, notificacao:recebida e notificacao:clicada.", en: "Listens to native events: app:ready, app:background, app:resumed, back:button, link:opened, network:changed, battery:changed, usb:connected, headphone:connected, volume:changed, keyboard:opened, orientation:changed, phone:shaken, screenshot:taken, nfc:received, notification:received and notification:clicked." },
     returns: { pt: "Funcao para cancelar a escuta.", en: "Unsubscribe function." },
     handling: { pt: "Guarde o retorno em `parar` e chame quando a tela/componente for desmontado para evitar escutas duplicadas.", en: "Store the return value as `stop` and call it when the screen/component unmounts to avoid duplicate listeners." }
   },
@@ -588,6 +588,90 @@ const nativeCodeEntries = [
     description: { pt: "Atalhos para saber quando o app saiu da frente ou voltou.", en: "Shortcuts for knowing when the app left the foreground or resumed." },
     returns: { pt: "Funcao para cancelar a escuta.", en: "Unsubscribe function." },
     handling: { pt: "Pause timers, audio ou leitura pesada ao minimizar; ao voltar, confira se dados precisam ser recarregados.", en: "Pause timers, audio or heavy reads on minimize; on resume, check whether data should be refreshed." }
+  },
+  {
+    syntax: { pt: "aoConectarUSB(fn) / aoDesconectarUSB(fn)", en: "onUSBConnect(fn) / onUSBDisconnect(fn)" },
+    java: "UsbManager + BatteryManager",
+    description: { pt: "Escuta conexão/desconexão USB por energia USB ou dispositivo USB/OTG anexado ao Android.", en: "Listens for USB connect/disconnect from USB power or USB/OTG devices attached to Android." },
+    returns: { pt: "Callback recebe { conectado, origem, dispositivo? }. Retorna função para cancelar.", en: "Callback receives { connected, source, device? }. Returns an unsubscribe function." },
+    handling: { pt: "Para cabo no computador, o evento vem como origem `power`; para OTG, vem com dados do dispositivo quando o Android entregar.", en: "For a computer cable, the event source is `power`; for OTG, device data is included when Android provides it." }
+  },
+  {
+    syntax: { pt: "aoConectarFone(fn) / aoDesconectarFone(fn)", en: "onHeadphoneConnect(fn) / onHeadphoneDisconnect(fn)" },
+    java: "AudioManager",
+    description: { pt: "Escuta fone com fio, Bluetooth, USB headset e aparelhos de áudio reconhecidos pelo Android.", en: "Listens for wired, Bluetooth, USB headset and other Android audio output devices." },
+    returns: { pt: "Callback recebe { conectado, dispositivo? }. Retorna função para cancelar.", en: "Callback receives { connected, device? }. Returns an unsubscribe function." },
+    handling: { pt: "Bluetooth pode chegar pelo callback de áudio quando vira saída de som; pare a escuta ao sair da tela.", en: "Bluetooth may arrive through the audio callback when it becomes an output device; stop listening when the screen unmounts." }
+  },
+  {
+    syntax: { pt: "aoMudarVolume(fn)", en: "onVolumeChange(fn)" },
+    java: "AudioManager + Settings Observer",
+    description: { pt: "Escuta mudanças nos volumes de mídia, toque, notificação, alarme e chamada.", en: "Listens for changes in media, ring, notification, alarm and voice-call volumes." },
+    returns: { pt: "Callback recebe volumes atuais e máximos por stream. Retorna função para cancelar.", en: "Callback receives current and max volumes by stream. Returns an unsubscribe function." },
+    handling: { pt: "O Android pode agrupar streams dependendo do modo de som do aparelho; trate como estado atual, não como histórico completo.", en: "Android may group streams depending on device sound mode; treat it as current state, not complete history." }
+  },
+  {
+    syntax: { pt: "volumeAtual() / definirVolume('midia', 0.5)", en: "getVolume() / setVolume('music', 0.5)" },
+    java: "AudioManager",
+    description: { pt: "Consulta e controla volumes de mídia, toque, notificação, alarme, chamada e sistema.", en: "Reads and controls media, ring, notification, alarm, voice-call and system volumes." },
+    returns: { pt: "`volumeAtual` retorna volumes atuais/máximos por stream. `definirVolume`, `aumentarVolume` e `diminuirVolume` retornam o novo estado.", en: "`getVolume` returns current/max volumes by stream. `setVolume`, `increaseVolume` and `decreaseVolume` return the new state." },
+    handling: { pt: "Use valores entre 0 e 1 para porcentagem ou inteiros para passos absolutos. Passe `{ mostrarUI: true }` se quiser exibir a barra nativa.", en: "Use values from 0 to 1 for percentage or integers for absolute steps. Pass `{ showUi: true }` to show the native volume panel." }
+  },
+  {
+    syntax: { pt: "aoAbrirTeclado(fn) / aoFecharTeclado(fn)", en: "onKeyboardOpen(fn) / onKeyboardClose(fn)" },
+    java: "ViewTreeObserver",
+    description: { pt: "Detecta abertura/fechamento do teclado pela área visível da WebView.", en: "Detects keyboard open/close through the visible WebView area." },
+    returns: { pt: "Callback recebe { aberto, alturaTeclado }. Retorna função para cancelar.", en: "Callback receives { open, keyboardHeight }. Returns an unsubscribe function." },
+    handling: { pt: "É uma heurística visual; modo tela cheia, teclado flutuante ou fabricante podem alterar a altura detectada.", en: "This is a visual heuristic; fullscreen mode, floating keyboards or vendors may change detected height." }
+  },
+  {
+    syntax: { pt: "aoMudarOrientacao(fn)", en: "onOrientationChange(fn)" },
+    java: "ViewTreeObserver + Configuration",
+    description: { pt: "Escuta troca entre portrait e landscape enquanto a WebView muda de tamanho.", en: "Listens for portrait/landscape changes while the WebView changes size." },
+    returns: { pt: "Callback recebe { orientacao, largura, altura }. Retorna função para cancelar.", en: "Callback receives { orientation, width, height }. Returns an unsubscribe function." },
+    handling: { pt: "Se o app travar orientação no config, o evento naturalmente não muda.", en: "If the app locks orientation in config, the event naturally does not change." }
+  },
+  {
+    syntax: { pt: "aoSacudirCelular(fn) / aoVirarCelularParaBaixo(fn)", en: "onPhoneShake(fn) / onPhoneFaceDown(fn)" },
+    java: "SensorManager",
+    description: { pt: "Escuta acelerômetro para detectar sacudida forte e tela virada para baixo.", en: "Uses the accelerometer to detect a strong shake and face-down posture." },
+    returns: { pt: "Callback recebe leituras x/y/z e força quando fizer sentido. Retorna função para cancelar.", en: "Callback receives x/y/z readings and force when relevant. Returns an unsubscribe function." },
+    handling: { pt: "Sensores variam por aparelho; use para interações leves e sempre mantenha um botão alternativo.", en: "Sensors vary by device; use for lightweight interactions and always keep a button fallback." }
+  },
+  {
+    syntax: { pt: "aoAproximarObjeto(fn)", en: "onProximityNear(fn)" },
+    java: "SensorManager",
+    description: { pt: "Escuta o sensor de proximidade quando algo se aproxima da tela.", en: "Listens to the proximity sensor when something gets near the screen." },
+    returns: { pt: "Callback recebe { perto, distancia, alcanceMaximo }. Retorna função para cancelar.", en: "Callback receives { near, distance, maximumRange }. Returns an unsubscribe function." },
+    handling: { pt: "Nem todo aparelho tem sensor de proximidade; trate ausência simplesmente como evento que nunca dispara.", en: "Not every device has a proximity sensor; treat absence as an event that simply never fires." }
+  },
+  {
+    syntax: { pt: "aoTirarPrint(fn)", en: "onScreenshot(fn)" },
+    java: "MediaStore Observer",
+    description: { pt: "Tenta detectar captura de tela observando novas imagens com nome/pasta de screenshot.", en: "Tries to detect screenshots by observing new images with screenshot-like names/folders." },
+    returns: { pt: "Callback recebe { uri, nome, caminho? }. Retorna função para cancelar.", en: "Callback receives { uri, name, path? }. Returns an unsubscribe function." },
+    handling: { pt: "Android moderno limita leitura de midia; alguns fabricantes mudam o nome da pasta, então esse evento é melhor esforço.", en: "Modern Android limits media reads; some vendors rename folders, so this event is best-effort." }
+  },
+  {
+    syntax: { pt: "capturarTela() / tirarPrint()", en: "captureScreen() / takeScreenshot()" },
+    java: "View.draw + Bitmap",
+    description: { pt: "Captura a tela atual do próprio app/WebView e devolve imagem em base64.", en: "Captures the current app/WebView screen and returns a base64 image." },
+    returns: { pt: "{ base64, dataUrl, width, height, mimeType, formato }.", en: "{ base64, dataUrl, width, height, mimeType, format }." },
+    handling: { pt: "Não captura outros apps nem áreas protegidas do sistema. Use depois da tela renderizar para evitar imagem vazia.", en: "Does not capture other apps or protected system areas. Call it after the screen renders to avoid an empty image." }
+  },
+  {
+    syntax: { pt: "aoNFC(fn)", en: "onNFC(fn)" },
+    java: "NfcAdapter",
+    description: { pt: "Escuta tags NFC enquanto o app está aberto em primeiro plano.", en: "Listens for NFC tags while the app is open in the foreground." },
+    returns: { pt: "Callback recebe { id, tecnologias, mensagens }. Retorna função para cancelar.", en: "Callback receives { id, technologies, messages }. Returns an unsubscribe function." },
+    handling: { pt: "Exige aparelho com NFC ligado. Tags que abrem o app enquanto ele estava fechado podem precisar de fluxo inicial em uma evolução futura.", en: "Requires a device with NFC enabled. Tags that launch the app from closed state may need an initial-flow helper in a future iteration." }
+  },
+  {
+    syntax: { pt: "aoReceberNotificacao(fn)", en: "onNotificationReceived(fn)" },
+    java: "dispatchEvent",
+    description: { pt: "Escuta quando uma notificação local do app é emitida pela bridge.", en: "Listens when a local app notification is emitted by the bridge." },
+    returns: { pt: "Callback recebe os dados da notificação. Retorna função para cancelar.", en: "Callback receives the notification data. Returns an unsubscribe function." },
+    handling: { pt: "Use para atualizar tela/estado quando `notificar()` ou uma notificacao agendada passar pela bridge. Para clique, use `aoClicarNotificacao()`.", en: "Use it to update UI/state when `notify()` or a scheduled notification goes through the bridge. For clicks, use `onNotificationClick()`." }
   },
   {
     syntax: { pt: "obterLinkInicial() / aoAbrirLink(fn)", en: "getInitialLink() / onOpenLink(fn)" },
@@ -688,11 +772,18 @@ const nativeCodeEntries = [
     handling: { pt: "Use `obterCompartilhamentoInicial()` no boot e `aoReceberCompartilhamento()` para intents recebidas com o app aberto.", en: "Use `getInitialShare()` on boot and `onShareReceived()` for intents received while the app is open." }
   },
   {
-    syntax: { pt: "procurarBT() / conectarBT(id) / enviarBT(objeto)", en: "scanBluetooth() / connectBluetooth(id) / sendBluetooth(object)" },
+    syntax: { pt: "procurarBT() / conectarBT(id) / enviarBT(objeto) / aoDarErroBT(callback)", en: "scanBluetooth() / connectBluetooth(id) / sendBluetooth(object) / onBluetoothError(callback)" },
     java: "Bluetooth RFCOMM",
     description: { pt: "Comunica dois apps html2apk por Bluetooth classico usando JSON.", en: "Communicates two html2apk apps over classic Bluetooth using JSON." },
-    returns: { pt: "`procurarBT` retorna lista de dispositivos; `conectarBT` retorna o dispositivo conectado; `enviarBT` retorna { ok, enviado }.", en: "`scanBluetooth` returns a device list; `connectBluetooth` returns the connected device; `sendBluetooth` returns { ok, sent }." },
-    handling: { pt: "No aparelho que recebe, registre `aoConectarBT()` e `aoReceberDadosBT()`. Para descoberta, o outro aparelho precisa estar pareado ou visivel no Bluetooth do Android.", en: "On the receiving device, register `onBluetoothConnect()` and `onBluetoothData()`. For discovery, the other device must be paired or visible in Android Bluetooth." }
+    returns: { pt: "`procurarBT` retorna lista de dispositivos; `conectarBT` retorna o dispositivo conectado; `enviarBT` retorna { ok, enviado }; `aoDarErroBT` recebe o erro.", en: "`scanBluetooth` returns a device list; `connectBluetooth` returns the connected device; `sendBluetooth` returns { ok, sent }; `onBluetoothError` receives the error." },
+    handling: { pt: "No aparelho que recebe, registre `aoConectarBT()`, `aoReceberDadosBT()` e `aoDarErroBT()`. Para descoberta, o outro aparelho precisa estar pareado ou visivel no Bluetooth do Android.", en: "On the receiving device, register `onBluetoothConnect()`, `onBluetoothData()` and `onBluetoothError()`. For discovery, the other device must be paired or visible in Android Bluetooth." }
+  },
+  {
+    syntax: { pt: "procurarWiFi() / conectarWiFi(id) / enviarWiFi(objeto) / aoDarErroWiFi(callback)", en: "scanWiFi() / connectWiFi(id) / sendWiFi(object) / onWiFiError(callback)" },
+    java: "NSD + Socket TCP local",
+    description: { pt: "Comunica dois apps html2apk pela mesma rede Wi-Fi ou hotspot usando JSON.", en: "Communicates two html2apk apps on the same Wi-Fi network or hotspot using JSON." },
+    returns: { pt: "`procurarWiFi` retorna lista de dispositivos; `conectarWiFi` retorna o dispositivo conectado; `enviarWiFi` retorna { ok, enviado }; `aoDarErroWiFi` recebe o erro.", en: "`scanWiFi` returns a device list; `connectWiFi` returns the connected device; `sendWiFi` returns { ok, sent }; `onWiFiError` receives the error." },
+    handling: { pt: "No aparelho que recebe, registre `aoConectarWiFi()`, `aoReceberDadosWiFi()` e `aoDarErroWiFi()`. Os dois aparelhos precisam estar na mesma rede local ou hotspot.", en: "On the receiving device, register `onWiFiConnect()`, `onWiFiData()` and `onWiFiError()`. Both devices must be on the same local network or hotspot." }
   },
   {
     syntax: { pt: "ocr(imagem)", en: "recognizeText(image)" },
@@ -788,7 +879,7 @@ const nativeCodeEntries = [
   {
     syntax: { pt: "infoRede() / infoBateria()", en: "networkInfo() / batteryInfo()" },
     java: "networkInfo/batteryInfo",
-    description: { pt: "Consulta conexao atual e bateria.", en: "Reads current connection and battery." },
+    description: { pt: "Consulta conexão atual e bateria.", en: "Reads current connection and battery." },
     returns: { pt: "rede: { online, tipo/type }; bateria: { level, charging }.", en: "network: { online, tipo/type }; battery: { level, charging }." },
     handling: { pt: "Combine com `aoEvento('rede:mudou')` e `aoEvento('bateria:mudou')` para atualizar a tela sem ficar consultando em loop.", en: "Combine with `onEvent('network:changed')` and `onEvent('battery:changed')` to update the UI without polling." }
   },
@@ -823,9 +914,16 @@ const nativeCodeEntries = [
   {
     syntax: { pt: "iniciarIconeFlutuante() / pararIconeFlutuante()", en: "startFloatingIcon() / stopFloatingIcon()" },
     java: "FloatingIconService",
-    description: { pt: "Controla o icone flutuante quando a sobreposicao estiver liberada no Android.", en: "Controls the floating icon when draw-over-apps is allowed on Android." },
-    returns: { pt: "Promise<void>.", en: "Promise<void>." },
-    handling: { pt: "`iniciarIconeFlutuante()` abre a tela de permissao automaticamente se faltar sobreposicao. Quando o usuario voltar, chame novamente para iniciar.", en: "`startFloatingIcon()` opens the permission screen automatically if draw-over-apps is missing. When the user comes back, call it again to start." }
+    description: { pt: "Controla o ícone flutuante e permite ajustar opacidade quando a sobreposição estiver liberada no Android.", en: "Controls the floating icon and allows opacity changes when draw-over-apps is allowed on Android." },
+    returns: { pt: "{ granted, requiresSettings, opacity } para iniciar/configurar; `pararIconeFlutuante` finaliza o serviço.", en: "{ granted, requiresSettings, opacity } for start/configure; `stopFloatingIcon` stops the service." },
+    handling: { pt: "`iniciarIconeFlutuante()` abre a tela de permissão automaticamente se faltar sobreposição. Use `definirOpacidadeIconeFlutuante(0.6)` para mudar sem recriar outro fluxo.", en: "`startFloatingIcon()` opens the permission screen automatically if draw-over-apps is missing. Use `setFloatingIconOpacity(0.6)` to change it without creating another flow." }
+  },
+  {
+    syntax: { pt: "minimizarApp() / fecharApp()", en: "minimizeApp() / closeApp()" },
+    java: "Activity",
+    description: { pt: "Envia o app para segundo plano ou fecha a Activity atual.", en: "Sends the app to the background or closes the current Activity." },
+    returns: { pt: "`minimizarApp`: { minimizado }. `fecharApp`: { fechado } antes de finalizar.", en: "`minimizeApp`: { minimized }. `closeApp`: { closed } before finishing." },
+    handling: { pt: "Use com uma ação clara do usuário. `fecharApp()` encerra a tela do APK, então salve estado antes.", en: "Use from an explicit user action. `closeApp()` finishes the APK screen, so save state first." }
   },
   {
     syntax: { pt: "tirarFoto() / capturarVideo()", en: "takePhoto() / captureVideo()" },
@@ -1254,6 +1352,111 @@ console.log(permissions);`
     }
   },
   {
+    when: { pt: "Para reagir a cabo/dispositivo USB e notificacoes locais.", en: "To react to USB cable/device changes and local notifications." },
+    example: {
+      pt: `aoConectarUSB((dados) => {
+  console.log("USB conectado", dados.origem, dados.dispositivo);
+});
+
+aoDesconectarUSB(() => {
+  console.log("USB desconectado");
+});
+
+aoReceberNotificacao((dados) => {
+  console.log("Notificação recebida", dados.titulo || dados.title);
+});`,
+      en: `onUSBConnect((data) => {
+  console.log("USB connected", data.source, data.device);
+});
+
+onUSBDisconnect(() => {
+  console.log("USB disconnected");
+});
+
+onNotificationReceived((data) => {
+  console.log("Notification received", data.title);
+});`
+    }
+  },
+  {
+    when: { pt: "Para reagir a fone, volume, teclado e orientação da tela.", en: "To react to headphones, volume, keyboard and screen orientation." },
+    example: {
+      pt: `aoConectarFone((dados) => {
+  console.log("Fone conectado", dados.dispositivo);
+});
+
+aoMudarVolume((dados) => {
+  console.log("Volume de mídia", dados.midia.atual);
+});
+
+aoAbrirTeclado((dados) => {
+  console.log("Teclado abriu", dados.alturaTeclado);
+});
+
+aoMudarOrientacao((dados) => {
+  console.log("Orientação", dados.orientacao);
+});`,
+      en: `onHeadphoneConnect((data) => {
+  console.log("Headphone connected", data.device);
+});
+
+onVolumeChange((data) => {
+  console.log("Media volume", data.music.current);
+});
+
+onKeyboardOpen((data) => {
+  console.log("Keyboard opened", data.keyboardHeight);
+});
+
+onOrientationChange((data) => {
+  console.log("Orientation", data.orientation);
+});`
+    }
+  },
+  {
+    when: { pt: "Para interações legais com sensores, print e NFC.", en: "For playful interactions with sensors, screenshots and NFC." },
+    example: {
+      pt: `aoSacudirCelular((dados) => {
+  console.log("Sacudiu", dados.forca);
+});
+
+aoVirarCelularParaBaixo(() => {
+  console.log("Tela virada para baixo");
+});
+
+aoAproximarObjeto((dados) => {
+  console.log("Algo chegou perto", dados.distancia);
+});
+
+aoTirarPrint((dados) => {
+  console.log("Print detectado", dados.uri);
+});
+
+aoNFC((dados) => {
+  console.log("Tag NFC", dados.id, dados.mensagens);
+});`,
+      en: `onPhoneShake((data) => {
+  console.log("Shaken", data.force);
+});
+
+onPhoneFaceDown(() => {
+  console.log("Phone is face down");
+});
+
+onProximityNear((data) => {
+  console.log("Something is near", data.distance);
+});
+
+onScreenshot((data) => {
+  console.log("Screenshot detected", data.uri);
+});
+
+onNFC((data) => {
+  console.log("NFC tag", data.id, data.messages);
+});`
+    }
+  },
+  {
     when: { pt: "Para pausar/resumir tarefas quando o usuario minimiza ou volta para o app.", en: "To pause/resume work when the user minimizes or returns to the app." },
     example: {
       pt: `const pararMinimizar = aoMinimizar(() => {
@@ -1533,6 +1736,10 @@ aoReceberDadosBT((dados) => {
   console.log("Recebido", dados);
 });
 
+aoDarErroBT((erro) => {
+  console.log("Erro Bluetooth", erro.mensagem || erro.message);
+});
+
 const lista = await procurarBT();
 await conectarBT(lista[0].id);
 await enviarBT({ mensagem: "Ola" });`,
@@ -1544,9 +1751,48 @@ onBluetoothData((data) => {
   console.log("Received", data);
 });
 
+onBluetoothError((error) => {
+  console.log("Bluetooth error", error.message);
+});
+
 const list = await scanBluetooth();
 await connectBluetooth(list[0].id);
 await sendBluetooth({ message: "Hello" });`
+    }
+  },
+  {
+    when: { pt: "Para trocar objetos entre dois celulares na mesma rede Wi-Fi ou hotspot.", en: "To exchange objects between two phones on the same Wi-Fi network or hotspot." },
+    example: {
+      pt: `aoConectarWiFi((dispositivo) => {
+  console.log("Conectado por Wi-Fi", dispositivo.nome || dispositivo.host);
+});
+
+aoReceberDadosWiFi((dados) => {
+  console.log("Recebido por Wi-Fi", dados);
+});
+
+aoDarErroWiFi((erro) => {
+  console.log("Erro Wi-Fi", erro.mensagem || erro.message);
+});
+
+const lista = await procurarWiFi();
+await conectarWiFi(lista[0].id);
+await enviarWiFi({ mensagem: "Ola por Wi-Fi" });`,
+      en: `onWiFiConnect((device) => {
+  console.log("Connected over Wi-Fi", device.name || device.host);
+});
+
+onWiFiData((data) => {
+  console.log("Received over Wi-Fi", data);
+});
+
+onWiFiError((error) => {
+  console.log("Wi-Fi error", error.message);
+});
+
+const list = await scanWiFi();
+await connectWiFi(list[0].id);
+await sendWiFi({ message: "Hello over Wi-Fi" });`
     }
   },
   {
@@ -1766,21 +2012,44 @@ for (const app of result.apps) {
     }
   },
   {
+    when: { pt: "Para ajustar volume e capturar a tela atual do app.", en: "To adjust volume and capture the current app screen." },
+    example: {
+      pt: `const volume = await volumeAtual();
+console.log(volume.midia.atual, volume.midia.maximo);
+
+await definirVolume("midia", 0.5, { mostrarUI: true });
+
+const imagem = await capturarTela();
+document.querySelector("img.preview").src = imagem.dataUrl;`,
+      en: `const volume = await getVolume();
+console.log(volume.music.current, volume.music.max);
+
+await setVolume("music", 0.5, { showUi: true });
+
+const image = await captureScreen();
+document.querySelector("img.preview").src = image.dataUrl;`
+    }
+  },
+  {
     when: { pt: "Para apps que precisam mostrar/esconder o icone flutuante.", en: "For apps that need to show/hide the floating icon." },
     example: {
-      pt: `const status = await iniciarIconeFlutuante();
+      pt: `const status = await iniciarIconeFlutuante({ opacidade: 0.85 });
 
 if (status.requiresSettings) {
   console.log("O Android abriu a tela de sobreposicao");
 }
 
+await definirOpacidadeIconeFlutuante(0.55);
+
 // Para desligar:
 // await pararIconeFlutuante();`,
-      en: `const status = await startFloatingIcon();
+      en: `const status = await startFloatingIcon({ opacity: 0.85 });
 
 if (status.requiresSettings) {
   console.log("Android opened the draw-over-apps screen");
 }
+
+await setFloatingIconOpacity(0.55);
 
 // To turn it off:
 // await stopFloatingIcon();`
@@ -3764,7 +4033,7 @@ async function init() {
       elements.iconPreview.src = iconPreviewPath(state.defaultIconPath);
     }
   } catch {
-    elements.appVersion.textContent = "v0.10.0";
+    elements.appVersion.textContent = "v0.11.0";
   }
 
   setTimeout(finishBoot, 1800);

@@ -570,7 +570,7 @@
     <div class="top-actions">
       <a class="download-button" href="#desktop">Baixar para Windows</a>
       <button class="theme-toggle" type="button" id="themeToggle" aria-pressed="false">Modo escuro</button>
-      <span class="pill">Versão 0.10.0</span>
+      <span class="pill">Versão 0.11.0</span>
       <span class="pill">Criado por Caio Multiversando</span>
     </div>
   </header>
@@ -802,12 +802,12 @@ await baixarArquivo("https://site.com/manual.pdf", "manual.pdf");</code></pre>
       <section id="features">
         <h2>Funções interpretadas</h2>
         <p class="lead">As funções interpretadas são agrupadas por comportamento, não por arquivo. Esse é o caminho mais claro para entender o que a ferramenta oferece ao JavaScript do app.</p>
-        <div class="note"><strong>Contagem atual:</strong> a aba "Códigos interpretados" documenta <strong>55 funções ou blocos de API</strong> disponíveis para o JavaScript do APK, incluindo chamadas em português e aliases em inglês quando existem.</div>
+        <div class="note"><strong>Contagem atual:</strong> a aba "Códigos interpretados" documenta <strong>86 funções ou blocos de API</strong> disponíveis para o JavaScript do APK, incluindo chamadas em português e aliases em inglês quando existem.</div>
 
         <div class="grid">
           <div class="card">
             <h3>Feedback e tela</h3>
-            <p>Toast, vibração, aguardar/loading, fullscreen, manter tela ligada, brilho, cor de barras e lanterna.</p>
+            <p>Toast, vibração, aguardar/loading, fullscreen, manter tela ligada, brilho, volume, captura de tela, cor de barras e lanterna.</p>
           </div>
           <div class="card">
             <h3>Notificações</h3>
@@ -831,11 +831,11 @@ await baixarArquivo("https://site.com/manual.pdf", "manual.pdf");</code></pre>
           </div>
           <div class="card">
             <h3>Localização e eventos</h3>
-            <p>Localização atual, watch de localização, eventos nativos, Bluetooth, deep links, compartilhamento recebido e notificação inicial.</p>
+            <p>Localização atual, watch de localização, eventos nativos, USB, fone, volume, teclado, orientação, sensores, print, NFC, Bluetooth, Wi-Fi local, deep links, compartilhamento recebido e notificação inicial.</p>
           </div>
           <div class="card">
             <h3>Wallpaper e overlay</h3>
-            <p>Papel de parede estático, configuração de wallpaper, ícone flutuante e permissão de sobreposição.</p>
+            <p>Papel de parede estático, configuração de wallpaper, ícone flutuante, opacidade, minimizar/fechar app e permissão de sobreposição.</p>
           </div>
         </div>
 
@@ -863,9 +863,9 @@ await baixarArquivo("https://site.com/manual.pdf", "manual.pdf");</code></pre>
           <tbody>
             <tr>
               <td>Feedback</td>
-              <td><code>toast</code>, <code>vibrar</code></td>
-              <td>Use para confirmações curtas, erro simples e resposta de botão.</td>
-              <td>Vibração longa incomoda; falha de feedback não deve bloquear o app.</td>
+              <td><code>toast</code>, <code>vibrar</code>, <code>volumeAtual</code>, <code>capturarTela</code></td>
+              <td>Use para confirmações curtas, captura do app, controle de volume e resposta de botão.</td>
+              <td>Vibração longa incomoda; captura pega o app/WebView, não outros apps.</td>
             </tr>
             <tr>
               <td>Notificações</td>
@@ -899,9 +899,9 @@ await baixarArquivo("https://site.com/manual.pdf", "manual.pdf");</code></pre>
             </tr>
             <tr>
               <td>Compartilhar e abrir</td>
-              <td><code>compartilhar</code>, <code>aoReceberCompartilhamento</code>, <code>procurarBT</code>, <code>enviarBT</code>, <code>share_me</code></td>
-              <td>Use para clipboard, share sheet, receber compartilhamentos, Bluetooth, compartilhar o próprio APK e apps externos.</td>
-              <td>Apps externos podem não existir; Bluetooth exige aparelho pareado ou visível para descoberta.</td>
+              <td><code>compartilhar</code>, <code>aoReceberCompartilhamento</code>, <code>procurarBT</code>, <code>enviarBT</code>, <code>aoDarErroBT</code>, <code>procurarWiFi</code>, <code>enviarWiFi</code>, <code>aoDarErroWiFi</code>, <code>share_me</code></td>
+              <td>Use para clipboard, share sheet, receber compartilhamentos, Bluetooth, Wi-Fi local, compartilhar o próprio APK e apps externos.</td>
+              <td>Apps externos podem não existir; Bluetooth exige aparelho pareado ou visível para descoberta; Wi-Fi exige mesma rede local ou hotspot.</td>
             </tr>
             <tr>
               <td>Segurança</td>
@@ -911,9 +911,9 @@ await baixarArquivo("https://site.com/manual.pdf", "manual.pdf");</code></pre>
             </tr>
             <tr>
               <td>Wallpaper e overlay</td>
-              <td><code>definirPapelParede</code>, <code>abrirConfiguracaoPapelParede</code>, <code>iniciarIconeFlutuante</code></td>
-              <td>Aplique imagem estática ou abra ajustes nativos; overlay precisa de permissão especial.</td>
-              <td>Video wallpaper e fundo de chamada dependem do Android/fabricante.</td>
+              <td><code>definirPapelParede</code>, <code>iniciarIconeFlutuante</code>, <code>definirOpacidadeIconeFlutuante</code>, <code>minimizarApp</code>, <code>fecharApp</code></td>
+              <td>Aplique imagem estática, controle overlay, mande o app para fundo ou feche a Activity.</td>
+              <td>Video wallpaper e fundo de chamada dependem do Android/fabricante; fechar app deve salvar estado antes.</td>
             </tr>
           </tbody>
         </table>
@@ -928,6 +928,24 @@ await baixarArquivo("https://site.com/manual.pdf", "manual.pdf");</code></pre>
 } catch (erro) {
   console.error("Feedback nativo falhou", erro);
 }</code></pre>
+
+        <h3>Volume, print e controle do app</h3>
+        <pre><code>const volume = await volumeAtual();
+console.log(volume.midia.atual, volume.midia.maximo);
+
+await definirVolume("midia", 0.5, { mostrarUI: true });
+await aumentarVolume("midia", 1);
+await diminuirVolume("midia", 1);
+
+const imagem = await capturarTela();
+document.querySelector("img.preview").src = imagem.dataUrl;
+
+await minimizarApp();
+
+// Salve estado importante antes de fechar:
+// await fecharApp();</code></pre>
+
+        <div class="note">Use <code>capturarTela()</code> ou <code>tirarPrint()</code> para capturar a tela do próprio APK/WebView. O Android não permite capturar outros apps por essa ponte simples.</div>
 
         <h3>Notificacao com clique</h3>
         <pre><code>await notificar({
@@ -955,8 +973,58 @@ console.log("ID para cancelar depois:", aviso.id);</code></pre>
   console.log("App saiu da frente", evento.timestamp);
 });
 
+aoConectarUSB((dados) => {
+  console.log("USB conectado", dados);
+});
+
+aoDesconectarUSB(() => {
+  console.log("USB desconectado");
+});
+
+aoReceberNotificacao((dados) => {
+  console.log("Notificação recebida", dados);
+});
+
+aoConectarFone((dados) => {
+  console.log("Fone conectado", dados.dispositivo);
+});
+
+aoMudarVolume((dados) => {
+  console.log("Volume de mídia", dados.midia.atual);
+});
+
+aoAbrirTeclado((dados) => {
+  console.log("Teclado abriu", dados.alturaTeclado);
+});
+
+aoMudarOrientacao((dados) => {
+  console.log("Orientação", dados.orientacao);
+});
+
+aoSacudirCelular((dados) => {
+  console.log("Sacudiu", dados.forca);
+});
+
+aoVirarCelularParaBaixo(() => {
+  console.log("Tela para baixo");
+});
+
+aoAproximarObjeto((dados) => {
+  console.log("Objeto perto", dados.distancia);
+});
+
+aoTirarPrint((dados) => {
+  console.log("Print detectado", dados.uri);
+});
+
+aoNFC((dados) => {
+  console.log("Tag NFC", dados.id, dados.mensagens);
+});
+
 // Quando não precisar mais:
 parar();</code></pre>
+
+        <div class="note">Eventos de sensor dependem do hardware do aparelho. <code>aoTirarPrint()</code> é melhor esforço porque Android e fabricantes podem limitar a leitura da MediaStore. <code>aoNFC()</code> exige NFC ligado e funciona enquanto o app está em primeiro plano.</div>
 
         <h3>Receber compartilhamento</h3>
         <pre><code>const inicial = await obterCompartilhamentoInicial();
@@ -983,6 +1051,10 @@ aoReceberDadosBT((dados) => {
   console.log("Recebido", dados);
 });
 
+aoDarErroBT((erro) => {
+  console.log("Erro Bluetooth", erro.mensagem || erro.message);
+});
+
 const dispositivos = await procurarBT();
 
 if (dispositivos[0]) {
@@ -992,7 +1064,31 @@ if (dispositivos[0]) {
   });
 }</code></pre>
 
-        <div class="note">O Bluetooth usa RFCOMM clássico. O lado que recebe registra os eventos e passa a escutar; o outro procura, conecta e envia JSON. Para aparecer na busca, o aparelho precisa estar pareado ou visível nas configurações Bluetooth do Android.</div>
+        <div class="note">O Bluetooth usa RFCOMM clássico. O lado que recebe registra os eventos e passa a escutar; <code>aoDarErroBT()</code> recebe falhas de escuta ou conexão. O outro procura, conecta e envia JSON. Para aparecer na busca, o aparelho precisa estar pareado ou visível nas configurações Bluetooth do Android.</div>
+
+        <h3>Wi-Fi local simples</h3>
+        <pre><code>aoConectarWiFi((dispositivo) => {
+  console.log("Conectado por Wi-Fi", dispositivo.nome || dispositivo.host);
+});
+
+aoReceberDadosWiFi((dados) => {
+  console.log("Recebido por Wi-Fi", dados);
+});
+
+aoDarErroWiFi((erro) => {
+  console.log("Erro Wi-Fi", erro.mensagem || erro.message);
+});
+
+const dispositivosWifi = await procurarWiFi();
+
+if (dispositivosWifi[0]) {
+  await conectarWiFi(dispositivosWifi[0].id);
+  await enviarWiFi({
+    mensagem: "Olá por Wi-Fi"
+  });
+}</code></pre>
+
+        <div class="note">O Wi-Fi local usa descoberta NSD e socket TCP entre apps html2apk na mesma rede ou hotspot. O lado que recebe registra os eventos e anuncia o servidor interno; o outro procura, conecta e envia JSON. Isso não é Wi-Fi Direct, então os aparelhos precisam estar na mesma rede local.</div>
 
         <h3>Camera e QR Code</h3>
         <pre><code>const foto = await tirarFoto({ base64: true });
@@ -1130,11 +1226,13 @@ if (!wallpaper.applied) {
   await abrirConfiguracaoPapelParede();
 }
 
-const overlay = await iniciarIconeFlutuante();
+const overlay = await iniciarIconeFlutuante({ opacidade: 0.85 });
 
 if (overlay.requiresSettings) {
   console.log("Permita aparecer sobre outros apps e chame de novo");
-}</code></pre>
+}
+
+await definirOpacidadeIconeFlutuante(0.55);</code></pre>
 
         <h3>Exemplo completo de travessia</h3>
         <pre><code>await baixarArquivo("https://exemplo.com/foto.png", "foto.png");

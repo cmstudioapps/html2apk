@@ -347,6 +347,13 @@ O icone flutuante usa a permissao especial `SYSTEM_ALERT_WINDOW`. A bridge nativ
 
 Mesmo com a permissao declarada no manifesto, o usuario ainda precisa liberar manualmente nas configuracoes do Android. Depois de liberar, volte ao app e chame `iniciarIconeFlutuante()` novamente.
 
+O icone tambem aceita opacidade:
+
+```js
+await iniciarIconeFlutuante({ opacidade: 0.85 });
+await definirOpacidadeIconeFlutuante(0.55);
+```
+
 ### Tema Automatico Do APK
 
 Use `themeMode: "auto"` ou `theme: "auto"` para o APK adaptar as barras nativas do Android a cor que esta visivel na tela. O html2apk observa a tela do WebView e ajusta status bar/navigation bar em tempo real.
@@ -430,7 +437,7 @@ Retorno:
 
 ## Bridge Nativa
 
-A v0.1 instala um plugin Cordova local com uma API global simples para recursos Android. Todas as funcoes retornam `Promise`, exceto os ouvintes `aoEvento`/atalhos, que retornam uma funcao para cancelar a escuta.
+A v0.1 instala um plugin Cordova local com uma API global simples para recursos Android. Todas as funções retornam `Promise`, exceto os ouvintes `aoEvento`/atalhos, que retornam uma função para cancelar a escuta.
 
 O html2apk injeta `html2apk-early-bridge.js` e `cordova.js` automaticamente no HTML inicial do APK. A bridge inicial cria as funcoes interpretadas antes dos scripts do seu projeto; se uma funcao nativa for chamada antes do `deviceready`, ela espera o Android ficar pronto antes de executar.
 
@@ -475,6 +482,7 @@ Exemplos de aliases:
 | `definirPapelParede()` | `setWallpaper()` |
 | `infoPapelParede()` | `wallpaperInfo()` |
 | `abrirConfiguracaoPapelParede()` | `openWallpaperSettings()` |
+| `capturarTela()` / `tirarPrint()` | `captureScreen()` / `takeScreenshot()` |
 | `compartilhar()` | `share()` |
 | `compartilharApp()` / `share_me()` | `shareApp()` |
 | `aoReceberCompartilhamento()` | `onShareReceived()` |
@@ -484,6 +492,13 @@ Exemplos de aliases:
 | `enviarBT()` | `sendBluetooth()` |
 | `aoConectarBT()` | `onBluetoothConnect()` |
 | `aoReceberDadosBT()` | `onBluetoothData()` |
+| `aoDarErroBT()` | `onBluetoothError()` |
+| `procurarWiFi()` | `scanWiFi()` |
+| `conectarWiFi()` | `connectWiFi()` |
+| `enviarWiFi()` | `sendWiFi()` |
+| `aoConectarWiFi()` | `onWiFiConnect()` |
+| `aoReceberDadosWiFi()` | `onWiFiData()` |
+| `aoDarErroWiFi()` | `onWiFiError()` |
 | `ocr()` | `recognizeText()` / `textFromImage()` |
 | `falar()` | `speak()` / `textToSpeech()` |
 | `pararFala()` | `stopSpeaking()` |
@@ -497,10 +512,18 @@ Exemplos de aliases:
 | `manterTelaLigada()` | `keepScreenOn()` |
 | `brilhoTela()` | `setScreenBrightness()` |
 | `definirCorTema()` | `setThemeColor()` |
+| `volumeAtual()` | `getVolume()` |
+| `definirVolume()` | `setVolume()` |
+| `aumentarVolume()` | `increaseVolume()` |
+| `diminuirVolume()` | `decreaseVolume()` |
 | `infoMemoria()` | `memoryInfo()` |
 | `infoArmazenamento()` | `storageInfo()` |
 | `infoDesempenho()` | `performanceInfo()` |
 | `appsAbertos()` | `openAppsMemory()` |
+| `configurarIconeFlutuante()` | `configureFloatingIcon()` |
+| `definirOpacidadeIconeFlutuante()` | `setFloatingIconOpacity()` |
+| `minimizarApp()` | `minimizeApp()` |
+| `fecharApp()` | `closeApp()` / `exitApp()` |
 | `obterLocalizacao()` | `getLocation()` |
 | `acompanharLocalizacao()` | `watchLocation()` |
 | `pararLocalizacao()` | `stopLocationWatch()` |
@@ -510,9 +533,23 @@ Exemplos de aliases:
 | `removerSeguro()` | `deleteSecure()` |
 | `aoEvento()` | `onEvent()` |
 | `aoMinimizar()` | `onMinimize()` |
+| `aoConectarUSB()` | `onUSBConnect()` |
+| `aoDesconectarUSB()` | `onUSBDisconnect()` |
+| `aoConectarFone()` | `onHeadphoneConnect()` |
+| `aoDesconectarFone()` | `onHeadphoneDisconnect()` |
+| `aoMudarVolume()` | `onVolumeChange()` |
+| `aoAbrirTeclado()` | `onKeyboardOpen()` |
+| `aoFecharTeclado()` | `onKeyboardClose()` |
+| `aoSacudirCelular()` | `onPhoneShake()` |
+| `aoVirarCelularParaBaixo()` | `onPhoneFaceDown()` |
+| `aoAproximarObjeto()` | `onProximityNear()` |
+| `aoTirarPrint()` | `onScreenshot()` |
+| `aoMudarOrientacao()` | `onOrientationChange()` |
+| `aoNFC()` | `onNFC()` |
+| `aoReceberNotificacao()` | `onNotificationReceived()` |
 | `obterLinkInicial()` | `getInitialLink()` |
 
-Os eventos tambem aceitam aliases em ingles em `onEvent()`: `app:ready`, `app:background`, `app:resumed`, `back:button`, `link:opened`, `share:received`, `sharing:received`, `bluetooth:connected`, `bluetooth:data`, `network:changed`, `battery:changed`, `location:changed`, `notification:received` e `notification:clicked`.
+Os eventos tambem aceitam aliases em ingles em `onEvent()`: `app:ready`, `app:background`, `app:resumed`, `back:button`, `link:opened`, `share:received`, `sharing:received`, `bluetooth:connected`, `bluetooth:data`, `bluetooth:error`, `wifi:connected`, `wifi:data`, `wifi:error`, `usb:connected`, `usb:disconnected`, `headphone:connected`, `headphone:disconnected`, `volume:changed`, `keyboard:opened`, `keyboard:closed`, `phone:shaken`, `phone:faceDown`, `proximity:near`, `screenshot:taken`, `orientation:changed`, `nfc:received`, `network:changed`, `battery:changed`, `location:changed`, `notification:received` e `notification:clicked`.
 
 Como tratar retornos:
 
@@ -742,10 +779,32 @@ aoReceberDadosBT((dados) => {
   console.log("Dados Bluetooth", dados);
 });
 
+aoDarErroBT((erro) => {
+  console.log("Erro Bluetooth", erro.mensagem || erro.message);
+});
+
 const dispositivos = await procurarBT();
 if (dispositivos[0]) {
   await conectarBT(dispositivos[0].id);
   await enviarBT({ mensagem: "Ola por Bluetooth" });
+}
+
+aoConectarWiFi((dispositivo) => {
+  console.log("Wi-Fi conectado", dispositivo.nome || dispositivo.host);
+});
+
+aoReceberDadosWiFi((dados) => {
+  console.log("Dados Wi-Fi", dados);
+});
+
+aoDarErroWiFi((erro) => {
+  console.log("Erro Wi-Fi", erro.mensagem || erro.message);
+});
+
+const dispositivosWifi = await procurarWiFi();
+if (dispositivosWifi[0]) {
+  await conectarWiFi(dispositivosWifi[0].id);
+  await enviarWiFi({ mensagem: "Ola por Wi-Fi" });
 }
 
 await share_me(); // compartilha o APK do proprio app aberto
@@ -759,7 +818,9 @@ Apps gerados tambem entram no menu Compartilhar do Android para `text/plain`, `i
 
 `ocr()` usa ML Kit local para reconhecimento de texto em imagens. O processamento fica offline no aparelho. `falar()` usa o TextToSpeech do Android e `ouvir()` usa o reconhecedor de voz do sistema; ambos aceitam `idioma: "pt-BR"` ou `idioma: "auto"`.
 
-Bluetooth usa RFCOMM classico entre apps html2apk. O aparelho que vai receber registra `aoConectarBT()` e `aoReceberDadosBT()`; isso inicia o servidor interno. O outro chama `procurarBT()`, escolhe um `id`, chama `conectarBT(id)` e envia JSON com `enviarBT(objeto)`. Para aparecer na busca, o aparelho precisa estar pareado ou visivel nas configuracoes Bluetooth do Android.
+Bluetooth usa RFCOMM classico entre apps html2apk. O aparelho que vai receber registra `aoConectarBT()`, `aoReceberDadosBT()` e, se quiser tratar falhas, `aoDarErroBT()`; isso inicia o servidor interno. O outro chama `procurarBT()`, escolhe um `id`, chama `conectarBT(id)` e envia JSON com `enviarBT(objeto)`. Para aparecer na busca, o aparelho precisa estar pareado ou visivel nas configuracoes Bluetooth do Android.
+
+Wi-Fi local usa descoberta NSD e socket TCP entre apps html2apk na mesma rede ou hotspot. O aparelho que vai receber registra `aoConectarWiFi()`, `aoReceberDadosWiFi()` e `aoDarErroWiFi()`; isso inicia o servidor interno e anuncia o app na rede local. O outro chama `procurarWiFi()`, escolhe um `id`, chama `conectarWiFi(id)` e envia JSON com `enviarWiFi(objeto)`. Nao e Wi-Fi Direct: os dois aparelhos precisam estar conectados na mesma rede local, ou um deles precisa estar no hotspot do outro.
 
 `salvarArquivo()` tem dois modos:
 
@@ -967,6 +1028,27 @@ const abertos = await appsAbertos();
 
 Por privacidade, Android moderno pode limitar essa lista ao proprio app e alguns processos visiveis ao APK. Entao essa funcao nao deve ser tratada como gerenciador completo de tarefas do sistema.
 
+Tela, volume e ciclo do app:
+
+```js
+const volume = await volumeAtual();
+console.log(volume.midia.atual, volume.midia.maximo);
+
+await definirVolume("midia", 0.5, { mostrarUI: true });
+await aumentarVolume("midia", 1);
+await diminuirVolume("midia", 1);
+
+const imagem = await capturarTela();
+document.querySelector("img.preview").src = imagem.dataUrl;
+
+await minimizarApp();
+
+// Use somente depois de salvar estado importante:
+// await fecharApp();
+```
+
+`capturarTela()` captura a tela do proprio APK/WebView, nao outros apps ou areas protegidas do sistema. `definirVolume()` aceita porcentagem entre 0 e 1 ou passos absolutos do stream.
+
 Eventos nativos:
 
 ```js
@@ -979,10 +1061,26 @@ aoEvento("botao:voltar", console.log);
 aoEvento("link:aberto", (evento) => console.log(evento.url));
 aoEvento("rede:mudou", console.log);
 aoEvento("bateria:mudou", console.log);
+aoConectarUSB((dados) => console.log("USB conectado", dados));
+aoDesconectarUSB(() => console.log("USB desconectado"));
+aoReceberNotificacao((dados) => console.log("Notificação recebida", dados));
 aoEvento("notificacao:clicada", console.log);
+aoConectarFone((dados) => console.log("Fone conectado", dados.dispositivo));
+aoDesconectarFone(() => console.log("Fone desconectado"));
+aoMudarVolume((dados) => console.log("Volume de mídia", dados.midia.atual));
+aoAbrirTeclado((dados) => console.log("Teclado abriu", dados.alturaTeclado));
+aoFecharTeclado(() => console.log("Teclado fechou"));
+aoMudarOrientacao((dados) => console.log("Orientação", dados.orientacao));
+aoSacudirCelular((dados) => console.log("Sacudiu", dados.forca));
+aoVirarCelularParaBaixo(() => console.log("Tela para baixo"));
+aoAproximarObjeto((dados) => console.log("Objeto perto", dados.distancia));
+aoTirarPrint((dados) => console.log("Print detectado", dados.uri));
+aoNFC((dados) => console.log("Tag NFC", dados.id, dados.mensagens));
 
 parar();
 ```
+
+Eventos de sensor e sistema seguem limites do Android/fabricante. `aoTirarPrint()` observa a MediaStore e depende do nome/pasta da captura; pode não disparar em alguns aparelhos. `aoNFC()` escuta tags enquanto o app está aberto em primeiro plano e exige NFC ligado no aparelho.
 
 Deep links:
 

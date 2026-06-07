@@ -2,6 +2,7 @@ package dev.html2apk.bridge;
 
 import android.app.Service;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.PixelFormat;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
@@ -14,9 +15,14 @@ import android.view.WindowManager;
 import android.widget.ImageView;
 
 public class FloatingIconService extends Service {
+    private static final String PREFS_NAME = "html2apk_bridge";
+    private static final String OPACITY_KEY = "floating_icon_opacity";
+    private static final String EXTRA_OPACITY = "opacity";
+
     private WindowManager windowManager;
     private View floatingView;
     private WindowManager.LayoutParams params;
+    private float opacity = 1f;
     private int startX;
     private int startY;
     private float touchStartX;
@@ -29,6 +35,11 @@ public class FloatingIconService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        applyOptions(intent);
+        if (floatingView != null) {
+            applyFloatingIconStyle();
+            return START_STICKY;
+        }
         showFloatingIcon();
         return START_STICKY;
     }
@@ -60,6 +71,7 @@ public class FloatingIconService extends Service {
         int padding = dp(8);
         icon.setImageDrawable(getApplicationInfo().loadIcon(getPackageManager()));
         icon.setPadding(padding, padding, padding, padding);
+        icon.setAlpha(opacity);
 
         GradientDrawable background = new GradientDrawable();
         background.setShape(GradientDrawable.OVAL);
@@ -125,6 +137,23 @@ public class FloatingIconService extends Service {
         floatingView = null;
     }
 
+    private void applyOptions(Intent intent) {
+        SharedPreferences preferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        float nextOpacity = preferences.getFloat(OPACITY_KEY, 1f);
+        if (intent != null && intent.hasExtra(EXTRA_OPACITY)) {
+            nextOpacity = intent.getFloatExtra(EXTRA_OPACITY, nextOpacity);
+            nextOpacity = clampOpacity(nextOpacity);
+            preferences.edit().putFloat(OPACITY_KEY, nextOpacity).apply();
+        }
+        opacity = clampOpacity(nextOpacity);
+    }
+
+    private void applyFloatingIconStyle() {
+        if (floatingView != null) {
+            floatingView.setAlpha(opacity);
+        }
+    }
+
     private void openApp() {
         Intent launchIntent = getPackageManager().getLaunchIntentForPackage(getPackageName());
         if (launchIntent == null) {
@@ -137,5 +166,9 @@ public class FloatingIconService extends Service {
 
     private int dp(int value) {
         return Math.round(value * getResources().getDisplayMetrics().density);
+    }
+
+    private float clampOpacity(float value) {
+        return Math.max(0.1f, Math.min(1f, value));
     }
 }
