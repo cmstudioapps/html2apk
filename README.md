@@ -4,6 +4,50 @@
 
 Use ele quando voce ja tem um app web, por exemplo uma pasta com `index.html`, `style.css`, `app.js` e imagens, e quer gerar um `.apk` instalavel no Android ou um `.aab` para loja.
 
+## Como contribuir sem quebrar o padrão
+
+O html2apk agora é um projeto aberto, mas a regra mais importante para novas features é simples: antes de implementar, entenda como o código atual trabalha. Evite criar uma segunda arquitetura para resolver algo que a ponte existente já resolve.
+
+Antes de mandar qualquer feature nova, o contribuinte precisa estudar o fluxo atual da aplicação e confirmar que a solução segue a mesma estratégia das funções existentes. Não envie código que cria atalhos, caminhos paralelos, outro padrão de bridge, outro jeito de tratar permissão ou outra forma de comunicar JavaScript com Java sem uma justificativa técnica muito clara. Primeiro adapte a ideia ao desenho que já funciona no projeto; só proponha uma abordagem nova se o padrão atual realmente não atender.
+
+Exemplo de postura esperada: "quero colocar uma nova função no projeto; antes de escrever, vou ver como as outras funções foram colocadas, como o código lida com elas, qual é o fluxo completo e por que esse fluxo existe". Essa investigação vem antes da implementação. Ela mostra onde a nova função deve nascer, como deve normalizar argumentos, qual action deve chamar, como o Java deve responder, onde documentar e como testar. É esse cuidado que permite criar algo novo sem quebrar a aplicação.
+
+As funções interpretadas seguem um caminho bem definido:
+
+```text
+JavaScript do app
+  -> função global em português
+  -> aliases quando fizer sentido
+  -> normalização de argumentos
+  -> cordova.exec(action)
+  -> dispatcher Java
+  -> permissão/thread/subsistema Android
+  -> CallbackContext
+  -> Promise no JavaScript
+```
+
+Quando uma feature nova entra, ela deve atravessar esse caminho em vez de criar uma forma paralela de comunicação. Isso evita duplicação, bugs difíceis de testar e diferença de comportamento entre o early bridge, o plugin Cordova, a interface desktop e o app final.
+
+Checklist antes de abrir PR ou commit:
+
+- Entenda a arquitetura existente antes de alterar arquivos. Se ainda não sabe por onde uma função interpretada nasce, passa pela bridge e chega ao Java, pare e leia o código antes de implementar.
+- Confirme que a feature nova não está criando conflito com APIs, helpers, normalizadores, actions ou eventos que já existem.
+- Evite estratégias novas desnecessárias. Se uma função parecida já usa `cordova.exec`, dispatcher Java, `CallbackContext`, permissão pendente ou evento `CustomEvent`, a nova feature deve seguir esse caminho.
+- Leia funções parecidas antes de escrever código novo. Se for arquivo, veja `salvarArquivo`, `baixarArquivo` e `FileProvider`. Se for permissão, veja câmera, microfone, notificação e localização. Se for evento, veja `aoEvento`, notificação e compartilhamento recebido.
+- Mantenha nomes em PT-BR como API principal e aliases em inglês apenas quando combinarem com o padrão existente.
+- Adicione a função no early bridge e no plugin JS com a mesma assinatura pública.
+- Reuse normalizadores e helpers existentes; não trate payload com string solta se o projeto já usa objeto estruturado.
+- No Java, entre pelo dispatcher de `action` existente e retorne JSON consistente.
+- Se precisar de permissão runtime, preserve callback pendente, busy state e abertura de configurações quando o Android exigir.
+- Se tocar arquivos, preserve sanitização de nome, armazenamento interno, MediaStore quando aplicável e FileProvider.
+- Se tocar operações longas, use a thread adequada e não trave a WebView.
+- Atualize `plugin.xml` apenas com permissões, intent filters ou dependências realmente necessárias.
+- Atualize runtime console, aba "Códigos interpretados", laboratório USB, README/SOBRE quando a feature for pública.
+- Adicione ou ajuste testes em `test/config.test.js` para provar que JS, Java, UI e docs continuam alinhados.
+- Rode `npm test` antes de enviar.
+
+O objetivo não é impedir criatividade; é proteger o comportamento previsível da ferramenta. Uma contribuição boa parece nativa no projeto: usa os mesmos nomes, passa pelos mesmos pontos, retorna no mesmo formato e respeita as mesmas fronteiras entre build, desktop, bridge JS e Java Android.
+
 ## O Mais Importante
 
 Na pratica, voce vai usar estes comandos:
@@ -977,50 +1021,6 @@ if (!podeUsarAlarmeExato) {
 ```
 
 A bridge cria canal de notificacao, solicita `POST_NOTIFICATIONS` automaticamente quando `notificar()`/`agendarNotificacao()` precisam, abre configuracoes se o Android bloquear o pop-up, abre o app com payload quando a notificacao e clicada, persiste notificacoes agendadas e tenta reagendar apos reboot ou update do app. Se voce usar `exato: true`/`exact: true` em uma notificacao agendada e o Android exigir liberacao manual de alarme exato, o html2apk abre essa tela automaticamente.
-
-## Como contribuir sem quebrar o padrão
-
-O html2apk agora é um projeto aberto, mas a regra mais importante para novas features é simples: antes de implementar, entenda como o código atual trabalha. Evite criar uma segunda arquitetura para resolver algo que a ponte existente já resolve.
-
-Antes de mandar qualquer feature nova, o contribuinte precisa estudar o fluxo atual da aplicação e confirmar que a solução segue a mesma estratégia das funções existentes. Não envie código que cria atalhos, caminhos paralelos, outro padrão de bridge, outro jeito de tratar permissão ou outra forma de comunicar JavaScript com Java sem uma justificativa técnica muito clara. Primeiro adapte a ideia ao desenho que já funciona no projeto; só proponha uma abordagem nova se o padrão atual realmente não atender.
-
-Exemplo de postura esperada: "quero colocar uma nova função no projeto; antes de escrever, vou ver como as outras funções foram colocadas, como o código lida com elas, qual é o fluxo completo e por que esse fluxo existe". Essa investigação vem antes da implementação. Ela mostra onde a nova função deve nascer, como deve normalizar argumentos, qual action deve chamar, como o Java deve responder, onde documentar e como testar. É esse cuidado que permite criar algo novo sem quebrar a aplicação.
-
-As funções interpretadas seguem um caminho bem definido:
-
-```text
-JavaScript do app
-  -> função global em português
-  -> aliases quando fizer sentido
-  -> normalização de argumentos
-  -> cordova.exec(action)
-  -> dispatcher Java
-  -> permissão/thread/subsistema Android
-  -> CallbackContext
-  -> Promise no JavaScript
-```
-
-Quando uma feature nova entra, ela deve atravessar esse caminho em vez de criar uma forma paralela de comunicação. Isso evita duplicação, bugs difíceis de testar e diferença de comportamento entre o early bridge, o plugin Cordova, a interface desktop e o app final.
-
-Checklist antes de abrir PR ou commit:
-
-- Entenda a arquitetura existente antes de alterar arquivos. Se ainda não sabe por onde uma função interpretada nasce, passa pela bridge e chega ao Java, pare e leia o código antes de implementar.
-- Confirme que a feature nova não está criando conflito com APIs, helpers, normalizadores, actions ou eventos que já existem.
-- Evite estratégias novas desnecessárias. Se uma função parecida já usa `cordova.exec`, dispatcher Java, `CallbackContext`, permissão pendente ou evento `CustomEvent`, a nova feature deve seguir esse caminho.
-- Leia funções parecidas antes de escrever código novo. Se for arquivo, veja `salvarArquivo`, `baixarArquivo` e `FileProvider`. Se for permissão, veja câmera, microfone, notificação e localização. Se for evento, veja `aoEvento`, notificação e compartilhamento recebido.
-- Mantenha nomes em PT-BR como API principal e aliases em inglês apenas quando combinarem com o padrão existente.
-- Adicione a função no early bridge e no plugin JS com a mesma assinatura pública.
-- Reuse normalizadores e helpers existentes; não trate payload com string solta se o projeto já usa objeto estruturado.
-- No Java, entre pelo dispatcher de `action` existente e retorne JSON consistente.
-- Se precisar de permissão runtime, preserve callback pendente, busy state e abertura de configurações quando o Android exigir.
-- Se tocar arquivos, preserve sanitização de nome, armazenamento interno, MediaStore quando aplicável e FileProvider.
-- Se tocar operações longas, use a thread adequada e não trave a WebView.
-- Atualize `plugin.xml` apenas com permissões, intent filters ou dependências realmente necessárias.
-- Atualize runtime console, aba "Códigos interpretados", laboratório USB, README/SOBRE quando a feature for pública.
-- Adicione ou ajuste testes em `test/config.test.js` para provar que JS, Java, UI e docs continuam alinhados.
-- Rode `npm test` antes de enviar.
-
-O objetivo não é impedir criatividade; é proteger o comportamento previsível da ferramenta. Uma contribuição boa parece nativa no projeto: usa os mesmos nomes, passa pelos mesmos pontos, retorna no mesmo formato e respeita as mesmas fronteiras entre build, desktop, bridge JS e Java Android.
 
 ## Problemas Comuns
 
