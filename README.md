@@ -982,6 +982,8 @@ A bridge cria canal de notificacao, solicita `POST_NOTIFICATIONS` automaticament
 
 O html2apk agora e um projeto aberto, mas a regra mais importante para novas features e simples: antes de implementar, entenda como o codigo atual trabalha. Evite criar uma segunda arquitetura para resolver algo que a ponte existente ja resolve.
 
+Antes de mandar qualquer feature nova, o contribuinte precisa estudar o fluxo atual da aplicacao e confirmar que a solucao segue a mesma estrategia das funcoes existentes. Nao envie codigo que cria atalhos, caminhos paralelos, outro padrao de bridge, outro jeito de tratar permissao ou outra forma de comunicar JavaScript com Java sem uma justificativa tecnica muito clara. Primeiro adapte a ideia ao desenho que ja funciona no projeto; so proponha uma abordagem nova se o padrao atual realmente nao atender.
+
 As funcoes interpretadas seguem um caminho bem definido:
 
 ```text
@@ -1000,6 +1002,9 @@ Quando uma feature nova entra, ela deve atravessar esse caminho em vez de criar 
 
 Checklist antes de abrir PR ou commit:
 
+- Entenda a arquitetura existente antes de alterar arquivos. Se ainda nao sabe por onde uma funcao interpretada nasce, passa pela bridge e chega ao Java, pare e leia o codigo antes de implementar.
+- Confirme que a feature nova nao esta criando conflito com APIs, helpers, normalizadores, actions ou eventos que ja existem.
+- Evite estrategias novas desnecessarias. Se uma funcao parecida ja usa `cordova.exec`, dispatcher Java, `CallbackContext`, permissao pendente ou evento `CustomEvent`, a nova feature deve seguir esse caminho.
 - Leia funcoes parecidas antes de escrever codigo novo. Se for arquivo, veja `salvarArquivo`, `baixarArquivo` e `FileProvider`. Se for permissao, veja camera, microfone, notificacao e localizacao. Se for evento, veja `aoEvento`, notificacao e compartilhamento recebido.
 - Mantenha nomes em PT-BR como API principal e aliases em ingles apenas quando combinarem com o padrao existente.
 - Adicione a funcao no early bridge e no plugin JS com a mesma assinatura publica.
