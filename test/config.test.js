@@ -822,6 +822,10 @@ test("desktop codes tab exposes USB interpreted-function lab", async () => {
   assert.match(renderer, /minimizarApp\(\) \/ fecharApp\(\)/);
   assert.match(renderer, /ML Kit TextRecognition local/);
   assert.match(renderer, /RecognizerIntent/);
+  assert.match(renderer, /function primaryCodeKey\(entry\)/);
+  assert.match(renderer, /function findRecipeForEntry\(entry\)/);
+  assert.match(renderer, /entry\.recipe \|\| findRecipeForEntry\(entry\) \|\| \{\}/);
+  assert.doesNotMatch(renderer, /entry\.recipe \|\| nativeCodeRecipes\[index\]/);
   assert.match(main, /Html2ApkRuntimeConsole\.log/);
   assert.doesNotMatch(main, /logPanel/);
 });

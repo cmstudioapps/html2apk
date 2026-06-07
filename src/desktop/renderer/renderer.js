@@ -2867,10 +2867,59 @@ async function createNewProjectFile() {
   }
 }
 
+const nativeCodeRecipeCache = new Map();
+
+function localizedRecipeText(value) {
+  if (!value) {
+    return "";
+  }
+
+  if (typeof value === "string") {
+    return value;
+  }
+
+  return [value.pt, value.en].filter(Boolean).join("\n");
+}
+
+function recipeSearchText(recipe) {
+  return [
+    localizedRecipeText(recipe && recipe.when),
+    localizedRecipeText(recipe && recipe.example)
+  ].join("\n");
+}
+
+function primaryCodeKey(entry) {
+  const syntax = entry && entry.syntax
+    ? entry.syntax.pt || entry.syntax.en || ""
+    : "";
+  const match = String(syntax).match(/([A-Za-z_$][\w$]*)\s*\(/);
+  return match ? match[1] : "";
+}
+
+function findRecipeForEntry(entry) {
+  const key = primaryCodeKey(entry);
+
+  if (!key) {
+    return null;
+  }
+
+  if (nativeCodeRecipeCache.has(key)) {
+    return nativeCodeRecipeCache.get(key);
+  }
+
+  const normalizedKey = key.toLowerCase();
+  const recipe = nativeCodeRecipes.find((item) => {
+    return recipeSearchText(item).toLowerCase().includes(normalizedKey);
+  }) || null;
+
+  nativeCodeRecipeCache.set(key, recipe);
+  return recipe;
+}
+
 function recipeForCode(index) {
   const language = currentLanguage();
   const entry = nativeCodeEntries[index] || {};
-  const recipe = entry.recipe || nativeCodeRecipes[index] || {};
+  const recipe = entry.recipe || findRecipeForEntry(entry) || {};
   return {
     when: recipe.when ? recipe.when[language] || recipe.when.pt : "",
     example: recipe.example ? recipe.example[language] || recipe.example.pt : ""
