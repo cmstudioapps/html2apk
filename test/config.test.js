@@ -370,6 +370,28 @@ test("runtime-manager prepares Android SDK paths from default locations", async 
   }
 });
 
+test("getJavaHome auto-detects only valid JVM directories", async () => {
+  const { getJavaHome } = require("../src/runtime-manager");
+  const tempJvmDir = await fs.mkdtemp(path.join(os.tmpdir(), "html2apk-jvm-"));
+  try {
+    // openjdk-21: invalid (alphabetically first, but lacks bin/java)
+    const invalidPath = path.join(tempJvmDir, "openjdk-21");
+    await fs.mkdir(invalidPath, { recursive: true });
+
+    // java-21-openjdk-amd64: valid (alphabetically second, contains bin/java)
+    const validPath = path.join(tempJvmDir, "java-21-openjdk-amd64");
+    await fs.mkdir(path.join(validPath, "bin"), { recursive: true });
+    await fs.writeFile(path.join(validPath, "bin", process.platform === "win32" ? "java.exe" : "java"), "mock-java-binary");
+
+    // Call getJavaHome overriding the parents to check our mock parent directory
+    const javaHome = getJavaHome({ JAVA_HOME: "" }, [tempJvmDir]);
+    
+    assert.equal(javaHome, validPath);
+  } finally {
+    await fs.rm(tempJvmDir, { recursive: true, force: true });
+  }
+});
+
 test("bridge exposes production notification APIs", async () => {
   const bridge = await fs.readFile(
     path.resolve(__dirname, "..", "src", "templates", "cordova-plugin-html2apk-bridge", "www", "html2apk-bridge.js"),

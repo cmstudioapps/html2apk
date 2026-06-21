@@ -55,29 +55,74 @@ function getAndroidSdkPath(env = process.env) {
   return defaultAndroidSdkCandidates(env).find(pathExists) || env.ANDROID_HOME || env.ANDROID_SDK_ROOT || null;
 }
 
-function getJavaHome(env = process.env) {
+function getValidJavaHome(dir) {
+  if (!pathExists(dir)) {
+    return null;
+  }
+  const javaExe = process.platform === "win32" ? "java.exe" : "java";
+  if (pathExists(path.join(dir, "bin", javaExe))) {
+    return dir;
+  }
+  // Support macOS virtual machine package structures
+  const macHome = path.join(dir, "Contents", "Home");
+  if (pathExists(path.join(macHome, "bin", javaExe))) {
+    return macHome;
+  }
+  return null;
+}
+
+function getJavaHome(env = process.env, parentDirsOverride = null) {
   if (env.JAVA_HOME && pathExists(env.JAVA_HOME)) {
     return env.JAVA_HOME;
   }
 
-  const candidates = [];
-  if (process.platform === "win32") {
-    candidates.push(
-      latestSubdir(path.join(process.env.ProgramFiles || "C:\\Program Files", "Eclipse Adoptium")),
-      latestSubdir(path.join(process.env.ProgramFiles || "C:\\Program Files", "Java"))
-    );
-  } else if (process.platform === "darwin") {
-    candidates.push(
-      latestSubdir("/Library/Java/JavaVirtualMachines")
-    );
-  } else {
-    candidates.push(
-      latestSubdir("/usr/lib/jvm"),
-      latestSubdir("/usr/java")
-    );
+  const parentDirs = parentDirsOverride || [];
+  if (!parentDirsOverride) {
+    if (process.platform === "win32") {
+      parentDirs.push(
+        path.join(process.env.ProgramFiles || "C:\\Program Files", "Eclipse Adoptium"),
+        path.join(process.env.ProgramFiles || "C:\\Program Files", "Java")
+      );
+    } else if (process.platform === "darwin") {
+      parentDirs.push(
+        "/Library/Java/JavaVirtualMachines"
+      );
+    } else {
+      parentDirs.push(
+        "/usr/lib/jvm",
+        "/usr/java"
+      );
+    }
   }
 
-  return candidates.find(pathExists) || env.JAVA_HOME || null;
+  for (const parent of parentDirs) {
+    if (!pathExists(parent)) {
+      continue;
+    }
+    try {
+      const entries = fs.readdirSync(parent)
+        .filter((name) => {
+          try {
+            return fs.statSync(path.join(parent, name)).isDirectory();
+          } catch {
+            return false;
+          }
+        })
+        .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
+
+      for (const name of entries) {
+        const fullPath = path.join(parent, name);
+        const valid = getValidJavaHome(fullPath);
+        if (valid) {
+          return valid;
+        }
+      }
+    } catch {
+      // Ignore directory read errors and check next parent
+    }
+  }
+
+  return env.JAVA_HOME || null;
 }
 
 function latestSubdir(parent) {
@@ -155,6 +200,23 @@ function getRuntimeEnvironment(env = process.env) {
   if (gradleHome) {
     nextEnv.GRADLE_HOME = gradleHome;
     pathEntries.push(path.join(gradleHome, "bin"));
+  }
+
+  // Ensure common system directories are present in PATH, since GUI/desktop
+  // launchers on Linux often inherit a minimal PATH that omits /usr/local/bin.
+  if (process.platform !== "win32") {
+    const systemDirs = [
+      "/usr/local/bin",
+      "/usr/local/sbin",
+      "/usr/bin",
+      "/usr/sbin"
+    ];
+    const currentPath = (nextEnv.PATH || "").split(pathDelimiter());
+    for (const dir of systemDirs) {
+      if (!currentPath.includes(dir) && pathExists(dir)) {
+        pathEntries.push(dir);
+      }
+    }
   }
 
   prependToPath(nextEnv, pathEntries);

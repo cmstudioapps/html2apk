@@ -12,7 +12,10 @@ const portableName = /^[a-z0-9._-]+$/i.test(process.env.HTML2APK_PORTABLE_NAME |
 const portableDir = path.join(outputRoot, portableName);
 const appDir = path.join(portableDir, "resources", "app");
 const electronDist = path.join(root, "node_modules", "electron", "dist");
-const executablePath = path.join(portableDir, "html2apk.exe");
+const isWindows = process.platform === "win32";
+const electronExeName = isWindows ? "electron.exe" : "electron";
+const outputExeName = isWindows ? "html2apk.exe" : "html2apk";
+const executablePath = path.join(portableDir, outputExeName);
 const sourceIconPng = path.join(root, "html2apk.png");
 const iconOutputDir = path.join(outputRoot, ".icon-ico");
 const windowsIconPath = path.join(iconOutputDir, "html2apk.ico");
@@ -323,7 +326,10 @@ async function build() {
   await removeInsideWorkspace(portableDir);
   await fs.mkdir(outputRoot, { recursive: true });
   await copyFiltered(electronDist, portableDir);
-  await fs.rename(path.join(portableDir, "electron.exe"), executablePath);
+  const electronBinary = path.join(portableDir, electronExeName);
+  if (await pathExists(electronBinary)) {
+    await fs.rename(electronBinary, executablePath);
+  }
   await editExecutableResources(sourcePackage);
 
   await fs.rm(appDir, { recursive: true, force: true });
@@ -338,7 +344,7 @@ async function build() {
 
   await writeDesktopPackageJson();
 
-  console.log(`Desktop portable generated: ${path.join(portableDir, "html2apk.exe")}`);
+  console.log(`Desktop portable generated: ${executablePath}`);
   console.log("Bundled app dependencies are in resources/app/node_modules.");
 }
 
