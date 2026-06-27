@@ -674,6 +674,20 @@ const nativeCodeEntries = [
     handling: { pt: "Use para atualizar tela/estado quando `notificar()` ou uma notificacao agendada passar pela bridge. Para clique, use `aoClicarNotificacao()`.", en: "Use it to update UI/state when `notify()` or a scheduled notification goes through the bridge. For clicks, use `onNotificationClick()`." }
   },
   {
+    syntax: { pt: "obterLinkInicial()", en: "getInitialLink()" },
+    java: "Intent / Activity",
+    description: { pt: "Retorna a URL que abriu o aplicativo (Deep Link), se houver.", en: "Returns the URL that opened the application (Deep Link), if any." },
+    returns: { pt: "String (ex: 'meuapp://conteudo/123').", en: "String (e.g. 'myapp://content/123')." },
+    handling: { pt: "Util para repassar campanhas de marketing no inicio do app.", en: "Useful for passing marketing campaigns at app startup." }
+  },
+  {
+    syntax: { pt: "aoLigarDispositivo(callback)", en: "onDeviceBoot(callback)" },
+    java: "Intent / BootReceiver",
+    description: { pt: "Executa uma funcao caso o aplicativo tenha sido aberto silenciosamente pelo boot do celular.", en: "Executes a function if the application was silently opened by the device boot." },
+    returns: { pt: "Nenhum.", en: "None." },
+    handling: { pt: "Depende de `configurarInicioAutomatico(true)` e permissao de sobreposicao no Android 10+.", en: "Depends on `setAutoStartOnBoot(true)` and overlay permission on Android 10+." }
+  },
+  {
     syntax: { pt: "obterLinkInicial() / aoAbrirLink(fn)", en: "getInitialLink() / onOpenLink(fn)" },
     java: "getInitialLink",
     description: { pt: "Lida com deep links/app links que abriram o APK.", en: "Handles deep links/app links that opened the APK." },
@@ -973,6 +987,27 @@ const nativeCodeEntries = [
     description: { pt: "Abre a biometria/tela segura do Android para confirmar identidade.", en: "Opens Android biometric/secure prompt to confirm identity." },
     returns: { pt: "{ supported, authenticated, canceled, message }.", en: "{ supported, authenticated, canceled, message }." },
     handling: { pt: "Funciona em Android 9+. Se `supported` vier falso, use PIN/senha do proprio app como fallback.", en: "Works on Android 9+. If `supported` is false, use your app's own PIN/password fallback." }
+  },
+  {
+    syntax: { pt: "solicitarBloqueio({ titulo })", en: "requestDeviceLock({ title })" },
+    java: "KeyguardManager",
+    description: { pt: "Abre a tela de bloqueio do Android (PIN, padrao, senha).", en: "Opens Android device lock screen (PIN, pattern, password)." },
+    returns: { pt: "{ supported, authenticated, canceled, message }.", en: "{ supported, authenticated, canceled, message }." },
+    handling: { pt: "Funciona se o usuario tiver senha cadastrada.", en: "Works if the user has a secure lock screen configured." }
+  },
+  {
+    syntax: { pt: "solicitarSegundoPlano()", en: "requestBackgroundExecution()" },
+    java: "Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS",
+    description: { pt: "Solicita ao sistema que o app funcione ativamente no background e inicie junto com o aparelho.", en: "Requests the system to run the app actively in the background and autostart on boot." },
+    returns: { pt: "{ ok, openedAutoStart, openedBatteryOptimization }.", en: "{ ok, openedAutoStart, openedBatteryOptimization }." },
+    handling: { pt: "Usa permissoes restritas. Play Store pode rejeitar apps sem justificativa valida para manter CPU ligada.", en: "Uses restricted permissions. Play Store might reject apps without a valid reason to keep CPU awake." }
+  },
+  {
+    syntax: { pt: "configurarInicioAutomatico(true/false)", en: "setAutoStartOnBoot(true/false)" },
+    java: "BootReceiver -> Intent",
+    description: { pt: "Define se o aplicativo deve ser aberto automaticamente quando o celular for ligado.", en: "Sets whether the app should automatically open when the device boots." },
+    returns: { pt: "{ ok, enabled }.", en: "{ ok, enabled }." },
+    handling: { pt: "Exige permissao de sobrepor a outros apps no Android 10+.", en: "Requires draw over other apps permission on Android 10+." }
   },
   {
     syntax: { pt: "salvarSeguro('token', valor) / lerSeguro('token')", en: "saveSecure('token', value) / readSecure('token')" },
@@ -2224,6 +2259,83 @@ if (bio.authenticated) {
 if (bio.authenticated) {
   openInApp("#/secure");
 }`
+    }
+  },
+  {
+    when: { pt: "Para exigir a senha/PIN/padrao da tela de bloqueio do aparelho.", en: "To require the device's lock screen PIN/pattern/password." },
+    example: {
+      pt: `const auth = await solicitarBloqueio({
+  titulo: "Acesso Restrito",
+  descricao: "Confirme a senha de tela"
+});
+
+if (auth.autenticado) {
+  abrirNoApp("#/area-secreta");
+} else if (!auth.suportado) {
+  toast("Aparelho sem senha configurada");
+}`,
+      en: `const auth = await requestDeviceLock({
+  title: "Restricted Access",
+  description: "Confirm device password"
+});
+
+if (auth.authenticated) {
+  openInApp("#/secret-area");
+} else if (!auth.supported) {
+  toast("Device has no secure lock screen");
+}`
+    }
+  },
+  {
+    when: { pt: "Para manter o app ativo em segundo plano ou inicia-lo ao ligar (alarmes, rastreadores).", en: "To keep the app active in background or start on boot (alarms, trackers)." },
+    example: {
+      pt: `const resultado = await solicitarSegundoPlano();
+
+if (resultado.abriuInicioAutomatico) {
+  toast("Ligue a chave do nosso aplicativo");
+} else if (resultado.abriuOtimizacaoBateria) {
+  toast("Selecione 'Nao Otimizar' ou 'Sem Restricoes'");
+} else {
+  toast("Tudo pronto, permissao ja ativa!");
+}`,
+      en: `const result = await requestBackgroundExecution();
+
+if (result.openedAutoStart) {
+  toast("Turn on the switch for our application");
+} else if (result.openedBatteryOptimization) {
+  toast("Select 'No Restrictions' or 'Don't Optimize'");
+} else {
+  toast("All set, permission already granted!");
+}`
+    }
+  },
+  {
+    when: { pt: "Para fazer o app abrir sozinho na tela do usuario assim que o celular for ligado.", en: "To make the app automatically open on the user's screen as soon as the device boots." },
+    example: {
+      pt: `// 1. Opcional mas recomendado: pedir permissao de sobreposicao
+// para nao ser bloqueado no Android 10+
+await abrirSobreposicao();
+
+// 2. Ligar a chave
+await configurarInicioAutomatico(true);
+
+// 3. Ao iniciar seu app, use o ouvinte para se esconder:
+aoLigarDispositivo(async () => {
+  console.log("App abriu sozinho pelo boot!");
+  await minimizarApp(); // Esconde a tela na mesma hora
+});`,
+      en: `// 1. Optional but recommended: request overlay permission
+// to avoid being blocked on Android 10+
+await openOverlay();
+
+// 2. Turn on the switch
+await setAutoStartOnBoot(true);
+
+// 3. When starting your app, use the listener:
+onDeviceBoot(async () => {
+  console.log("App opened automatically by boot!");
+  await minimizeApp(); // Hides the app silently
+});`
     }
   },
   {
@@ -4085,7 +4197,7 @@ async function init() {
       elements.iconPreview.src = iconPreviewPath(state.defaultIconPath);
     }
   } catch {
-    elements.appVersion.textContent = "v0.11.0";
+    elements.appVersion.textContent = "v12.0.0";
   }
 
   setTimeout(finishBoot, 1800);

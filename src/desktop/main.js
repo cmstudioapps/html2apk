@@ -995,7 +995,12 @@ function nativeFunctionLabHtml() {
         acompanharLocalizacao: { title: "acompanharLocalizacao()", run: async function () { var result = await fn("acompanharLocalizacao")({ intervaloMs: 5000 }); state.watchId = result && result.watchId; return result; } },
         pararLocalizacao: { title: "pararLocalizacao()", run: function () { return fn("pararLocalizacao")(state.watchId || ""); } },
         aoMudarLocalizacao: { title: "aoMudarLocalizacao()", run: function () { if (state.stopLocationEvent) { state.stopLocationEvent(); } state.stopLocationEvent = fn("aoMudarLocalizacao")(function (event) { log("localizacao:mudou", event, "ok"); }); return { listening: true }; } },
+        medirVelocidade: { title: "medirVelocidade()", run: async function () { if (state.pararMedicao) { await state.pararMedicao(); } state.pararMedicao = await fn("medirVelocidade")(function(kmh, local) { log("medirVelocidade", { kmh: kmh, original: local }, "ok"); }); return { measuring: true }; } },
+        pararVelocidade: { title: "parar medidor de velocidade", run: async function () { if (state.pararMedicao) { await state.pararMedicao(); state.pararMedicao = null; return { stopped: true }; } return { stopped: false }; } },
         autenticarBiometria: { title: "autenticarBiometria()", run: function () { return fn("autenticarBiometria")({ titulo: "Teste html2apk", descricao: "Confirme para testar a bridge" }); } },
+        solicitarBloqueio: { title: "solicitarBloqueio()", run: function () { return fn("solicitarBloqueio")({ titulo: "Acesso Restrito", descricao: "Confirme a senha de tela" }); } },
+        solicitarSegundoPlano: { title: "solicitarSegundoPlano()", run: function () { return fn("solicitarSegundoPlano")(); } },
+        configurarInicioAutomatico: { title: "configurarInicioAutomatico()", run: function () { state.autoStart = !state.autoStart; return fn("configurarInicioAutomatico")(state.autoStart); } },
         salvarSeguro: { title: "salvarSeguro()", run: function () { return fn("salvarSeguro")("tokenTeste", { token: "abc123", criadoEm: Date.now() }); } },
         lerSeguro: { title: "lerSeguro()", run: function () { return fn("lerSeguro")("tokenTeste"); } },
         lerSeguroCompleto: { title: "lerSeguroCompleto()", run: function () { return fn("lerSeguroCompleto")("tokenTeste"); } },
@@ -1008,9 +1013,10 @@ function nativeFunctionLabHtml() {
         abrirConfigPapel: { title: "abrirConfiguracaoPapelParede()", run: function () { return fn("abrirConfiguracaoPapelParede")(); } },
         definirImagemEscolhida: { title: "imagem escolhida -> papel de parede", run: async function () { if (!state.lastImage) { state.lastImage = await fn("escolherImagem")(); } if (!state.lastImage || !state.lastImage.uri) { return { canceled: true }; } return fn("definirPapelParede")({ uri: state.lastImage.uri, alvo: "inicio", mimeType: state.lastImage.mimeType || "image/*" }); } },
 
-        registrarEventos: { title: "registrar eventos", run: function () { return registerEvents(); } },
+        registrarEventos: { title: "registrarEventos()", run: function () { return fn("registrarEventos")({ aoClicarNotificacao: function (e) { alert("Clicou na notificacao: " + JSON.stringify(e)); }, aoMudarEstadoApp: function (e) { console.log("Estado mudou:", e); } }); } },
         obterNotificacaoInicial: { title: "obterNotificacaoInicial()", run: function () { return fn("obterNotificacaoInicial")(); } },
-        obterLinkInicial: { title: "obterLinkInicial()", run: function () { return fn("obterLinkInicial")(); } }
+        obterLinkInicial: { title: "obterLinkInicial()", run: function () { return fn("obterLinkInicial")(); } },
+        aoLigarDispositivo: { title: "aoLigarDispositivo()", run: function () { return fn("aoLigarDispositivo")(() => alert("App iniciou via boot!")); } }
       };
 
       var groups = [
@@ -1025,9 +1031,9 @@ function nativeFunctionLabHtml() {
         { title: "Arquivos e midia", ids: ["escolherImagem", "escolherImagens", "escolherArquivo", "escolherArquivos", "escolherVideo", "escolherPasta", "salvarArquivoPicker", "salvarArquivoCrud", "lerArquivo", "lerArquivoCompleto", "listarArquivos", "infoArquivo", "arquivoExiste", "abrirArquivo", "compartilharArquivo", "baixarArquivo", "baixarBase64", "baixarArquivoLocal", "excluirArquivo"] },
         { title: "Abrir apps externos", ids: ["abrirNoApp", "abrirForaDoApp", "abrirUrl", "abrirUrlExterno", "discar", "abrirMapa", "abrirWhatsapp"] },
         { title: "Diagnostico", ids: ["infoDispositivo", "infoRede", "infoBateria", "infoMemoria", "infoArmazenamento", "infoDesempenho", "appsAbertos", "infoAppsAbertos"] },
-        { title: "Localizacao e seguranca", ids: ["obterLocalizacao", "acompanharLocalizacao", "pararLocalizacao", "aoMudarLocalizacao", "autenticarBiometria", "salvarSeguro", "lerSeguro", "lerSeguroCompleto", "listarSeguro", "removerSeguro", "limparSeguro"] },
+        { title: "Localizacao e seguranca", ids: ["obterLocalizacao", "acompanharLocalizacao", "pararLocalizacao", "aoMudarLocalizacao", "medirVelocidade", "pararVelocidade", "autenticarBiometria", "solicitarBloqueio", "solicitarSegundoPlano", "configurarInicioAutomatico", "salvarSeguro", "lerSeguro", "lerSeguroCompleto", "listarSeguro", "removerSeguro", "limparSeguro"] },
         { title: "Papel de parede", ids: ["infoPapelParede", "definirPapelParede", "abrirConfigPapel", "definirImagemEscolhida"] },
-        { title: "Eventos", ids: ["registrarEventos", "obterNotificacaoInicial", "obterLinkInicial"] }
+        { title: "Eventos", ids: ["registrarEventos", "obterNotificacaoInicial", "obterLinkInicial", "aoLigarDispositivo"] }
       ];
 
       var safeActionIds = [
@@ -1051,7 +1057,7 @@ function nativeFunctionLabHtml() {
         "abrirSobreposicao", "abrirConfigPapel", "escolherImagem", "escolherImagens",
         "escolherArquivo", "escolherArquivos", "escolherVideo", "escolherPasta",
         "salvarArquivoPicker", "baixarArquivoLocal", "tirarFoto", "capturarVideo",
-        "escanearQRCode", "ouvir", "autenticarBiometria"
+        "escanearQRCode", "ouvir", "autenticarBiometria", "solicitarBloqueio"
       ];
       var dangerActionIds = ["fecharApp", "minimizarApp", "limparSeguro", "excluirArquivo", "pararIconeFlutuante"];
       var initialSmokeIds = ["registrarEventos", "statusPermissoes", "infoDispositivo", "infoRede", "infoBateria", "volumeAtual"];

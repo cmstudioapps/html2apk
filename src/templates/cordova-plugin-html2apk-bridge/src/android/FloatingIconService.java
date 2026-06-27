@@ -68,15 +68,9 @@ public class FloatingIconService extends Service {
 
         ImageView icon = new ImageView(this);
         int size = dp(58);
-        int padding = dp(8);
         icon.setImageDrawable(getApplicationInfo().loadIcon(getPackageManager()));
-        icon.setPadding(padding, padding, padding, padding);
+        icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
         icon.setAlpha(opacity);
-
-        GradientDrawable background = new GradientDrawable();
-        background.setShape(GradientDrawable.OVAL);
-        background.setColor(0xff126fff);
-        icon.setBackground(background);
 
         int windowType = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
             ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY

@@ -1,8 +1,7 @@
 {
   "name": "html2apk",
-  "version": "0.11.0",
+  "version": "12.0.0",
   "author": { "name": "Dev Caio Multiversando", "email": "dev@caio.local" },
-
   "description": "Node CLI and library to turn an HTML/CSS/JS folder into an Android APK through Cordova.",
   "main": "index.js",
   "bin": {
@@ -25,7 +24,10 @@
     "desktop": "node bin/html2apk-desktop.js",
     "build-desktop-win": "node scripts/build-desktop-portable.js",
     "build-desktop-deb": "npx electron-builder --linux deb",
+<<<<<<< HEAD
 
+=======
+>>>>>>> b1eab64 (Local updates pushed to main)
     "test": "node --test test/config.test.js",
     "build-win": "pkg . --targets node20-win-x64 --output dist/html2apk.exe",
     "build-linux": "pkg . --targets node20-linux-x64 --output dist/html2apk-linux",

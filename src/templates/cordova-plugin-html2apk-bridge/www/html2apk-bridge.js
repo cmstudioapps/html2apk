@@ -1327,8 +1327,46 @@ var api = {
   aoMudarLocalizacao: function (listener) {
     return onEvent("localizacao:mudou", listener);
   },
+  medirVelocidade: function (callback, options) {
+    var listener = function (local) {
+      if (typeof callback !== "function") return;
+      var ms = typeof local.velocidade === "number" ? local.velocidade : 0;
+      var kmh = ms * 3.6;
+      callback(kmh, local);
+    };
+    var stopEvent = api.aoMudarLocalizacao(listener);
+    return api.acompanharLocalizacao(Object.assign({ altaPrecisao: true, intervaloMs: 2000 }, options || {}))
+      .then(function (result) {
+        var watchId = result && result.watchId;
+        return function pararMedicao() {
+          stopEvent();
+          if (watchId) {
+            return api.pararLocalizacao(watchId);
+          }
+          return Promise.resolve();
+        };
+      });
+  },
   autenticarBiometria: function (options) {
     return call("authenticateBiometric", [options || {}]);
+  },
+  solicitarBloqueio: function (options) {
+    return call("requestDeviceLock", [options || {}]);
+  },
+  solicitarSegundoPlano: function (options) {
+    return call("requestBackgroundExecution", [options || {}]);
+  },
+  configurarInicioAutomatico: function (enable) {
+    return call("setAutoStartOnBoot", [{ ativar: !!enable }]);
+  },
+  aoLigarDispositivo: function (callback) {
+    if (typeof callback === "function") {
+      call("getInitialLink").then(function(link) {
+        if (link === "html2apk://boot") {
+          callback();
+        }
+      });
+    }
   },
   salvarSeguro: function (keyOrOptions, value, options) {
     return call("saveSecureItem", [secureItemOptions(keyOrOptions, value, options)]);
@@ -1649,7 +1687,12 @@ Object.assign(api, {
   watchLocation: api.acompanharLocalizacao,
   stopLocationWatch: api.pararLocalizacao,
   onLocationChange: api.aoMudarLocalizacao,
+  measureSpeed: api.medirVelocidade,
   authenticateBiometric: api.autenticarBiometria,
+  requestDeviceLock: api.solicitarBloqueio,
+  requestBackgroundExecution: api.solicitarSegundoPlano,
+  setAutoStartOnBoot: api.configurarInicioAutomatico,
+  onDeviceBoot: api.aoLigarDispositivo,
   saveSecure: api.salvarSeguro,
   secureSet: api.salvarSeguro,
   readSecure: api.lerSeguro,

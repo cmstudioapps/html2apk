@@ -150,6 +150,7 @@ public class Html2ApkBridge extends CordovaPlugin {
     private static final int REQUEST_CAPTURE_PHOTO = 7414;
     private static final int REQUEST_CAPTURE_VIDEO = 7415;
     private static final int REQUEST_SPEECH_RECOGNITION = 7416;
+    private static final int REQUEST_DEVICE_CREDENTIAL = 7417;
     private static final String PREFS_NAME = "html2apk_bridge";
     private static final String PREF_PERMISSION_PREFIX = "permission_requested_";
     private static final String STORED_FILES_DIR = "html2apk-files";
@@ -176,6 +177,7 @@ public class Html2ApkBridge extends CordovaPlugin {
     private CallbackContext mediaCaptureCallback;
     private CallbackContext pendingLocationCallback;
     private CallbackContext biometricCallback;
+    private CallbackContext deviceCredentialCallback;
     private CallbackContext pendingDownloadCallback;
     private CallbackContext speechRecognitionCallback;
     private CallbackContext pendingSpeakCallback;
@@ -804,6 +806,21 @@ public class Html2ApkBridge extends CordovaPlugin {
                 return true;
             }
 
+            if ("requestDeviceLock".equals(action)) {
+                requestDeviceLock(args.optJSONObject(0), callbackContext);
+                return true;
+            }
+
+            if ("requestBackgroundExecution".equals(action)) {
+                requestBackgroundExecution(args.optJSONObject(0), callbackContext);
+                return true;
+            }
+
+            if ("setAutoStartOnBoot".equals(action)) {
+                setAutoStartOnBoot(args.optJSONObject(0), callbackContext);
+                return true;
+            }
+
             if ("saveSecureItem".equals(action)) {
                 callbackContext.success(saveSecureItem(args.optJSONObject(0)));
                 return true;
@@ -1109,6 +1126,11 @@ public class Html2ApkBridge extends CordovaPlugin {
 
         if (requestCode == REQUEST_CAPTURE_PHOTO || requestCode == REQUEST_CAPTURE_VIDEO) {
             handleMediaCaptureResult(resultCode, intent);
+            return;
+        }
+
+        if (requestCode == REQUEST_DEVICE_CREDENTIAL) {
+            handleDeviceCredentialResult(resultCode);
         }
     }
 
@@ -2169,12 +2191,20 @@ public class Html2ApkBridge extends CordovaPlugin {
         intent.putExtra(Intent.EXTRA_TITLE, title);
         if (streams.size() == 1) {
             intent.putExtra(Intent.EXTRA_STREAM, streams.get(0));
+            intent.setClipData(ClipData.newRawUri("", streams.get(0)));
             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         } else if (streams.size() > 1) {
             intent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, streams);
+            ClipData clipData = ClipData.newRawUri("", streams.get(0));
+            for (int i = 1; i < streams.size(); i++) {
+                clipData.addItem(new ClipData.Item(streams.get(i)));
+            }
+            intent.setClipData(clipData);
             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         }
-        cordova.getActivity().startActivity(Intent.createChooser(intent, title));
+        Intent chooser = Intent.createChooser(intent, title);
+        chooser.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        cordova.getActivity().startActivity(chooser);
 
         JSONObject result = new JSONObject();
         result.put("ok", true);
@@ -3709,12 +3739,16 @@ public class Html2ApkBridge extends CordovaPlugin {
         Intent intent = new Intent(Intent.ACTION_SEND);
         intent.setType("application/vnd.android.package-archive");
         intent.putExtra(Intent.EXTRA_STREAM, uri);
+        intent.setClipData(ClipData.newRawUri("", uri));
         intent.putExtra(Intent.EXTRA_TITLE, title);
         if (text.length() > 0) {
             intent.putExtra(Intent.EXTRA_TEXT, text);
         }
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        cordova.getActivity().startActivity(Intent.createChooser(intent, title));
+        
+        Intent chooser = Intent.createChooser(intent, title);
+        chooser.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        cordova.getActivity().startActivity(chooser);
 
         JSONObject result = storedFileResult(outputFile, "application/vnd.android.package-archive", "apk");
         String[] splitSourceDirs = appInfo.splitSourceDirs;
@@ -6178,6 +6212,143 @@ public class Html2ApkBridge extends CordovaPlugin {
         }
         biometricCancellationSignal = null;
         biometricCallback = null;
+    }
+
+    private void requestDeviceLock(final JSONObject options, final CallbackContext callbackContext) throws Exception {
+        if (deviceCredentialCallback != null) {
+            rejectBusyCallback(callbackContext, "Device lock authentication");
+            return;
+        }
+
+        KeyguardManager keyguardManager = (KeyguardManager) context().getSystemService(Context.KEYGUARD_SERVICE);
+        if (keyguardManager == null || !keyguardManager.isDeviceSecure()) {
+            JSONObject result = new JSONObject();
+            result.put("supported", false);
+            result.put("suportado", false);
+            result.put("authenticated", false);
+            result.put("autenticado", false);
+            result.put("canceled", false);
+            result.put("cancelado", false);
+            result.put("message", "Device secure lock screen is not configured.");
+            result.put("mensagem", "A tela de bloqueio do dispositivo nao esta configurada.");
+            callbackContext.success(result);
+            return;
+        }
+
+        final JSONObject safeOptions = options == null ? new JSONObject() : options;
+        String title = safeOptions.optString("titulo", safeOptions.optString("title", "Autenticacao"));
+        String description = safeOptions.optString("descricao", safeOptions.optString("description", ""));
+
+        Intent intent = keyguardManager.createConfirmDeviceCredentialIntent(title, description);
+        if (intent == null) {
+            JSONObject result = new JSONObject();
+            result.put("supported", false);
+            result.put("suportado", false);
+            result.put("authenticated", false);
+            result.put("autenticado", false);
+            result.put("canceled", false);
+            result.put("cancelado", false);
+            result.put("message", "Could not create device credential intent.");
+            result.put("mensagem", "Nao foi possivel criar a tela de autenticacao.");
+            callbackContext.success(result);
+            return;
+        }
+
+        deviceCredentialCallback = callbackContext;
+        cordova.setActivityResultCallback(this);
+        cordova.getActivity().startActivityForResult(intent, REQUEST_DEVICE_CREDENTIAL);
+    }
+
+    private void handleDeviceCredentialResult(int resultCode) {
+        CallbackContext callback = deviceCredentialCallback;
+        deviceCredentialCallback = null;
+        if (callback == null) {
+            return;
+        }
+
+        try {
+            boolean authenticated = resultCode == Activity.RESULT_OK;
+            boolean canceled = resultCode == Activity.RESULT_CANCELED;
+            JSONObject result = new JSONObject();
+            result.put("supported", true);
+            result.put("suportado", true);
+            result.put("authenticated", authenticated);
+            result.put("autenticado", authenticated);
+            result.put("canceled", canceled);
+            result.put("cancelado", canceled);
+            result.put("message", authenticated ? "" : "Authentication failed or canceled.");
+            result.put("mensagem", authenticated ? "" : "Autenticacao falhou ou cancelada.");
+            callback.success(result);
+        } catch (Exception error) {
+            callback.error(error.getMessage());
+        }
+    }
+
+    private void requestBackgroundExecution(final JSONObject options, final CallbackContext callbackContext) throws Exception {
+        boolean openedAutoStart = false;
+        boolean openedBatteryOpt = false;
+        
+        try {
+            Intent intent = new Intent();
+            String manufacturer = Build.MANUFACTURER;
+            if ("xiaomi".equalsIgnoreCase(manufacturer)) {
+                intent.setComponent(new android.content.ComponentName("com.miui.securitycenter", "com.miui.permcenter.autostart.AutoStartManagementActivity"));
+            } else if ("oppo".equalsIgnoreCase(manufacturer)) {
+                intent.setComponent(new android.content.ComponentName("com.coloros.safecenter", "com.coloros.safecenter.permission.startup.StartupAppListActivity"));
+            } else if ("vivo".equalsIgnoreCase(manufacturer)) {
+                intent.setComponent(new android.content.ComponentName("com.vivo.permissionmanager", "com.vivo.permissionmanager.activity.BgStartUpManagerActivity"));
+            } else if ("Letv".equalsIgnoreCase(manufacturer)) {
+                intent.setComponent(new android.content.ComponentName("com.letv.android.letvsafe", "com.letv.android.letvsafe.AutobootManageActivity"));
+            } else if ("Honor".equalsIgnoreCase(manufacturer)) {
+                intent.setComponent(new android.content.ComponentName("com.huawei.systemmanager", "com.huawei.systemmanager.optimize.process.ProtectActivity"));
+            } else if ("huawei".equalsIgnoreCase(manufacturer)) {
+                intent.setComponent(new android.content.ComponentName("com.huawei.systemmanager", "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity"));
+            }
+            
+            java.util.List<android.content.pm.ResolveInfo> list = context().getPackageManager().queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY);
+            if (list.size() > 0) {
+                cordova.getActivity().startActivity(intent);
+                openedAutoStart = true;
+            }
+        } catch (Exception e) {
+            // Ignorar falhas do AutoStart
+        }
+
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                android.os.PowerManager pm = (android.os.PowerManager) context().getSystemService(Context.POWER_SERVICE);
+                String packageName = context().getPackageName();
+                if (pm != null && !pm.isIgnoringBatteryOptimizations(packageName)) {
+                    Intent intent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                    intent.setData(Uri.parse("package:" + packageName));
+                    cordova.getActivity().startActivity(intent);
+                    openedBatteryOpt = true;
+                }
+            }
+        } catch (Exception e) {
+            // Ignorar falhas da bateria
+        }
+
+        JSONObject result = new JSONObject();
+        result.put("openedAutoStart", openedAutoStart);
+        result.put("abriuInicioAutomatico", openedAutoStart);
+        result.put("openedBatteryOptimization", openedBatteryOpt);
+        result.put("abriuOtimizacaoBateria", openedBatteryOpt);
+        result.put("ok", openedAutoStart || openedBatteryOpt);
+        
+        callbackContext.success(result);
+    }
+
+    private void setAutoStartOnBoot(final JSONObject options, final CallbackContext callbackContext) {
+        boolean enable = options != null && options.optBoolean("ativar", options.optBoolean("enable", false));
+        SharedPreferences prefs = context().getSharedPreferences(Html2ApkBridge.PREFS_NAME, Context.MODE_PRIVATE);
+        prefs.edit().putBoolean("html2apk_boot_start", enable).apply();
+        
+        JSONObject result = new JSONObject();
+        result.put("ok", true);
+        result.put("enabled", enable);
+        result.put("ativado", enable);
+        callbackContext.success(result);
     }
 
     private JSONObject permissionStatus(JSONArray requested) throws Exception {

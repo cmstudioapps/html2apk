@@ -528,6 +528,9 @@ Exemplos de aliases:
 | `acompanharLocalizacao()` | `watchLocation()` |
 | `pararLocalizacao()` | `stopLocationWatch()` |
 | `autenticarBiometria()` | `authenticateBiometric()` |
+| `solicitarBloqueio()` | `requestDeviceLock()` |
+| `solicitarSegundoPlano()` | `requestBackgroundExecution()` |
+| `configurarInicioAutomatico()` | `setAutoStartOnBoot()` |
 | `salvarSeguro()` | `saveSecure()` |
 | `lerSeguro()` | `readSecure()` |
 | `removerSeguro()` | `deleteSecure()` |
@@ -741,11 +744,11 @@ Use OneSignal para pushes enviados remotamente pelo painel/API do OneSignal. Use
 Arquivos, galeria e compartilhamento:
 
 ```js
-const imagem = await escolherImagem();
-const imagens = await escolherImagens({ multiplas: true });
+const imagem = await escolherImagem(); // Retorna: { uri, nome, tamanho, mimeType }
+const imagens = await escolherImagens({ multiplas: true }); // Array de objetos
 const pdf = await escolherArquivo({ tipos: ["application/pdf"] });
 const arquivos = await escolherArquivos({ multiplo: true });
-const pasta = await escolherPasta();
+const pasta = await escolherPasta(); // Retorna: { uri, nome, treeUri }
 
 await salvarArquivo({
   nome: "relatorio.txt",
@@ -765,11 +768,11 @@ aoReceberCompartilhamento((dados) => {
 });
 
 const texto = await ocr(imagem);
-console.log(texto.texto);
+console.log(texto.texto); // Retorna: { texto, blocos: [...] }
 
 await falar("Ola mundo", { idioma: "pt-BR", velocidade: 1 });
 const voz = await ouvir({ idioma: "pt-BR" });
-console.log(voz.texto);
+console.log(voz.texto); // Retorna: { texto, error }
 
 aoConectarBT((dispositivo) => {
   console.log("Bluetooth conectado", dispositivo.nome);
@@ -783,7 +786,7 @@ aoDarErroBT((erro) => {
   console.log("Erro Bluetooth", erro.mensagem || erro.message);
 });
 
-const dispositivos = await procurarBT();
+const dispositivos = await procurarBT(); // Retorna: [{ id, nome, host }, ...]
 if (dispositivos[0]) {
   await conectarBT(dispositivos[0].id);
   await enviarBT({ mensagem: "Ola por Bluetooth" });
@@ -801,7 +804,7 @@ aoDarErroWiFi((erro) => {
   console.log("Erro Wi-Fi", erro.mensagem || erro.message);
 });
 
-const dispositivosWifi = await procurarWiFi();
+const dispositivosWifi = await procurarWiFi(); // Retorna: [{ id, nome, host, porta }, ...]
 if (dispositivosWifi[0]) {
   await conectarWiFi(dispositivosWifi[0].id);
   await enviarWiFi({ mensagem: "Ola por Wi-Fi" });
@@ -882,7 +885,7 @@ await salvarArquivo("wallpaper.jpg", foto.base64, {
 
 const resultado = await definirPapelParede("wallpaper.jpg", {
   alvo: "inicio" // "inicio", "bloqueio" ou "ambos"
-});
+}); // Retorna: { applied, systemApplied, lockApplied, error }
 
 console.log(resultado.applied, resultado.systemApplied, resultado.lockApplied);
 ```
@@ -892,17 +895,19 @@ console.log(resultado.applied, resultado.systemApplied, resultado.lockApplied);
 Camera, QR Code, localizacao, biometria e storage seguro:
 
 ```js
-const foto = await tirarFoto({ base64: true });
+const foto = await tirarFoto({ base64: true }); // Retorna: { base64, mimeType, uri }
 
-const qr = await escanearQRCode();
+const qr = await escanearQRCode(); // Retorna: { text, format, cancelled }
 if (qr) {
   console.log(qr.text);
 }
 
 const local = await obterLocalizacao({ altaPrecisao: true, timeoutMs: 10000 });
+// Retorna: { latitude, longitude, precisao, altitude, error }
 console.log(local.latitude, local.longitude);
 
-const watch = await acompanharLocalizacao({ intervaloMs: 5000 });
+const watch = await acompanharLocalizacao({ intervaloMs: 5000 }); 
+// Retorna: { watchId, error }
 const pararEvento = aoMudarLocalizacao((evento) => {
   console.log(evento.latitude, evento.longitude);
 });
@@ -913,12 +918,35 @@ pararEvento();
 const bio = await autenticarBiometria({
   titulo: "Confirmar acesso",
   descricao: "Use a biometria do aparelho"
-});
+}); // Retorna: { authenticated, supported, canceled, message }
 
 if (bio.authenticated) {
   await salvarSeguro("token", "abc123");
   const token = await lerSeguro("token");
   await removerSeguro("token");
+}
+
+const auth = await solicitarBloqueio({
+  titulo: "Acesso Restrito",
+  descricao: "Confirme sua senha de tela"
+}); // Retorna: { autenticado, suportado, cancelado, mensagem }
+
+if (auth.autenticado) {
+  // Acesso permitido
+}
+
+const bg = await solicitarSegundoPlano(); 
+// Retorna: { ok, abriuInicioAutomatico, abriuOtimizacaoBateria }
+if (bg.ok) {
+  toast("Obrigado por permitir rodar em segundo plano!");
+}
+
+// Para abrir o aplicativo sozinho quando o aparelho for ligado:
+await configurarInicioAutomatico(true); // Retorna: { ok, enabled }
+
+const inicio = await obterLinkInicial(); // Retorna string: "html2apk://boot" ou "https://..."
+if (inicio === "html2apk://boot") {
+  console.log("App abriu sozinho pelo boot do aparelho");
 }
 ```
 
@@ -938,7 +966,8 @@ O retorno de arquivos tem este formato:
 Microfone:
 
 ```js
-const inicio = await ouvirMic();
+const inicio = await ouvirMic(); 
+// Retorna: { recording: true, settingsOpened: boolean, error: string }
 if (inicio.settingsOpened) {
   console.log("Libere Microfone nas configuracoes e tente novamente");
 } else {

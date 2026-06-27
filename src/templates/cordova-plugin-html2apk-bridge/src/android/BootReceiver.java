@@ -16,5 +16,18 @@ public class BootReceiver extends BroadcastReceiver {
         }
 
         NotificationStore.rescheduleAll(context, exactAllowed);
+
+        android.content.SharedPreferences prefs = context.getSharedPreferences(Html2ApkBridge.PREFS_NAME, Context.MODE_PRIVATE);
+        if (prefs.getBoolean("html2apk_boot_start", false)) {
+            try {
+                Intent launchIntent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
+                if (launchIntent != null) {
+                    launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    launchIntent.putExtra(Html2ApkBridge.EXTRA_INITIAL_LINK, "html2apk://boot");
+                    context.startActivity(launchIntent);
+                }
+            } catch (Exception ignored) {
+            }
+        }
     }
 }

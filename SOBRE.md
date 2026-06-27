@@ -2,9 +2,9 @@
 
 Criacao, direcao, propriedade e creditos: **Caio Multiversando**.
 
-Versão observada no projeto: `0.11.0`.
+Versão observada no projeto: `12.0.0`.
 
-Download da versão desktop observada: gere o executável local em `dist-desktop` e publique o pacote `0.11.0` no canal de distribuição escolhido.
+Download da versão desktop observada: gere o executável local em `dist-desktop` e publique o pacote `12.0.0` no canal de distribuição escolhido.
 
 Este documento explica o html2apk em dois modos:
 
@@ -854,6 +854,30 @@ const bio = await autenticarBiometria({
 if (bio.authenticated) {
   abrirNoApp("#/seguro");
 }
+
+// Para exigir a senha da tela de bloqueio (PIN/padrao/senha):
+const auth = await solicitarBloqueio({
+  titulo: "Acesso Restrito",
+  descricao: "Confirme a senha de tela"
+});
+
+if (auth.autenticado) {
+  abrirNoApp("#/area-secreta");
+}
+
+// Para pedir ao Android que nao feche o app em segundo plano:
+const bg = await solicitarSegundoPlano();
+if (bg.abriuInicioAutomatico) {
+  console.log("Tela de autostart foi aberta");
+}
+
+// Para fazer o app abrir sozinho quando o celular ligar:
+await configurarInicioAutomatico(true);
+
+const inicio = await obterLinkInicial();
+if (inicio === "html2apk://boot") {
+  console.log("App abriu sozinho pelo boot");
+}
 ```
 
 Storage seguro:
@@ -1528,6 +1552,9 @@ salvarArquivo -> saveStoredFile
 baixarArquivo -> downloadFile
 definirPapelParede -> setWallpaper
 autenticarBiometria -> authenticateBiometric
+solicitarBloqueio -> requestDeviceLock
+solicitarSegundoPlano -> requestBackgroundExecution
+configurarInicioAutomatico -> setAutoStartOnBoot
 ```
 
 ### Por que existem dois scripts parecidos?
