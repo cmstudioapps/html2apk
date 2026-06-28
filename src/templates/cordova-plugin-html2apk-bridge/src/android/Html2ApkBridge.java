@@ -6346,9 +6346,12 @@ public class Html2ApkBridge extends CordovaPlugin {
         prefs.edit().putBoolean("html2apk_boot_start", enable).apply();
         
         JSONObject result = new JSONObject();
-        result.put("ok", true);
-        result.put("enabled", enable);
-        result.put("ativado", enable);
+        try {
+            result.put("ok", true);
+            result.put("enabled", enable);
+            result.put("ativado", enable);
+        } catch (Exception ignored) {
+        }
         callbackContext.success(result);
     }
 
