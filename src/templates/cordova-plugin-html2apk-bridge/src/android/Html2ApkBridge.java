@@ -4962,6 +4962,10 @@ public class Html2ApkBridge extends CordovaPlugin {
                             }
 
                             outputStream.flush();
+                            outputStream.close();
+                            outputStream = null;
+                            inputStream.close();
+                            inputStream = null;
 
                             Uri apkUri = fileProviderUri(apkFile);
                             Intent intent = new Intent(Intent.ACTION_VIEW);
