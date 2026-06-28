@@ -474,9 +474,9 @@ Exemplos de aliases:
 | `lerArquivo()` | `readFile()` |
 | `listarArquivos()` | `listFiles()` |
 | `excluirArquivo()` | `deleteFile()` |
-| `abrirArquivo()` | `openFile()` |
-| `compartilharArquivo()` | `shareFile()` |
+| `abrirArquivo()` | `openFile()` / `openStoredFile()` |
 | `baixarArquivo()` | `downloadFile()` |
+| `instalarAtualizacao()` | `installUpdate()` |
 | `baixarBase64()` | `downloadBase64()` |
 | `baixarArquivoLocal()` | `downloadLocalFile()` / `downloadFromFile()` |
 | `definirPapelParede()` | `setWallpaper()` |
@@ -857,6 +857,9 @@ Para baixar um arquivo e guardar no mesmo armazenamento:
 
 ```js
 await baixarArquivo("https://exemplo.com/relatorio.pdf", "relatorio.pdf");
+
+// Para atualizacoes via OTA
+await instalarAtualizacao("https://seu-servidor.com/app.apk");
 await abrirArquivo("relatorio.pdf");
 
 await baixarBase64("foto.png", base64DaImagem, {

@@ -1176,6 +1176,10 @@ await excluirArquivo("perfil.json");</code></pre>
   "relatorio.pdf"
 );
 
+// Atualização via OTA do APK
+await instalarAtualizacao("https://site.com/app.apk");
+
+
 await abrirArquivo("relatorio.pdf");
 
 await baixarBase64("foto.png", base64, {

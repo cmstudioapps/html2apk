@@ -608,6 +608,11 @@ public class Html2ApkBridge extends CordovaPlugin {
                 return true;
             }
 
+            if ("installUpdate".equals(action)) {
+                installUpdate(args.optString(0, ""), callbackContext);
+                return true;
+            }
+
             if ("setWallpaper".equals(action)) {
                 callbackContext.success(setWallpaper(args.optJSONObject(0)));
                 return true;
@@ -4894,6 +4899,67 @@ public class Html2ApkBridge extends CordovaPlugin {
             outputStream.close();
         } catch (Exception ignored) {
         }
+    }
+
+    private void installUpdate(final String url, final CallbackContext callbackContext) {
+        if (url == null || url.length() == 0) {
+            callbackContext.error("URL is required");
+            return;
+        }
+
+        cordova.getThreadPool().execute(new Runnable() {
+            @Override
+            public void run() {
+                InputStream inputStream = null;
+                FileOutputStream outputStream = null;
+                try {
+                    URL downloadUrl = new URL(url);
+                    HttpURLConnection connection = (HttpURLConnection) downloadUrl.openConnection();
+                    connection.setRequestMethod("GET");
+                    connection.setConnectTimeout(15000);
+                    connection.setReadTimeout(15000);
+                    connection.connect();
+
+                    if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
+                        throw new Exception("Server returned HTTP " + connection.getResponseCode() + " " + connection.getResponseMessage());
+                    }
+
+                    File cacheDir = context().getExternalCacheDir();
+                    if (cacheDir == null) {
+                        cacheDir = context().getCacheDir();
+                    }
+                    File apkFile = new File(cacheDir, "update.apk");
+
+                    inputStream = connection.getInputStream();
+                    outputStream = new FileOutputStream(apkFile);
+
+                    byte[] data = new byte[8192];
+                    int count;
+                    while ((count = inputStream.read(data)) != -1) {
+                        outputStream.write(data, 0, count);
+                    }
+
+                    outputStream.flush();
+
+                    Uri apkUri = fileProviderUri(apkFile);
+                    Intent intent = new Intent(Intent.ACTION_VIEW);
+                    intent.setDataAndType(apkUri, "application/vnd.android.package-archive");
+                    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+                    context().startActivity(intent);
+                    
+                    JSONObject result = new JSONObject();
+                    result.put("ok", true);
+                    callbackContext.success(result);
+                } catch (Exception e) {
+                    callbackContext.error(e.getMessage());
+                } finally {
+                    try { if (outputStream != null) outputStream.close(); } catch (Exception ignored) {}
+                    try { if (inputStream != null) inputStream.close(); } catch (Exception ignored) {}
+                }
+            }
+        });
     }
 
     private JSONObject setWallpaper(JSONObject options) throws Exception {
