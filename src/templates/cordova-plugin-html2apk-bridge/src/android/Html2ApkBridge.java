@@ -4931,14 +4931,15 @@ public class Html2ApkBridge extends CordovaPlugin {
                     @Override
                     public void run() {
                         InputStream inputStream = null;
-                        FileOutputStream outputStream = null;
+                        FileOutputStream fileOut = null;
                         try {
+                            // --- DOWNLOAD ---
                             URL downloadUrl = new URL(url);
                             HttpURLConnection connection = (HttpURLConnection) downloadUrl.openConnection();
                             connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Android; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36");
                             connection.setRequestMethod("GET");
-                            connection.setConnectTimeout(15000);
-                            connection.setReadTimeout(15000);
+                            connection.setConnectTimeout(30000);
+                            connection.setReadTimeout(60000);
                             connection.setInstanceFollowRedirects(true);
                             connection.connect();
 
@@ -4946,45 +4947,59 @@ public class Html2ApkBridge extends CordovaPlugin {
                                 throw new Exception("Server returned HTTP " + connection.getResponseCode() + " " + connection.getResponseMessage());
                             }
 
-                            // Force internal cache to avoid Android 11+ Scoped Storage bugs with PackageInstaller
                             File cacheDir = context().getCacheDir();
                             File apkFile = new File(cacheDir, "update.apk");
 
                             inputStream = connection.getInputStream();
-                            outputStream = new FileOutputStream(apkFile);
+                            fileOut = new FileOutputStream(apkFile);
 
-                            byte[] data = new byte[8192];
+                            byte[] data = new byte[65536];
                             int count;
                             while ((count = inputStream.read(data)) != -1) {
-                                outputStream.write(data, 0, count);
+                                fileOut.write(data, 0, count);
                             }
 
-                            outputStream.flush();
-                            outputStream.close();
-                            outputStream = null;
+                            fileOut.flush();
+                            fileOut.close();
+                            fileOut = null;
                             inputStream.close();
                             inputStream = null;
 
                             if (apkFile.length() < 1000) {
-                                throw new Exception("Downloaded file is too small to be a valid APK.");
+                                throw new Exception("Downloaded file is too small to be a valid APK (" + apkFile.length() + " bytes).");
                             }
 
-                            Uri apkUri = fileProviderUri(apkFile);
-                            Intent intent = new Intent(Intent.ACTION_VIEW);
-                            intent.setDataAndType(apkUri, "application/vnd.android.package-archive");
-                            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                            // --- INSTALL VIA PackageInstaller Session API ---
+                            android.content.pm.PackageInstaller packageInstaller = context().getPackageManager().getPackageInstaller();
+                            android.content.pm.PackageInstaller.SessionParams params = new android.content.pm.PackageInstaller.SessionParams(
+                                android.content.pm.PackageInstaller.SessionParams.MODE_FULL_INSTALL
+                            );
+                            params.setSize(apkFile.length());
 
-                            // Explicitly grant read permission to package installer
-                            List<android.content.pm.ResolveInfo> resInfoList = cordova.getActivity().getPackageManager().queryIntentActivities(intent, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY);
-                            for (android.content.pm.ResolveInfo resolveInfo : resInfoList) {
-                                String packageName = resolveInfo.activityInfo.packageName;
-                                cordova.getActivity().grantUriPermission(packageName, apkUri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                            int sessionId = packageInstaller.createSession(params);
+                            android.content.pm.PackageInstaller.Session session = packageInstaller.openSession(sessionId);
+
+                            OutputStream sessionOut = session.openWrite("html2apk_update", 0, apkFile.length());
+                            FileInputStream fis = new FileInputStream(apkFile);
+                            byte[] buf = new byte[65536];
+                            int c;
+                            while ((c = fis.read(buf)) != -1) {
+                                sessionOut.write(buf, 0, c);
                             }
+                            session.fsync(sessionOut);
+                            sessionOut.close();
+                            fis.close();
 
-                            cordova.getActivity().startActivity(intent);
-                            
+                            Intent confirmIntent = new Intent("dev.html2apk.INSTALL_STATUS");
+                            int intentFlags = android.app.PendingIntent.FLAG_UPDATE_CURRENT;
+                            if (android.os.Build.VERSION.SDK_INT >= 31) {
+                                intentFlags |= android.app.PendingIntent.FLAG_MUTABLE;
+                            }
+                            android.app.PendingIntent pi = android.app.PendingIntent.getBroadcast(
+                                context(), sessionId, confirmIntent, intentFlags
+                            );
+                            session.commit(pi.getIntentSender());
+
                             JSONObject result = new JSONObject();
                             result.put("ok", true);
                             callbackContext.success(result);
@@ -4992,7 +5007,7 @@ public class Html2ApkBridge extends CordovaPlugin {
                             String msg = e.getMessage();
                             callbackContext.error(msg != null ? msg : e.toString());
                         } finally {
-                            try { if (outputStream != null) outputStream.close(); } catch (Exception ignored) {}
+                            try { if (fileOut != null) fileOut.close(); } catch (Exception ignored) {}
                             try { if (inputStream != null) inputStream.close(); } catch (Exception ignored) {}
                             
                             cordova.getActivity().runOnUiThread(new Runnable() {
