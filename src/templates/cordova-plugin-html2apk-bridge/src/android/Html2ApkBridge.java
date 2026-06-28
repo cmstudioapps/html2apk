@@ -4935,9 +4935,11 @@ public class Html2ApkBridge extends CordovaPlugin {
                         try {
                             URL downloadUrl = new URL(url);
                             HttpURLConnection connection = (HttpURLConnection) downloadUrl.openConnection();
+                            connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Android; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36");
                             connection.setRequestMethod("GET");
                             connection.setConnectTimeout(15000);
                             connection.setReadTimeout(15000);
+                            connection.setInstanceFollowRedirects(true);
                             connection.connect();
 
                             if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
@@ -4973,7 +4975,8 @@ public class Html2ApkBridge extends CordovaPlugin {
                             result.put("ok", true);
                             callbackContext.success(result);
                         } catch (Exception e) {
-                            callbackContext.error(e.getMessage());
+                            String msg = e.getMessage();
+                            callbackContext.error(msg != null ? msg : e.toString());
                         } finally {
                             try { if (outputStream != null) outputStream.close(); } catch (Exception ignored) {}
                             try { if (inputStream != null) inputStream.close(); } catch (Exception ignored) {}
