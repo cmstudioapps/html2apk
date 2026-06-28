@@ -4946,10 +4946,8 @@ public class Html2ApkBridge extends CordovaPlugin {
                                 throw new Exception("Server returned HTTP " + connection.getResponseCode() + " " + connection.getResponseMessage());
                             }
 
-                            File cacheDir = context().getExternalCacheDir();
-                            if (cacheDir == null) {
-                                cacheDir = context().getCacheDir();
-                            }
+                            // Force internal cache to avoid Android 11+ Scoped Storage bugs with PackageInstaller
+                            File cacheDir = context().getCacheDir();
                             File apkFile = new File(cacheDir, "update.apk");
 
                             inputStream = connection.getInputStream();
