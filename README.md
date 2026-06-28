@@ -527,6 +527,7 @@ Exemplos de aliases:
 | `obterLocalizacao()` | `getLocation()` |
 | `acompanharLocalizacao()` | `watchLocation()` |
 | `pararLocalizacao()` | `stopLocationWatch()` |
+| `medirVelocidade()` | `measureSpeed()` |
 | `autenticarBiometria()` | `authenticateBiometric()` |
 | `solicitarBloqueio()` | `requestDeviceLock()` |
 | `solicitarSegundoPlano()` | `requestBackgroundExecution()` |
@@ -914,6 +915,11 @@ const pararEvento = aoMudarLocalizacao((evento) => {
 
 await pararLocalizacao(watch.watchId);
 pararEvento();
+
+const pararMedicao = await medirVelocidade((kmh, local) => {
+  console.log(`Velocidade: ${kmh} km/h`);
+});
+await pararMedicao();
 
 const bio = await autenticarBiometria({
   titulo: "Confirmar acesso",

@@ -1203,7 +1203,13 @@ const pararEvento = aoMudarLocalizacao(console.log);
 
 // Ao sair da tela:
 await pararLocalizacao(watch.watchId);
-pararEvento();</code></pre>
+pararEvento();
+
+// Medir velocidade em tempo real
+const pararMedicao = await medirVelocidade((kmh, local) => {
+  console.log(kmh + " km/h");
+});
+// Para encerrar: await pararMedicao();</code></pre>
 
         <h3>Biometria e storage seguro</h3>
         <pre><code>const bio = await autenticarBiometria({
