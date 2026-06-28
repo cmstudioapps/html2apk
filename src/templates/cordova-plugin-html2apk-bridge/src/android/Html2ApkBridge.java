@@ -4974,6 +4974,7 @@ public class Html2ApkBridge extends CordovaPlugin {
                             intent.setDataAndType(apkUri, "application/vnd.android.package-archive");
                             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                             intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 
                             // Explicitly grant read permission to package installer
                             List<android.content.pm.ResolveInfo> resInfoList = cordova.getActivity().getPackageManager().queryIntentActivities(intent, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY);
