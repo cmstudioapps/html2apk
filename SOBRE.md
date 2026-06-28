@@ -2,9 +2,9 @@
 
 Criacao, direcao, propriedade e creditos: **Caio Multiversando**.
 
-Versão observada no projeto: `12.0.0`.
+Versão observada no projeto: `12.0.1`.
 
-Download da versão desktop observada: gere o executável local em `dist-desktop` e publique o pacote `12.0.0` no canal de distribuição escolhido.
+Download da versão desktop observada: gere o executável local em `dist-desktop` e publique o pacote `12.0.1` no canal de distribuição escolhido.
 
 Este documento explica o html2apk em dois modos:
 

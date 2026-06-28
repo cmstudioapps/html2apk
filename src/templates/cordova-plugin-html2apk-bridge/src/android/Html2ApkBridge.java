@@ -138,6 +138,7 @@ public class Html2ApkBridge extends CordovaPlugin {
     static final String CHANNEL_ID = "html2apk_default";
     static final String EXTRA_NOTIFICATION_CLICKED = "html2apk_notification_clicked";
     static final String EXTRA_NOTIFICATION_DETAIL = "html2apk_notification_detail";
+    static final String EXTRA_INITIAL_LINK = "html2apk_initial_link";
 
     private static final int REQUEST_POST_NOTIFICATIONS = 7311;
     private static final int REQUEST_CAMERA = 7312;
@@ -151,7 +152,7 @@ public class Html2ApkBridge extends CordovaPlugin {
     private static final int REQUEST_CAPTURE_VIDEO = 7415;
     private static final int REQUEST_SPEECH_RECOGNITION = 7416;
     private static final int REQUEST_DEVICE_CREDENTIAL = 7417;
-    private static final String PREFS_NAME = "html2apk_bridge";
+    static final String PREFS_NAME = "html2apk_bridge";
     private static final String PREF_PERMISSION_PREFIX = "permission_requested_";
     private static final String STORED_FILES_DIR = "html2apk-files";
     private static final String STORED_FILE_META_SUFFIX = ".html2apk-meta.json";
@@ -7516,13 +7517,24 @@ public class Html2ApkBridge extends CordovaPlugin {
     }
 
     private void handleLinkIntent(Intent intent, boolean dispatchToJs) {
-        if (intent == null || intent.getData() == null) {
+        if (intent == null) {
+            return;
+        }
+
+        Uri uri = intent.getData();
+        if (uri == null && intent.hasExtra(EXTRA_INITIAL_LINK)) {
+            String linkStr = intent.getStringExtra(EXTRA_INITIAL_LINK);
+            if (linkStr != null) {
+                uri = Uri.parse(linkStr);
+            }
+        }
+
+        if (uri == null) {
             return;
         }
 
         JSONObject detail = new JSONObject();
         try {
-            Uri uri = intent.getData();
             detail.put("url", uri.toString());
             detail.put("scheme", uri.getScheme());
             detail.put("host", uri.getHost());
