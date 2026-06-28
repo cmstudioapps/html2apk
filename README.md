@@ -858,8 +858,11 @@ Para baixar um arquivo e guardar no mesmo armazenamento:
 ```js
 await baixarArquivo("https://exemplo.com/relatorio.pdf", "relatorio.pdf");
 
-// Para atualizacoes via OTA
-await instalarAtualizacao("https://seu-servidor.com/app.apk");
+// Para atualizacoes via OTA com modal bloqueante
+await instalarAtualizacao("https://seu-servidor.com/app.apk", {
+  titulo: "Baixando nova versão",
+  mensagem: "Aguarde, não feche o aplicativo..."
+});
 await abrirArquivo("relatorio.pdf");
 
 await baixarBase64("foto.png", base64DaImagem, {

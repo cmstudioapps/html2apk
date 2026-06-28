@@ -969,7 +969,7 @@ function nativeFunctionLabHtml() {
         arquivoExiste: { title: "arquivoExiste()", run: function () { return fn("arquivoExiste")("lab.json"); } },
         abrirArquivo: { title: "abrirArquivo()", run: function () { return fn("abrirArquivo")("lab.json"); } },
         compartilharArquivo: { title: "compartilharArquivo()", run: function () { return fn("compartilharArquivo")("lab.json"); } },
-        instalarAtualizacao: { title: "instalarAtualizacao()", run: function () { alert("Simulacao: instalando atualizacao de " + "https://example.com/app.apk"); return fn("instalarAtualizacao")("https://example.com/app.apk"); } },
+        instalarAtualizacao: { title: "instalarAtualizacao()", run: function () { var opts = prompt("Titulo do modal:", "Baixando atualizacao..."); var optsMsg = prompt("Mensagem do modal:", "Por favor, aguarde."); alert("Simulacao: instalando atualizacao de https://example.com/app.apk com titulo: " + opts); return fn("instalarAtualizacao")("https://example.com/app.apk", { titulo: opts, mensagem: optsMsg }); } },
         baixarArquivo: { title: "baixarArquivo()", run: function () { return fn("baixarArquivo")("https://example.com/", "example.html"); } },
         baixarBase64: { title: "baixarBase64()", run: function () { return fn("baixarBase64")("pixel-download.png", sampleImageBase64, { mimeType: "image/png" }); } },
         baixarArquivoLocal: { title: "baixarArquivoLocal()", run: async function () { var file = await fn("escolherArquivo")(); if (!file) { return { canceled: true }; } return fn("baixarArquivoLocal")(file, "copia-" + (file.name || file.nome || "arquivo")); } },

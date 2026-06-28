@@ -1176,8 +1176,11 @@ await excluirArquivo("perfil.json");</code></pre>
   "relatorio.pdf"
 );
 
-// Atualização via OTA do APK
-await instalarAtualizacao("https://site.com/app.apk");
+// Atualização via OTA do APK com modal nativo bloqueante
+await instalarAtualizacao("https://site.com/app.apk", {
+  titulo: "Atualizando App",
+  mensagem: "Fazendo download da nova versão..."
+});
 
 
 await abrirArquivo("relatorio.pdf");

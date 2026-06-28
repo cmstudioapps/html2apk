@@ -1255,11 +1255,11 @@ var api = {
   compartilharArquivo: function (nameOrOptions, options) {
     return call("shareStoredFile", [storedFileNameOptions(nameOrOptions, options)]);
   },
-  instalarAtualizacao: function (url) {
+  instalarAtualizacao: function (url, options) {
     if (!url || typeof url !== "string") {
       return Promise.reject(new Error("A URL do APK e obrigatoria"));
     }
-    return call("installUpdate", [url]);
+    return call("installUpdate", [url, options || {}]);
   },
   baixarArquivo: function (urlOrOptions, nameOrOptions, options) {
     return call("downloadFile", [downloadFileOptions(urlOrOptions, nameOrOptions, options)]);
