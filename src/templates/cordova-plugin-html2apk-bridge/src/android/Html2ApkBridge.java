@@ -4990,13 +4990,37 @@ public class Html2ApkBridge extends CordovaPlugin {
                             sessionOut.close();
                             fis.close();
 
-                            Intent confirmIntent = new Intent("dev.html2apk.INSTALL_STATUS");
+                            // Register receiver to handle the install confirmation
+                            final String ACTION_INSTALL = "dev.html2apk.INSTALL_STATUS_" + sessionId;
+                            android.content.BroadcastReceiver installReceiver = new android.content.BroadcastReceiver() {
+                                @Override
+                                public void onReceive(Context ctx, Intent intent) {
+                                    int status = intent.getIntExtra(android.content.pm.PackageInstaller.EXTRA_STATUS, android.content.pm.PackageInstaller.STATUS_FAILURE);
+                                    if (status == android.content.pm.PackageInstaller.STATUS_PENDING_USER_ACTION) {
+                                        // The system requires user confirmation - launch the confirm dialog
+                                        Intent confirmActivity = intent.getParcelableExtra(Intent.EXTRA_INTENT);
+                                        if (confirmActivity != null) {
+                                            confirmActivity.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                            ctx.startActivity(confirmActivity);
+                                        }
+                                    }
+                                    try { ctx.unregisterReceiver(this); } catch (Exception ignored) {}
+                                }
+                            };
+
+                            if (android.os.Build.VERSION.SDK_INT >= 33) {
+                                context().registerReceiver(installReceiver, new android.content.IntentFilter(ACTION_INSTALL), android.content.Context.RECEIVER_EXPORTED);
+                            } else {
+                                context().registerReceiver(installReceiver, new android.content.IntentFilter(ACTION_INSTALL));
+                            }
+
+                            Intent statusIntent = new Intent(ACTION_INSTALL);
                             int intentFlags = android.app.PendingIntent.FLAG_UPDATE_CURRENT;
                             if (android.os.Build.VERSION.SDK_INT >= 31) {
                                 intentFlags |= android.app.PendingIntent.FLAG_MUTABLE;
                             }
                             android.app.PendingIntent pi = android.app.PendingIntent.getBroadcast(
-                                context(), sessionId, confirmIntent, intentFlags
+                                context(), sessionId, statusIntent, intentFlags
                             );
                             session.commit(pi.getIntentSender());
 
