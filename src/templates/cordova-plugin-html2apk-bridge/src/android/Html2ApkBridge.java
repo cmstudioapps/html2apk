@@ -4967,13 +4967,24 @@ public class Html2ApkBridge extends CordovaPlugin {
                             inputStream.close();
                             inputStream = null;
 
+                            if (apkFile.length() < 1000) {
+                                throw new Exception("Downloaded file is too small to be a valid APK.");
+                            }
+
                             Uri apkUri = fileProviderUri(apkFile);
                             Intent intent = new Intent(Intent.ACTION_VIEW);
                             intent.setDataAndType(apkUri, "application/vnd.android.package-archive");
                             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
 
-                            context().startActivity(intent);
+                            // Explicitly grant read permission to package installer
+                            List<android.content.pm.ResolveInfo> resInfoList = cordova.getActivity().getPackageManager().queryIntentActivities(intent, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY);
+                            for (android.content.pm.ResolveInfo resolveInfo : resInfoList) {
+                                String packageName = resolveInfo.activityInfo.packageName;
+                                cordova.getActivity().grantUriPermission(packageName, apkUri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                            }
+
+                            cordova.getActivity().startActivity(intent);
                             
                             JSONObject result = new JSONObject();
                             result.put("ok", true);
