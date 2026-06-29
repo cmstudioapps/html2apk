@@ -944,7 +944,7 @@ const auth = await solicitarBloqueio({
 }); // Retorna: { autenticado, suportado, cancelado, limiteExcedido, mensagem }
 
 if (auth.limiteExcedido) {
-  // Aguarde antes de chamar novamente
+  // Aguarde 5 segundos após um desbloqueio bem-sucedido
 } else if (auth.autenticado) {
   // Acesso permitido
 }
