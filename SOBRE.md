@@ -812,12 +812,14 @@ Local atual:
 
 ```js
 const local = await obterLocalizacao({
-  altaPrecisao: true,
-  timeoutMs: 10000
+  enableHighAccuracy: true
 });
 
-if (local.latitude) {
-  console.log(local.latitude, local.longitude);
+if (local.disponivel) {
+  console.log("Lat/Lng: ", local.latitude, local.longitude);
+  console.log("Velocidade: ", local.velocidadeKmh, "km/h"); // ou velocidadeMs
+} else if (local.requiresSettings) {
+  console.log("GPS desligado");
 }
 ```
 
@@ -861,7 +863,9 @@ const auth = await solicitarBloqueio({
   descricao: "Confirme a senha de tela"
 });
 
-if (auth.autenticado) {
+if (auth.limiteExcedido) {
+  console.log("Muitas requisições. Aguarde 1 segundo!");
+} else if (auth.autenticado) {
   abrirNoApp("#/area-secreta");
 }
 
