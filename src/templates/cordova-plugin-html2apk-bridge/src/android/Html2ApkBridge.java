@@ -6418,7 +6418,7 @@ public class Html2ApkBridge extends CordovaPlugin {
 
     private void requestDeviceLock(final JSONObject options, final CallbackContext callbackContext) throws Exception {
         long now = System.currentTimeMillis();
-        if (now - lastDeviceLockRequestTime < 1000) { // 1 request per second max
+        if (now - lastDeviceLockRequestTime < 5000) { // max 1 request every 5 seconds
             JSONObject result = new JSONObject();
             result.put("supported", true);
             result.put("suportado", true);
