@@ -864,7 +864,7 @@ const auth = await solicitarBloqueio({
 });
 
 if (auth.limiteExcedido) {
-  console.log("Muitas requisições. Aguarde 5 segundos!");
+  console.log("Muitas requisições. Aguarde 5 segundos após um desbloqueio bem-sucedido!");
 } else if (auth.autenticado) {
   abrirNoApp("#/area-secreta");
 }

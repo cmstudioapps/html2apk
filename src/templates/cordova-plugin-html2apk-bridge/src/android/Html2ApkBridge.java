@@ -6433,7 +6433,6 @@ public class Html2ApkBridge extends CordovaPlugin {
             callbackContext.success(result);
             return;
         }
-        lastDeviceLockRequestTime = now;
 
         if (deviceCredentialCallback != null) {
             rejectBusyCallback(callbackContext, "Device lock authentication");
@@ -6489,6 +6488,11 @@ public class Html2ApkBridge extends CordovaPlugin {
         try {
             boolean authenticated = resultCode == Activity.RESULT_OK;
             boolean canceled = resultCode == Activity.RESULT_CANCELED;
+            
+            if (authenticated) {
+                lastDeviceLockRequestTime = System.currentTimeMillis();
+            }
+            
             JSONObject result = new JSONObject();
             result.put("supported", true);
             result.put("suportado", true);
