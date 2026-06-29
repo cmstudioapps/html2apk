@@ -6254,8 +6254,23 @@ public class Html2ApkBridge extends CordovaPlugin {
         result.put("accuracy", location.hasAccuracy() ? location.getAccuracy() : JSONObject.NULL);
         result.put("precisao", location.hasAccuracy() ? location.getAccuracy() : JSONObject.NULL);
         result.put("altitude", location.hasAltitude() ? location.getAltitude() : JSONObject.NULL);
-        result.put("speed", location.hasSpeed() ? location.getSpeed() : JSONObject.NULL);
-        result.put("velocidade", location.hasSpeed() ? location.getSpeed() : JSONObject.NULL);
+        if (location.hasSpeed()) {
+            float ms = location.getSpeed();
+            float kmh = ms * 3.6f;
+            result.put("speed", ms); // Keep backwards compatibility
+            result.put("speedMs", ms);
+            result.put("speedKmh", kmh);
+            result.put("velocidade", ms); // Keep backwards compatibility
+            result.put("velocidadeMs", ms);
+            result.put("velocidadeKmh", kmh);
+        } else {
+            result.put("speed", JSONObject.NULL);
+            result.put("speedMs", JSONObject.NULL);
+            result.put("speedKmh", JSONObject.NULL);
+            result.put("velocidade", JSONObject.NULL);
+            result.put("velocidadeMs", JSONObject.NULL);
+            result.put("velocidadeKmh", JSONObject.NULL);
+        }
         result.put("provider", location.getProvider());
         result.put("provedor", location.getProvider());
         result.put("timestamp", location.getTime());
