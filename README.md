@@ -910,7 +910,7 @@ if (qr) {
 }
 
 const local = await obterLocalizacao({ altaPrecisao: true, timeoutMs: 10000 });
-// Retorna: { latitude, longitude, precisao, altitude, error }
+// Retorna: { latitude, longitude, precisao, altitude, velocidadeKmh, velocidadeMs, error }
 console.log(local.latitude, local.longitude);
 
 const watch = await acompanharLocalizacao({ intervaloMs: 5000 }); 
@@ -941,9 +941,11 @@ if (bio.authenticated) {
 const auth = await solicitarBloqueio({
   titulo: "Acesso Restrito",
   descricao: "Confirme sua senha de tela"
-}); // Retorna: { autenticado, suportado, cancelado, mensagem }
+}); // Retorna: { autenticado, suportado, cancelado, limiteExcedido, mensagem }
 
-if (auth.autenticado) {
+if (auth.limiteExcedido) {
+  // Aguarde antes de chamar novamente
+} else if (auth.autenticado) {
   // Acesso permitido
 }
 
