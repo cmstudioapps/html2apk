@@ -6414,7 +6414,27 @@ public class Html2ApkBridge extends CordovaPlugin {
         biometricCallback = null;
     }
 
+    private long lastDeviceLockRequestTime = 0;
+
     private void requestDeviceLock(final JSONObject options, final CallbackContext callbackContext) throws Exception {
+        long now = System.currentTimeMillis();
+        if (now - lastDeviceLockRequestTime < 1000) { // 1 request per second max
+            JSONObject result = new JSONObject();
+            result.put("supported", true);
+            result.put("suportado", true);
+            result.put("authenticated", false);
+            result.put("autenticado", false);
+            result.put("canceled", true);
+            result.put("cancelado", true);
+            result.put("rateLimited", true);
+            result.put("limiteExcedido", true);
+            result.put("message", "Rate limit exceeded. Please wait before requesting again.");
+            result.put("mensagem", "Limite de solicitacoes excedido. Aguarde antes de tentar novamente.");
+            callbackContext.success(result);
+            return;
+        }
+        lastDeviceLockRequestTime = now;
+
         if (deviceCredentialCallback != null) {
             rejectBusyCallback(callbackContext, "Device lock authentication");
             return;
