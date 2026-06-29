@@ -2197,19 +2197,29 @@ public class Html2ApkBridge extends CordovaPlugin {
         intent.putExtra(Intent.EXTRA_TITLE, title);
         if (streams.size() == 1) {
             intent.putExtra(Intent.EXTRA_STREAM, streams.get(0));
-            intent.setClipData(ClipData.newRawUri("", streams.get(0)));
+            intent.setClipData(ClipData.newRawUri("File", streams.get(0)));
             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         } else if (streams.size() > 1) {
             intent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, streams);
-            ClipData clipData = ClipData.newRawUri("", streams.get(0));
+            ClipData clipData = ClipData.newRawUri("Files", streams.get(0));
             for (int i = 1; i < streams.size(); i++) {
                 clipData.addItem(new ClipData.Item(streams.get(i)));
             }
             intent.setClipData(clipData);
             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         }
+
+        List<android.content.pm.ResolveInfo> resInfoList = context().getPackageManager().queryIntentActivities(intent, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY);
+        for (android.content.pm.ResolveInfo resolveInfo : resInfoList) {
+            String packageName = resolveInfo.activityInfo.packageName;
+            for (Uri u : streams) {
+                context().grantUriPermission(packageName, u, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            }
+        }
+
         Intent chooser = Intent.createChooser(intent, title);
         chooser.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         cordova.getActivity().startActivity(chooser);
 
         JSONObject result = new JSONObject();
@@ -3728,7 +3738,8 @@ public class Html2ApkBridge extends CordovaPlugin {
             fileName += ".apk";
         }
 
-        File shareDir = new File(context().getCacheDir(), "html2apk-share");
+        File externalFiles = context().getExternalFilesDir(null);
+        File shareDir = new File(externalFiles != null ? externalFiles : context().getCacheDir(), "html2apk-share");
         if (!shareDir.exists() && !shareDir.mkdirs()) {
             throw new Exception("Could not create share directory.");
         }
@@ -3745,15 +3756,23 @@ public class Html2ApkBridge extends CordovaPlugin {
         Intent intent = new Intent(Intent.ACTION_SEND);
         intent.setType("application/vnd.android.package-archive");
         intent.putExtra(Intent.EXTRA_STREAM, uri);
-        intent.setClipData(ClipData.newRawUri("", uri));
+        intent.setClipData(ClipData.newRawUri("APK", uri));
         intent.putExtra(Intent.EXTRA_TITLE, title);
         if (text.length() > 0) {
             intent.putExtra(Intent.EXTRA_TEXT, text);
         }
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         
+        // Explicitly grant read permission to all possible target apps
+        List<android.content.pm.ResolveInfo> resInfoList = context().getPackageManager().queryIntentActivities(intent, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY);
+        for (android.content.pm.ResolveInfo resolveInfo : resInfoList) {
+            String packageName = resolveInfo.activityInfo.packageName;
+            context().grantUriPermission(packageName, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        }
+
         Intent chooser = Intent.createChooser(intent, title);
         chooser.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         cordova.getActivity().startActivity(chooser);
 
         JSONObject result = storedFileResult(outputFile, "application/vnd.android.package-archive", "apk");
@@ -4316,9 +4335,21 @@ public class Html2ApkBridge extends CordovaPlugin {
         String title = safeOptions.optString("titulo", safeOptions.optString("title", "Compartilhar"));
         Intent intent = new Intent(Intent.ACTION_SEND);
         intent.setType(mimeType);
-        intent.putExtra(Intent.EXTRA_STREAM, fileProviderUri(file));
+        Uri uri = fileProviderUri(file);
+        intent.putExtra(Intent.EXTRA_STREAM, uri);
+        intent.setClipData(ClipData.newRawUri("File", uri));
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        cordova.getActivity().startActivity(Intent.createChooser(intent, title));
+
+        List<android.content.pm.ResolveInfo> resInfoList = context().getPackageManager().queryIntentActivities(intent, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY);
+        for (android.content.pm.ResolveInfo resolveInfo : resInfoList) {
+            String packageName = resolveInfo.activityInfo.packageName;
+            context().grantUriPermission(packageName, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        }
+
+        Intent chooser = Intent.createChooser(intent, title);
+        chooser.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        cordova.getActivity().startActivity(chooser);
     }
 
     private void downloadFile(JSONObject options, CallbackContext callbackContext) {
