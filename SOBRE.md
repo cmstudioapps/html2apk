@@ -386,28 +386,36 @@ QR Code:
 ```js
 try {
   const qr = await escanearQRCode();
+  // Retorna um Objeto (se achou): { text, format } ou null (se nao achou)
+  
   if (qr) {
-    console.log("QR:", qr.text);
+    await toast("Lido: " + qr.text);
+  } else {
+    await toast("Digite ou cole o codigo");
   }
-} catch (erro) {
-  await toast("Digite ou cole o codigo");
+} catch (e) {
+  // Trate o erro
 }
 ```
 
 Microfone:
 
 ```js
-const inicio = await ouvirMic();
-if (inicio.settingsOpened) {
-  console.log("Libere Microfone nas configuracoes e tente de novo");
-  return;
-}
-
-setTimeout(async () => {
+try {
+  const inicio = await ouvirMic();
+  // Retorna: { recording: true, startedAt: timestamp }
+  
+  await toast("Fale agora!");
+  await aguardar(5000);
+  
   const audio = await pararMic();
-  const url = "data:" + audio.mimeType + ";base64," + audio.base64;
-  new Audio(url).play();
-}, 3000);
+  // Retorna: { base64, mimeType, duracaoMs, tamanho }
+  // Use a string base64 para tocar no <audio src="..."> ou mandar pra API
+  
+  console.log(audio.duracaoMs, "ms gravados");
+} catch (e) {
+  // Trate caso o usuario recuse a permissao
+}
 ```
 
 Lanterna:
@@ -623,9 +631,11 @@ const perfil = await lerArquivo("perfil.json");
 console.log(perfil.nome);
 
 const completo = await lerArquivoCompleto("perfil.json");
+// Retorna: { uri, mimeType, name, nome, size, tamanho, type, tipo } (type: "imagem", "video", "audio" ou "documento")
 console.log(completo.mimeType, completo.tamanho);
 
 const arquivos = await listarArquivos();
+// Retorna um Array de objetos com o mesmo formato de lerArquivoCompleto/infoArquivo
 console.log(arquivos);
 
 const existe = await arquivoExiste("perfil.json");
@@ -779,13 +789,22 @@ Diagnostico:
 
 ```js
 const aparelho = await infoDispositivo();
-const rede = await infoRede();
-const bateria = await infoBateria();
-const memoria = await infoMemoria();
-const armazenamento = await infoArmazenamento();
-const desempenho = await infoDesempenho();
+// Retorna: { fabricante, modelo, brand, androidVersion, sdkInt, packageName }
 
-console.log({ aparelho, rede, bateria, memoria, armazenamento, desempenho });
+const rede = await infoRede();
+// Retorna: { online, conectado, tipo, type } (tipo: wifi, cellular, ethernet...)
+
+const bateria = await infoBateria();
+// Retorna: { nivel, level, carregando, charging } (nível de 0 a 100)
+
+const memoria = await infoMemoria();
+// Retorna: { availableBytes, totalBytes, lowMemory, thresholdBytes, appUsedBytes, appMaxBytes }
+
+const armazenamento = await infoArmazenamento();
+// Retorna: { internal: { available, total, free }, cache: {...}, appExternal: {...}, external: {...} }
+
+const desempenho = await infoDesempenho();
+// Agrupa as info acima: { timestamp, memory, storage, battery, network }
 ```
 
 Apps/processos visiveis:
