@@ -855,6 +855,19 @@ await pararLocalizacao(watch.watchId);
 pararEvento();
 ```
 
+Velocímetro simplificado:
+
+```js
+const pararMedicao = await medirVelocidade((kmh, local) => {
+  // Retorna a velocidade em km/h e o objeto de localizacao completo
+  console.log(`Velocidade: ${kmh} km/h`);
+  console.log(`Em metros por segundo: ${local.velocidadeMs} m/s`);
+});
+
+// Ao sair da tela pare a medicao:
+// await pararMedicao();
+```
+
 Cuidados:
 
 - permissao e pedida automaticamente;
