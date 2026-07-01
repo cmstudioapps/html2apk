@@ -567,6 +567,12 @@ function emitEvent(type, detail) {
     return;
   }
 
+  if (nativeWindowCount > 0) {
+    if (eventType === "app:voltou" || eventType === "app:resumed" || eventType === "app:pausado" || eventType === "app:paused" || eventType === "app:background") {
+      return;
+    }
+  }
+
   var payload = detail || {};
   payload.type = payload.type || eventType;
   payload.tipo = payload.tipo || eventType;

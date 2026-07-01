@@ -945,10 +945,17 @@
 
   function emitEvent(type, detail) {
     var eventType = normalizeEventType(type || (detail && detail.type));
-    var payload = detail || {};
     if (!eventType) {
       return;
     }
+
+    if (nativeWindowCount > 0) {
+      if (eventType === "app:voltou" || eventType === "app:resumed" || eventType === "app:pausado" || eventType === "app:paused" || eventType === "app:background") {
+        return;
+      }
+    }
+
+    var payload = detail || {};
     payload.type = payload.type || eventType;
     payload.tipo = payload.tipo || eventType;
     payload.timestamp = payload.timestamp || Date.now();
