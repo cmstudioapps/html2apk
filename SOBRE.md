@@ -720,8 +720,27 @@ if (permInstalacao.permitido || permInstalacao.solicitado) {
 }
 ```
 
-`solicitarPermissaoInstalacao()` redireciona o usuário para as configurações do Android caso o app ainda não tenha a permissão `REQUEST_INSTALL_PACKAGES`.
-`instalarAtualizacao()` baixa e abre o APK via `PackageInstaller` nativo. Ideal para atualizações diretas de APKs hospedados fora da Play Store.
+Retorno esperado de `solicitarPermissaoInstalacao()`:
+
+```json
+{
+  "suportado": true,
+  "supported": true,
+  "solicitado": true,
+  "requested": true,
+  "permitido": false,
+  "granted": false
+}
+```
+
+O método `solicitarPermissaoInstalacao()` (`requestInstallPermission()`) checa se o aplicativo tem permissão de instalar pacotes (exigência do Android 8 Oreo em diante).
+- Se a permissão já foi concedida (`permitido: true`), não faz nada.
+- Se não possui a permissão (`permitido: false`), ele automaticamente abre a tela nativa de configurações de "Instalar apps desconhecidos" do Android (`solicitado: true`) para o usuário ativar a chavinha.
+- Em Androids mais antigos (< 8.0), retorna `suportado: false` e `permitido: true`.
+
+O método `instalarAtualizacao(url, opções)` (`installUpdate()`) baixa e abre o APK via `PackageInstaller` nativo. Ideal para atualizações diretas de APKs hospedados fora da Play Store. Opções suportadas incluem:
+- `titulo`: Título do modal bloqueante de progresso (ex: "Nova Versão").
+- `mensagem`: Mensagem do modal (ex: "Instalando...").
 
 ### Abrir dentro ou fora do app
 

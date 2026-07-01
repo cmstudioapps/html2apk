@@ -1198,6 +1198,23 @@ if (arquivo) {
   await baixarArquivoLocal(arquivo, "copia-" + arquivo.name);
 }</code></pre>
 
+        <p>A função <code>solicitarPermissaoInstalacao()</code> retorna o seguinte objeto:</p>
+        <pre><code>{
+  "suportado": true,
+  "supported": true,
+  "solicitado": true,
+  "requested": true,
+  "permitido": false,
+  "granted": false
+}</code></pre>
+        <ul>
+          <li><strong>suportado / supported:</strong> <code>true</code> se for Android 8.0 (Oreo) ou mais recente, que exige essa checagem manual.</li>
+          <li><strong>permitido / granted:</strong> <code>true</code> se o usuário já marcou a chave permitindo a instalação ou se for um Android antigo sem restrição. <code>false</code> se o app ainda não pode instalar APKs.</li>
+          <li><strong>solicitado / requested:</strong> <code>true</code> se o app acabou de abrir nativamente a tela de "Instalar apps desconhecidos" para o usuário.</li>
+        </ul>
+        <div class="note">Após solicitar, a tela abre e o usuário volta depois de marcar a opção. Logo após (ou quando <code>permitido</code> for verdadeiro), você pode chamar a função <code>instalarAtualizacao()</code> passando a URL do APK. O sistema irá fazer o download usando o PackageInstaller nativo. Você pode passar as opções <code>titulo</code> e <code>mensagem</code> para o balão bloqueante que impede o uso do app enquanto atualiza.</div>
+
+
         <div class="note">Por padrão, o download fica no armazenamento do app para funcionar com <code>abrirArquivo()</code> e <code>compartilharArquivo()</code>. Para imagem ou vídeo aparecer na galeria do Android, passe <code>{ galeria: true }</code>; o retorno inclui <code>publicUri</code> quando a publicação for feita.</div>
 
         <h3>Localização</h3>
