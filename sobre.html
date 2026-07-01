@@ -1327,6 +1327,7 @@ await definirOpacidadeIconeFlutuante(0.55);</code></pre>
           <li>Apps abertos são limitados por privacidade do Android moderno.</li>
           <li>OneSignal exige configuração externa e nunca deve receber chave secreta dentro do APK.</li>
           <li>Keystore perdida não é recuperada pela ferramenta.</li>
+          <li><strong>Ciclo de vida inteligente:</strong> O html2apk suprime automaticamente eventos <code>app:pausado</code> e <code>app:voltou</code> quando janelas nativas bloqueantes (como pedir PIN ou câmera) são abertas. Isso protege o seu app de falsos-positivos e loops infinitos.</li>
         </ul>
       </section>
 

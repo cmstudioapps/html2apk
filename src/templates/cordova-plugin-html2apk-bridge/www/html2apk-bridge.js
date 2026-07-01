@@ -82,8 +82,57 @@ if (typeof document !== "undefined") {
   document.addEventListener("deviceready", markDeviceReady, false);
 }
 
+var nativeWindowCount = 0;
+
+if (typeof document !== "undefined" && document.dispatchEvent) {
+  var originalDispatchEvent = document.dispatchEvent;
+  document.dispatchEvent = function (event) {
+    if (nativeWindowCount > 0 && event && typeof event.type === "string") {
+      var t = event.type;
+      if (t === "app:voltou" || t === "app:resumed" || t === "app:pausado" || t === "app:paused" || t === "app:background") {
+        return false;
+      }
+    }
+    return originalDispatchEvent.apply(this, arguments);
+  };
+}
+
+var NATIVE_UI_ACTIONS = {
+  "capturePhoto": true,
+  "captureVideo": true,
+  "requestCameraPermission": true,
+  "requestMicrophonePermission": true,
+  "shareText": true,
+  "share": true,
+  "shareCurrentApp": true,
+  "scanBluetooth": true,
+  "scanWifi": true,
+  "recognizeSpeech": true,
+  "openUrl": true,
+  "dial": true,
+  "openMap": true,
+  "openWhatsapp": true,
+  "pickFile": true,
+  "pickFolder": true,
+  "saveFile": true,
+  "saveStoredFile": true,
+  "openFile": true,
+  "requestDeviceLock": true,
+  "authenticateBiometric": true,
+  "requestInstallPermission": true,
+  "installUpdate": true,
+  "requestBackgroundExecution": true,
+  "setupAutoStartOnBoot": true,
+  "setupFloatingIcon": true
+};
+
 function call(action, args) {
-  return whenCordovaBridgeReady().then(function () {
+  var isNativeUI = NATIVE_UI_ACTIONS[action] === true;
+  if (isNativeUI) {
+    nativeWindowCount++;
+  }
+
+  var promise = whenCordovaBridgeReady().then(function () {
     return new Promise(function (resolve, reject) {
       try {
         exec(resolve, reject, "Html2ApkBridge", action, args || []);
@@ -92,6 +141,23 @@ function call(action, args) {
       }
     });
   });
+
+  if (isNativeUI) {
+    var release = function () {
+      setTimeout(function () {
+        nativeWindowCount = Math.max(0, nativeWindowCount - 1);
+      }, 500);
+    };
+    promise = promise.then(function (res) {
+      release();
+      return res;
+    }, function (err) {
+      release();
+      throw err;
+    });
+  }
+
+  return promise;
 }
 
 function whenCordovaBridgeReady() {

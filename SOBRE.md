@@ -340,6 +340,10 @@ const pararVoltar = aoVoltarParaApp(() => {
 });
 ```
 
+> [!TIP]
+> **Inteligência de Ciclo de Vida do html2apk:** Diferente do Cordova puro, o html2apk é inteligente e **suprime** automaticamente os eventos `aoMinimizar` (`app:pausado`) e `aoVoltarParaApp` (`app:voltou`) quando você chama funções que abrem telas nativas bloqueantes (como `solicitarBloqueio`, `tirarFoto`, `escolherArquivo` ou `solicitarPermissaoInstalacao`). 
+> Antigamente, chamar essas funções disparava um falso-positivo de "app minimizado" e gerava bugs chatos (loops infinitos de bloqueio). Agora, o evento `aoVoltarParaApp` só será disparado quando o usuário *realmente* sair do seu aplicativo (indo para a tela inicial do celular ou outro app) e voltar para ele.
+
 Deep links:
 
 ```js
