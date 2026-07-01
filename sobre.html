@@ -892,10 +892,10 @@ await baixarArquivo("https://site.com/manual.pdf", "manual.pdf");</code></pre>
               <td>Nomes internos não podem ter separadores, dois pontos ou <code>..</code>.</td>
             </tr>
             <tr>
-              <td>Downloads</td>
-              <td><code>baixarArquivo</code>, <code>baixarBase64</code>, <code>baixarArquivoLocal</code></td>
-              <td>Baixe URL, base64 ou copie URI/arquivo com notificação de progresso.</td>
-              <td>Se a notificação for negada, o download continua com <code>notificationShown:false</code>.</td>
+              <td>Downloads e atualizações</td>
+              <td><code>baixarArquivo</code>, <code>baixarBase64</code>, <code>baixarArquivoLocal</code>, <code>instalarAtualizacao</code>, <code>solicitarPermissaoInstalacao</code></td>
+              <td>Baixe URL, base64 ou atualizações do app com progresso nativo e gerencie permissão de instalação de fontes desconhecidas.</td>
+              <td>Para atualizações, prefira solicitar permissão de instalação antes. O download comum notifica progresso.</td>
             </tr>
             <tr>
               <td>Compartilhar e abrir</td>
@@ -1177,10 +1177,13 @@ await excluirArquivo("perfil.json");</code></pre>
 );
 
 // Atualização via OTA do APK com modal nativo bloqueante
-await instalarAtualizacao("https://site.com/app.apk", {
-  titulo: "Atualizando App",
-  mensagem: "Fazendo download da nova versão..."
-});
+const permInstalacao = await solicitarPermissaoInstalacao();
+if (permInstalacao.permitido || permInstalacao.solicitado) {
+  await instalarAtualizacao("https://site.com/app.apk", {
+    titulo: "Atualizando App",
+    mensagem: "Fazendo download da nova versão..."
+  });
+}
 
 
 await abrirArquivo("relatorio.pdf");

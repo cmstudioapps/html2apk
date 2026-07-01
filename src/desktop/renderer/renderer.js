@@ -975,6 +975,13 @@ const nativeCodeEntries = [
     handling: { pt: "Para imagem/video aparecer na galeria, passe `{ galeria: true }`. Para esconder a notificacao, passe `{ notificacao: false }`.", en: "For image/video to appear in the gallery, pass `{ gallery: true }`. To hide the notification, pass `{ notification: false }`." }
   },
   {
+    syntax: { pt: "solicitarPermissaoInstalacao() / requestInstallPermission()", en: "requestInstallPermission() / solicitarPermissaoInstalacao()" },
+    java: "Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES",
+    description: { pt: "Abre a tela de configuracoes para o usuario permitir instalacao de apps de fontes desconhecidas (Android 8+).", en: "Opens the settings screen for the user to allow installing apps from unknown sources (Android 8+)." },
+    returns: { pt: "Objeto informando se e `suportado` e se foi `solicitado` (abriu config) ou ja `permitido`.", en: "Object stating if `supported` and if it was `requested` (opened config) or already `granted`." },
+    handling: { pt: "Ideal chamar antes de `instalarAtualizacao` para evitar falha silenciosa.", en: "Ideal to call before `installUpdate` to avoid silent failure." }
+  },
+  {
     syntax: { pt: "obterLocalizacao() / acompanharLocalizacao()", en: "getLocation() / watchLocation()" },
     java: "LocationManager",
     description: { pt: "Le a localizacao atual ou inicia acompanhamento por evento `localizacao:mudou`.", en: "Reads current location or starts watching through the `location:changed` event." },

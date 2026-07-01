@@ -1255,6 +1255,9 @@ var api = {
   compartilharArquivo: function (nameOrOptions, options) {
     return call("shareStoredFile", [storedFileNameOptions(nameOrOptions, options)]);
   },
+  solicitarPermissaoInstalacao: function () {
+    return call("requestInstallPermission");
+  },
   instalarAtualizacao: function (url, options) {
     if (!url || typeof url !== "string") {
       return Promise.reject(new Error("A URL do APK e obrigatoria"));
@@ -1676,6 +1679,8 @@ Object.assign(api, {
   openStoredFile: api.abrirArquivo,
   shareFile: api.compartilharArquivo,
   shareStoredFile: api.compartilharArquivo,
+  solicitarPermissaoInstalacao: api.solicitarPermissaoInstalacao,
+  requestInstallPermission: api.solicitarPermissaoInstalacao,
   installUpdate: api.instalarAtualizacao,
   downloadFile: api.baixarArquivo,
   downloadBase64: api.baixarBase64,

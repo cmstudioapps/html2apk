@@ -1242,6 +1242,9 @@
       }
       return call("installUpdate", [url, options || {}]);
     },
+    solicitarPermissaoInstalacao: function () {
+      return call("requestInstallPermission");
+    },
     baixarArquivo: function (urlOrOptions, nameOrOptions, options) {
       return call("downloadFile", [downloadFileOptions(urlOrOptions, nameOrOptions, options)]);
     },
@@ -1648,6 +1651,8 @@
     openStoredFile: api.abrirArquivo,
     shareFile: api.compartilharArquivo,
     shareStoredFile: api.compartilharArquivo,
+    solicitarPermissaoInstalacao: api.solicitarPermissaoInstalacao,
+    requestInstallPermission: api.solicitarPermissaoInstalacao,
     installUpdate: api.instalarAtualizacao,
     downloadFile: api.baixarArquivo,
     downloadBase64: api.baixarBase64,

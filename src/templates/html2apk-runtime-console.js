@@ -52,6 +52,8 @@
     "listarArquivos", "listFiles",
     "abrirArquivo", "openFile",
     "compartilharArquivo", "shareFile",
+    "instalarAtualizacao", "installUpdate",
+    "solicitarPermissaoInstalacao", "requestInstallPermission",
     "compartilhar", "share",
     "compartilharApp", "shareApp", "share_me",
     "aguardar", "loading",

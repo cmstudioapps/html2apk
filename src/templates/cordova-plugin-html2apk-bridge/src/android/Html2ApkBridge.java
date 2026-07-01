@@ -643,6 +643,11 @@ public class Html2ApkBridge extends CordovaPlugin {
                 return true;
             }
 
+            if ("requestInstallPermission".equals(action)) {
+                callbackContext.success(requestInstallPermission());
+                return true;
+            }
+
             if ("setWallpaper".equals(action)) {
                 callbackContext.success(setWallpaper(args.optJSONObject(0)));
                 return true;
@@ -2250,6 +2255,9 @@ public class Html2ApkBridge extends CordovaPlugin {
         Intent chooser = Intent.createChooser(intent, title);
         chooser.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN) {
+            chooser.setClipData(intent.getClipData());
+        }
         cordova.getActivity().startActivity(chooser);
 
         JSONObject result = new JSONObject();
@@ -3803,6 +3811,9 @@ public class Html2ApkBridge extends CordovaPlugin {
         Intent chooser = Intent.createChooser(intent, title);
         chooser.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN) {
+            chooser.setClipData(intent.getClipData());
+        }
         cordova.getActivity().startActivity(chooser);
 
         JSONObject result = storedFileResult(outputFile, "application/vnd.android.package-archive", "apk");
@@ -4950,6 +4961,38 @@ public class Html2ApkBridge extends CordovaPlugin {
             inputStream.close();
         } catch (Exception ignored) {
         }
+    }
+
+    private JSONObject requestInstallPermission() throws Exception {
+        JSONObject res = new JSONObject();
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            boolean canRequest = context().getPackageManager().canRequestPackageInstalls();
+            res.put("suportado", true);
+            res.put("supported", true);
+            if (!canRequest) {
+                Intent intent = new Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES);
+                intent.setData(Uri.parse("package:" + context().getPackageName()));
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                cordova.getActivity().startActivity(intent);
+                res.put("solicitado", true);
+                res.put("requested", true);
+                res.put("permitido", false);
+                res.put("granted", false);
+            } else {
+                res.put("solicitado", false);
+                res.put("requested", false);
+                res.put("permitido", true);
+                res.put("granted", true);
+            }
+        } else {
+            res.put("suportado", false);
+            res.put("supported", false);
+            res.put("solicitado", false);
+            res.put("requested", false);
+            res.put("permitido", true);
+            res.put("granted", true);
+        }
+        return res;
     }
 
     private void closeSilently(OutputStream outputStream) {

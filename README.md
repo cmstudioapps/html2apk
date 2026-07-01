@@ -473,10 +473,10 @@ Exemplos de aliases:
 | `salvarArquivo()` | `saveFile()` |
 | `lerArquivo()` | `readFile()` |
 | `listarArquivos()` | `listFiles()` |
-| `excluirArquivo()` | `deleteFile()` |
+| `excluirArquivo()` | `deleteFile()`, `removeFile()` |
 | `abrirArquivo()` | `openFile()` / `openStoredFile()` |
-| `baixarArquivo()` | `downloadFile()` |
 | `instalarAtualizacao()` | `installUpdate()` |
+| `solicitarPermissaoInstalacao()` | `requestInstallPermission()` |
 | `baixarBase64()` | `downloadBase64()` |
 | `baixarArquivoLocal()` | `downloadLocalFile()` / `downloadFromFile()` |
 | `definirPapelParede()` | `setWallpaper()` |
@@ -864,10 +864,13 @@ Para baixar um arquivo e guardar no mesmo armazenamento:
 await baixarArquivo("https://exemplo.com/relatorio.pdf", "relatorio.pdf");
 
 // Para atualizacoes via OTA com modal bloqueante
-await instalarAtualizacao("https://seu-servidor.com/app.apk", {
-  titulo: "Baixando nova versão",
-  mensagem: "Aguarde, não feche o aplicativo..."
-});
+const permInstalacao = await solicitarPermissaoInstalacao();
+if (permInstalacao.permitido || permInstalacao.solicitado) {
+  await instalarAtualizacao("https://seu-servidor.com/app.apk", {
+    titulo: "Baixando nova versão",
+    mensagem: "Aguarde, não feche o aplicativo..."
+  });
+}
 await abrirArquivo("relatorio.pdf");
 
 await baixarBase64("foto.png", base64DaImagem, {

@@ -708,6 +708,21 @@ Cuidados:
 - se `POST_NOTIFICATIONS` for negada, o download continua, mas `notificationShown` volta `false`;
 - use `infoArmazenamento()` antes de baixar arquivos grandes.
 
+Atualizações via OTA (Over The Air):
+
+```js
+const permInstalacao = await solicitarPermissaoInstalacao();
+if (permInstalacao.permitido || permInstalacao.solicitado) {
+  await instalarAtualizacao("https://site.com/app.apk", {
+    titulo: "Nova Versão",
+    mensagem: "Instalando..."
+  });
+}
+```
+
+`solicitarPermissaoInstalacao()` redireciona o usuário para as configurações do Android caso o app ainda não tenha a permissão `REQUEST_INSTALL_PACKAGES`.
+`instalarAtualizacao()` baixa e abre o APK via `PackageInstaller` nativo. Ideal para atualizações diretas de APKs hospedados fora da Play Store.
+
 ### Abrir dentro ou fora do app
 
 Dentro da WebView:
