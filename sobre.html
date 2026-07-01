@@ -904,10 +904,10 @@ await baixarArquivo("https://site.com/manual.pdf", "manual.pdf");</code></pre>
               <td>Apps externos podem não existir; Bluetooth exige aparelho pareado ou visível para descoberta; Wi-Fi exige mesma rede local ou hotspot.</td>
             </tr>
             <tr>
-              <td>Segurança</td>
-              <td><code>autenticarBiometria</code>, <code>salvarSeguro</code>, <code>lerSeguro</code></td>
-              <td>Use biometria para confirmar acesso e Keystore para dados pequenos.</td>
-              <td>Biometria precisa de aparelho compatível; storage seguro não é lugar para arquivo grande.</td>
+              <td>Segurança e Sessão</td>
+              <td><code>autenticarBiometria</code>, <code>salvarSeguro</code>, <code>lerSeguro</code>, <code>salvarNaSessao</code>, <code>lerDaSessao</code></td>
+              <td>Use biometria para confirmar acesso, Keystore para dados pequenos e Sessão para dados temporários na RAM.</td>
+              <td>Storage seguro não é lugar para arquivo grande. Sessão se perde ao fechar o app.</td>
             </tr>
             <tr>
               <td>Wallpaper e overlay</td>
@@ -1249,6 +1249,21 @@ if (bio.authenticated) {
   const token = await lerSeguro("token");
   console.log(token);
 }</code></pre>
+
+        <h3>Sessão Nativa (Session Storage)</h3>
+        <p>Guarda dados na memória RAM do Android que sobrevivem a F5 no HTML.</p>
+        <pre><code>await salvarNaSessao("usuario", "Caio");
+
+const usr = await lerDaSessao("usuario");
+console.log(usr); // "Caio"
+
+// Se a chave não existir, lerDaSessao retorna null (como no sessionStorage padrão)
+const ausente = await lerDaSessao("nao-existe");
+console.log(ausente); // null
+
+const sessoes = await listarSessao();
+await removerDaSessao("usuario");
+await limparSessao();</code></pre>
 
         <h3>Papel de parede e ícone flutuante</h3>
         <pre><code>const wallpaper = await definirPapelParede("foto.jpg", {

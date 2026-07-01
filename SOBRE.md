@@ -971,6 +971,10 @@ await salvarNaSessao("usuario", "Caio");
 const usr = await lerDaSessao("usuario");
 console.log(usr); // "Caio"
 
+// Se a chave não existir, lerDaSessao retorna null (como no sessionStorage padrão)
+const ausente = await lerDaSessao("nao-existe");
+console.log(ausente); // null
+
 const sessoes = await listarSessao();
 await removerDaSessao("usuario");
 await limparSessao();
