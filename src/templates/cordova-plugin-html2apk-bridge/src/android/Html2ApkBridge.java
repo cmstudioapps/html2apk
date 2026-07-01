@@ -333,20 +333,28 @@ public class Html2ApkBridge extends CordovaPlugin {
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) {
         try {
             if ("sessionSet".equals(action)) {
-                String key = args.getString(0);
-                String value = args.getString(1);
-                sessionStore.put(key, value);
+                String key = args.optString(0, "");
+                String value = args.isNull(1) ? null : args.optString(1, null);
+                if (value == null) {
+                    sessionStore.remove(key);
+                } else {
+                    sessionStore.put(key, value);
+                }
                 callbackContext.success();
                 return true;
             }
             if ("sessionGet".equals(action)) {
-                String key = args.getString(0);
+                String key = args.optString(0, "");
                 String value = sessionStore.get(key);
-                callbackContext.success(value != null ? value : "");
+                if (value == null) {
+                    callbackContext.sendPluginResult(new org.apache.cordova.PluginResult(org.apache.cordova.PluginResult.Status.OK, (String) null));
+                } else {
+                    callbackContext.success(value);
+                }
                 return true;
             }
             if ("sessionRemove".equals(action)) {
-                String key = args.getString(0);
+                String key = args.optString(0, "");
                 sessionStore.remove(key);
                 callbackContext.success();
                 return true;
