@@ -1009,6 +1009,12 @@ function nativeFunctionLabHtml() {
         removerSeguro: { title: "removerSeguro()", run: function () { return fn("removerSeguro")("tokenTeste"); } },
         limparSeguro: { title: "limparSeguro()", run: function () { return fn("limparSeguro")(); } },
 
+        salvarNaSessao: { title: "salvarNaSessao()", run: function () { return fn("salvarNaSessao")("testeChave", "valor_sessao_123"); } },
+        lerDaSessao: { title: "lerDaSessao()", run: function () { return fn("lerDaSessao")("testeChave"); } },
+        removerDaSessao: { title: "removerDaSessao()", run: function () { return fn("removerDaSessao")("testeChave"); } },
+        listarSessao: { title: "listarSessao()", run: function () { return fn("listarSessao")(); } },
+        limparSessao: { title: "limparSessao()", run: function () { return fn("limparSessao")(); } },
+
         infoPapelParede: { title: "infoPapelParede()", run: function () { return fn("infoPapelParede")(); } },
         definirPapelParede: { title: "definirPapelParede()", run: function () { return fn("definirPapelParede")({ base64: sampleImageBase64, mimeType: "image/png", alvo: "inicio" }); } },
         abrirConfigPapel: { title: "abrirConfiguracaoPapelParede()", run: function () { return fn("abrirConfiguracaoPapelParede")(); } },
@@ -1032,7 +1038,7 @@ function nativeFunctionLabHtml() {
         { title: "Arquivos e midia", ids: ["escolherImagem", "escolherImagens", "escolherArquivo", "escolherArquivos", "escolherVideo", "escolherPasta", "salvarArquivoPicker", "salvarArquivoCrud", "lerArquivo", "lerArquivoCompleto", "listarArquivos", "infoArquivo", "arquivoExiste", "abrirArquivo", "compartilharArquivo", "baixarArquivo", "baixarBase64", "baixarArquivoLocal", "excluirArquivo", "instalarAtualizacao"] },
         { title: "Abrir apps externos", ids: ["abrirNoApp", "abrirForaDoApp", "abrirUrl", "abrirUrlExterno", "discar", "abrirMapa", "abrirWhatsapp"] },
         { title: "Diagnostico", ids: ["infoDispositivo", "infoRede", "infoBateria", "infoMemoria", "infoArmazenamento", "infoDesempenho", "appsAbertos", "infoAppsAbertos"] },
-        { title: "Localizacao e seguranca", ids: ["obterLocalizacao", "acompanharLocalizacao", "pararLocalizacao", "aoMudarLocalizacao", "medirVelocidade", "pararVelocidade", "autenticarBiometria", "solicitarBloqueio", "solicitarSegundoPlano", "configurarInicioAutomatico", "salvarSeguro", "lerSeguro", "lerSeguroCompleto", "listarSeguro", "removerSeguro", "limparSeguro"] },
+        { title: "Localizacao e seguranca", ids: ["obterLocalizacao", "acompanharLocalizacao", "pararLocalizacao", "aoMudarLocalizacao", "medirVelocidade", "pararVelocidade", "autenticarBiometria", "solicitarBloqueio", "solicitarSegundoPlano", "configurarInicioAutomatico", "salvarSeguro", "lerSeguro", "lerSeguroCompleto", "listarSeguro", "removerSeguro", "limparSeguro", "salvarNaSessao", "lerDaSessao", "removerDaSessao", "listarSessao", "limparSessao"] },
         { title: "Papel de parede", ids: ["infoPapelParede", "definirPapelParede", "abrirConfigPapel", "definirImagemEscolhida"] },
         { title: "Eventos", ids: ["registrarEventos", "obterNotificacaoInicial", "obterLinkInicial", "aoLigarDispositivo"] }
       ];
@@ -1047,7 +1053,8 @@ function nativeFunctionLabHtml() {
       ];
       var setupActionIds = [
         "salvarArquivoCrud", "lerArquivo", "lerArquivoCompleto", "infoArquivo", "salvarSeguro",
-        "lerSeguro", "lerSeguroCompleto", "listarSeguro", "baixarBase64"
+        "lerSeguro", "lerSeguroCompleto", "listarSeguro", "baixarBase64",
+        "salvarNaSessao", "lerDaSessao", "listarSessao"
       ];
       var listenerActionIds = [
         "registrarEventos", "receberCompartilhamento", "iniciarBt", "iniciarWifi", "aoMudarLocalizacao"

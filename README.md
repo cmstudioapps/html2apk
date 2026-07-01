@@ -535,6 +535,11 @@ Exemplos de aliases:
 | `salvarSeguro()` | `saveSecure()` |
 | `lerSeguro()` | `readSecure()` |
 | `removerSeguro()` | `deleteSecure()` |
+| `salvarNaSessao()` | `sessionSet()` |
+| `lerDaSessao()` | `sessionGet()` |
+| `removerDaSessao()` | `sessionRemove()` |
+| `limparSessao()` | `sessionClear()` |
+| `listarSessao()` | `sessionGetAll()` |
 | `aoEvento()` | `onEvent()` |
 | `aoMinimizar()` | `onMinimize()` |
 | `aoConectarUSB()` | `onUSBConnect()` |
@@ -936,6 +941,9 @@ if (bio.authenticated) {
   await salvarSeguro("token", "abc123");
   const token = await lerSeguro("token");
   await removerSeguro("token");
+
+  await salvarNaSessao("sessaoAtiva", "true");
+  console.log(await lerDaSessao("sessaoAtiva"));
 }
 
 const auth = await solicitarBloqueio({

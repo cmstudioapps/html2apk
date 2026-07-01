@@ -327,9 +327,39 @@ public class Html2ApkBridge extends CordovaPlugin {
         super.onDestroy();
     }
 
+    private static final java.util.HashMap<String, String> sessionStore = new java.util.HashMap<>();
+
     @Override
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) {
         try {
+            if ("sessionSet".equals(action)) {
+                String key = args.getString(0);
+                String value = args.getString(1);
+                sessionStore.put(key, value);
+                callbackContext.success();
+                return true;
+            }
+            if ("sessionGet".equals(action)) {
+                String key = args.getString(0);
+                String value = sessionStore.get(key);
+                callbackContext.success(value != null ? value : "");
+                return true;
+            }
+            if ("sessionRemove".equals(action)) {
+                String key = args.getString(0);
+                sessionStore.remove(key);
+                callbackContext.success();
+                return true;
+            }
+            if ("sessionClear".equals(action)) {
+                sessionStore.clear();
+                callbackContext.success();
+                return true;
+            }
+            if ("sessionGetAll".equals(action)) {
+                callbackContext.success(new JSONObject(sessionStore));
+                return true;
+            }
             if ("notify".equals(action)) {
                 JSONObject options = args.optJSONObject(0);
                 if (requestNotificationPermissionForAction(options == null ? new JSONObject() : options, false, callbackContext)) {

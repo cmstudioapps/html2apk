@@ -1017,6 +1017,13 @@ const nativeCodeEntries = [
     handling: { pt: "Use para tokens e dados pequenos. Nao use para arquivos grandes; para isso, use o CRUD de arquivos.", en: "Use it for tokens and small data. Do not use it for large files; use file CRUD for that." }
   },
   {
+    syntax: { pt: "salvarNaSessao('chave', valor) / lerDaSessao('chave')", en: "sessionSet('key', value) / sessionGet('key')" },
+    java: "Memory HashMap",
+    description: { pt: "Guarda dados em memória RAM nativa que sobrevivem a reloads do HTML/WebView enquanto o app estiver aberto.", en: "Stores data in native RAM that survives HTML/WebView reloads while the app remains open." },
+    returns: { pt: "`lerDaSessao` retorna o valor em string salvo; `listarSessao` retorna tudo; `removerDaSessao` apaga.", en: "`sessionGet` returns the saved string value; `sessionGetAll` returns all; `sessionRemove` deletes." },
+    handling: { pt: "Como a memória RAM é limpa ao fechar o app, use apenas para estados e sessões temporárias.", en: "Since RAM is cleared when closing the app, use this only for temporary state and sessions." }
+  },
+  {
     syntax: { pt: "definirPapelParede('foto.jpg', { alvo: 'inicio' })", en: "setWallpaper('photo.jpg', { target: 'home' })" },
     java: "WallpaperManager",
     description: { pt: "Define imagem estatica como papel de parede da tela inicial, bloqueio ou ambas.", en: "Sets a static image as home, lock or both wallpapers." },
@@ -2353,6 +2360,27 @@ const token = await readSecure("token");
 console.log(token);
 
 await deleteSecure("token");`
+    }
+  },
+  {
+    when: { pt: "Para guardar temporariamente dados como token de login nativo, que não precisam de armazenamento forte mas devem sobreviver a F5 no app.", en: "To temporarily store data such as a native login token, which does not need strong storage but must survive an app F5 reload." },
+    example: {
+      pt: `await salvarNaSessao("usuario", "Caio");
+
+const usr = await lerDaSessao("usuario");
+console.log(usr);
+
+// Listar todas as sessoes ativas:
+const tudo = await listarSessao();
+console.log(tudo);`,
+      en: `await sessionSet("user", "Caio");
+
+const usr = await sessionGet("user");
+console.log(usr);
+
+// List all active sessions:
+const all = await sessionGetAll();
+console.log(all);`
     }
   }
 ];

@@ -1434,6 +1434,21 @@ var api = {
   fecharApp: function () {
     return call("closeApp");
   },
+  salvarNaSessao: function (key, value) {
+    return call("sessionSet", [String(key || ""), value === undefined ? null : String(value)]);
+  },
+  lerDaSessao: function (key) {
+    return call("sessionGet", [String(key || "")]);
+  },
+  removerDaSessao: function (key) {
+    return call("sessionRemove", [String(key || "")]);
+  },
+  limparSessao: function () {
+    return call("sessionClear");
+  },
+  listarSessao: function () {
+    return call("sessionGetAll");
+  },
   obterNotificacaoInicial: function () {
     return call("getInitialNotification").then(function (notification) {
       initialNotification = notification && notification.id ? notification : null;
@@ -1710,6 +1725,11 @@ Object.assign(api, {
   secureDelete: api.removerSeguro,
   listSecureKeys: api.listarSeguro,
   clearSecureStorage: api.limparSeguro,
+  sessionSet: api.salvarNaSessao,
+  sessionGet: api.lerDaSessao,
+  sessionRemove: api.removerDaSessao,
+  sessionClear: api.limparSessao,
+  sessionGetAll: api.listarSessao,
   permissionStatus: api.statusPermissoes,
   requestNotificationPermission: api.solicitarPermissaoNotificacoes,
   notificationPermissionStatus: api.statusPermissaoNotificacoes,
@@ -1830,6 +1850,11 @@ if (typeof window !== "undefined") {
   window.aoMudarRede = api.aoMudarRede;
   window.aoMudarBateria = api.aoMudarBateria;
   window.aoClicarNotificacao = api.aoClicarNotificacao;
+  window.salvarNaSessao = api.salvarNaSessao;
+  window.lerDaSessao = api.lerDaSessao;
+  window.removerDaSessao = api.removerDaSessao;
+  window.limparSessao = api.limparSessao;
+  window.listarSessao = api.listarSessao;
 
   Object.keys(api).forEach(function (key) {
     if (key.indexOf("__") === 0) {

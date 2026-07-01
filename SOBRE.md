@@ -928,11 +928,26 @@ const chaves = await listarSeguro();
 await removerSeguro("token");
 ```
 
+Sessão nativa (Session Storage):
+
+```js
+// Guarda dados na memoria RAM do Android que sobrevivem a F5 no HTML
+await salvarNaSessao("usuario", "Caio");
+
+const usr = await lerDaSessao("usuario");
+console.log(usr); // "Caio"
+
+const sessoes = await listarSessao();
+await removerDaSessao("usuario");
+await limparSessao();
+```
+
 Cuidados:
 
 - biometria funciona em Android compativel e com seguranca configurada;
 - tenha fallback por PIN/senha do proprio app;
-- storage seguro e para dados pequenos, nao arquivos grandes.
+- storage seguro e para dados pequenos, nao arquivos grandes;
+- sessão nativa se perde quando o Android mata o aplicativo ou quando o usuário fecha o app.
 
 ### Papel de parede e icone flutuante
 
