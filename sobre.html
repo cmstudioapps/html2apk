@@ -1064,7 +1064,7 @@ if (dispositivos[0]) {
   });
 }</code></pre>
 
-        <div class="note">O Bluetooth usa RFCOMM clássico. O lado que recebe registra os eventos e passa a escutar; <code>aoDarErroBT()</code> recebe falhas de escuta ou conexão. O outro procura, conecta e envia JSON. Para aparecer na busca, o aparelho precisa estar pareado ou visível nas configurações Bluetooth do Android.</div>
+        <div class="note">O Bluetooth usa RFCOMM clássico com <b>suporte nativo a salas P2P (1-para-N)</b>. O lado que recebe (Host) registra os eventos e passa a escutar; se vários aparelhos (Amigos) se conectarem, o Host segura todas as conexões simultaneamente sem derrubar ninguém. <code>aoDarErroBT()</code> recebe falhas de escuta ou conexão. O outro procura, conecta e envia. <br><br><b>Broadcast:</b> A função <code>enviarBT()</code> manda os dados JSON simultaneamente para todos os dispositivos atualmente conectados a você! Para aparecer na busca, o aparelho precisa estar pareado ou visível nas configurações Bluetooth.</div>
 
         <h3>Wi-Fi local simples</h3>
         <pre><code>aoConectarWiFi((dispositivo) => {

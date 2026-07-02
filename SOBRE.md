@@ -574,7 +574,9 @@ if (dispositivos[0]) {
 }
 ```
 
-A bridge usa Bluetooth clássico RFCOMM. `aoConectarBT()` inicia o servidor interno do app. `aoDarErroBT()` recebe falhas de escuta/conexão Bluetooth. `procurarBT()` lista aparelhos pareados e aparelhos visíveis durante a busca. `enviarBT()` serializa o objeto como JSON; no outro lado, `aoReceberDadosBT()` entrega o objeto original.
+A bridge usa Bluetooth clássico RFCOMM com suporte nativo a **salas P2P (1-para-N)**. `aoConectarBT()` inicia o servidor interno do app e escuta conexões; se vários dispositivos conectarem no seu app (Host), as conexões são mantidas simultaneamente sem derrubar as anteriores. `aoDarErroBT()` recebe falhas de escuta/conexão Bluetooth. `procurarBT()` lista aparelhos pareados e aparelhos visíveis durante a busca. 
+
+Ao utilizar `enviarBT()`, a engine faz um **Broadcast** (envia o dado simultaneamente para todos os dispositivos atualmente conectados a você). Se você for um Host com 3 Amigos conectados, os três receberão o objeto JSON. No outro lado, `aoReceberDadosBT()` entrega o objeto original.
 
 Wi-Fi local entre apps:
 

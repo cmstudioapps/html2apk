@@ -128,6 +128,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
@@ -229,13 +230,11 @@ public class Html2ApkBridge extends CordovaPlugin {
     private boolean textToSpeechReady;
     private boolean bluetoothServerRunning;
     private BluetoothServerSocket bluetoothServerSocket;
-    private BluetoothSocket bluetoothSocket;
-    private OutputStream bluetoothOutputStream;
+    private final ConcurrentHashMap<String, BluetoothConnection> activeBluetoothConnections = new ConcurrentHashMap<>();
     private ServerSocket wifiServerSocket;
     private Socket wifiSocket;
     private OutputStream wifiOutputStream;
     private Thread bluetoothServerThread;
-    private Thread bluetoothReadThread;
     private Thread wifiServerThread;
     private Thread wifiReadThread;
     private Handler bluetoothDiscoveryTimeout;
@@ -2484,11 +2483,7 @@ public class Html2ApkBridge extends CordovaPlugin {
             @Override
             public void run() {
                 try {
-                    OutputStream output;
-                    synchronized (Html2ApkBridge.this) {
-                        output = bluetoothOutputStream;
-                    }
-                    if (output == null) {
+                    if (activeBluetoothConnections.isEmpty()) {
                         callbackContext.error("Bluetooth is not connected.");
                         return;
                     }
@@ -2498,9 +2493,22 @@ public class Html2ApkBridge extends CordovaPlugin {
                     message.put("data", payload);
                     message.put("timestamp", System.currentTimeMillis());
                     byte[] bytes = (message.toString() + "\n").getBytes("UTF-8");
+
+                    int sentCount = 0;
                     synchronized (Html2ApkBridge.this) {
-                        output.write(bytes);
-                        output.flush();
+                        for (BluetoothConnection conn : activeBluetoothConnections.values()) {
+                            try {
+                                conn.outputStream.write(bytes);
+                                conn.outputStream.flush();
+                                sentCount++;
+                            } catch (Exception ignored) {
+                            }
+                        }
+                    }
+
+                    if (sentCount == 0) {
+                        callbackContext.error("Failed to send data to any connected device.");
+                        return;
                     }
 
                     JSONObject result = new JSONObject();
@@ -2508,6 +2516,7 @@ public class Html2ApkBridge extends CordovaPlugin {
                     result.put("sent", true);
                     result.put("enviado", true);
                     result.put("bytes", bytes.length);
+                    result.put("receivers", sentCount);
                     callbackContext.success(result);
                 } catch (Exception error) {
                     callbackContext.error(error.getMessage());
@@ -2555,7 +2564,11 @@ public class Html2ApkBridge extends CordovaPlugin {
                         }
                         BluetoothSocket socket = server.accept();
                         if (socket != null) {
-                            bindBluetoothSocket(socket, true);
+                            try {
+                                bindBluetoothSocket(socket, true);
+                            } catch (Exception e) {
+                                dispatchBluetoothError("Falha ao aceitar conexão: " + e.getMessage());
+                            }
                         }
                     } catch (Exception error) {
                         if (bluetoothServerRunning) {
@@ -2791,22 +2804,24 @@ public class Html2ApkBridge extends CordovaPlugin {
         device.put("conectado", true);
         device.put("incoming", incoming);
         device.put("entrada", incoming);
+        String id = device.optString("id");
+
+        BluetoothConnection conn;
         synchronized (this) {
-            closeBluetoothConnectionLocked();
-            bluetoothSocket = socket;
-            bluetoothOutputStream = socket.getOutputStream();
+            conn = new BluetoothConnection(id, socket, socket.getOutputStream(), device);
+            activeBluetoothConnections.put(id, conn);
         }
-        startBluetoothReadThread(socket, device);
+        startBluetoothReadThread(conn);
         dispatchEvent("bluetooth:conectado", device);
         return device;
     }
 
-    private void startBluetoothReadThread(final BluetoothSocket socket, final JSONObject device) {
-        bluetoothReadThread = new Thread(new Runnable() {
+    private void startBluetoothReadThread(final BluetoothConnection conn) {
+        conn.readThread = new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
-                    BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), "UTF-8"));
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(conn.socket.getInputStream(), "UTF-8"));
                     String line;
                     while ((line = reader.readLine()) != null) {
                         JSONObject detail = new JSONObject();
@@ -2815,18 +2830,18 @@ public class Html2ApkBridge extends CordovaPlugin {
                         detail.put("data", data);
                         detail.put("raw", line);
                         detail.put("bruto", line);
-                        detail.put("device", device);
-                        detail.put("dispositivo", device);
+                        detail.put("device", conn.device);
+                        detail.put("dispositivo", conn.device);
                         detail.put("timestamp", System.currentTimeMillis());
                         dispatchEvent("bluetooth:dados", detail);
                     }
                 } catch (Exception ignored) {
                 } finally {
-                    handleBluetoothDisconnected(socket, device);
+                    handleBluetoothDisconnected(conn.id, conn.device);
                 }
             }
-        }, "html2apk-bluetooth-read");
-        bluetoothReadThread.start();
+        }, "html2apk-bluetooth-read-" + conn.id);
+        conn.readThread.start();
     }
 
     private Object parseBluetoothData(String line) {
@@ -2849,11 +2864,12 @@ public class Html2ApkBridge extends CordovaPlugin {
         return text;
     }
 
-    private void handleBluetoothDisconnected(BluetoothSocket socket, JSONObject device) {
+    private void handleBluetoothDisconnected(String id, JSONObject device) {
         boolean wasCurrent = false;
         synchronized (this) {
-            if (socket == bluetoothSocket) {
-                closeBluetoothConnectionLocked();
+            BluetoothConnection conn = activeBluetoothConnections.remove(id);
+            if (conn != null) {
+                closeConnectionLocked(conn);
                 wasCurrent = true;
             }
         }
@@ -2898,7 +2914,7 @@ public class Html2ApkBridge extends CordovaPlugin {
         } catch (Exception ignored) {
         }
         synchronized (this) {
-            closeBluetoothConnectionLocked();
+            closeAllBluetoothConnectionsLocked();
             if (bluetoothServerSocket != null) {
                 try {
                     bluetoothServerSocket.close();
@@ -2909,23 +2925,27 @@ public class Html2ApkBridge extends CordovaPlugin {
         }
     }
 
-    private void closeBluetoothConnectionLocked() {
-        if (bluetoothOutputStream != null) {
-            try {
-                bluetoothOutputStream.close();
-            } catch (Exception ignored) {
-            }
-            bluetoothOutputStream = null;
+    private void closeAllBluetoothConnectionsLocked() {
+        for (BluetoothConnection conn : activeBluetoothConnections.values()) {
+            closeConnectionLocked(conn);
         }
-        if (bluetoothSocket != null) {
-            try {
-                bluetoothSocket.close();
-            } catch (Exception ignored) {
-            }
-            bluetoothSocket = null;
-        }
+        activeBluetoothConnections.clear();
     }
 
+    private void closeConnectionLocked(BluetoothConnection conn) {
+        if (conn.outputStream != null) {
+            try {
+                conn.outputStream.close();
+            } catch (Exception ignored) {
+            }
+        }
+        if (conn.socket != null) {
+            try {
+                conn.socket.close();
+            } catch (Exception ignored) {
+            }
+        }
+    }
     private void scanWifi(JSONObject options, CallbackContext callbackContext) {
         JSONObject safeOptions = options == null ? new JSONObject() : options;
         if (wifiDiscoveryCallback != null) {
@@ -8495,5 +8515,20 @@ public class Html2ApkBridge extends CordovaPlugin {
 
     static String text(JSONObject options) {
         return options.optString("texto", options.optString("text", ""));
+    }
+
+    private static class BluetoothConnection {
+        public final String id;
+        public final BluetoothSocket socket;
+        public final OutputStream outputStream;
+        public Thread readThread;
+        public final JSONObject device;
+
+        public BluetoothConnection(String id, BluetoothSocket socket, OutputStream outputStream, JSONObject device) {
+            this.id = id;
+            this.socket = socket;
+            this.outputStream = outputStream;
+            this.device = device;
+        }
     }
 }
