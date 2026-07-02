@@ -142,6 +142,7 @@
 
   function short(value, limit) {
     var text = stringify(value);
+    if (text === undefined) text = "undefined";
     var max = limit || 700;
     return text.length > max ? text.slice(0, max) + "..." : text;
   }
@@ -634,7 +635,7 @@
     button.setAttribute("aria-label", "Console");
     icon = document.createElement("img");
     icon.alt = "";
-    icon.src = scriptAssetUrl("html2apk-console.png");
+    icon.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='4 17 10 11 4 5'/%3E%3Cline x1='12' y1='19' x2='20' y2='19'/%3E%3C/svg%3E";
     icon.addEventListener("error", function () {
       button.classList.add("fallback");
       icon.remove();
