@@ -15,6 +15,23 @@ public class Web2ApkInjector extends CordovaPlugin {
 
     @Override
     public Object onMessage(String id, Object data) {
+        if ("onPageStarted".equals(id)) {
+            String url = data == null ? "" : data.toString();
+            if (url.startsWith("http://") || url.startsWith("https://")) {
+                if (!url.startsWith("https://localhost") && !url.startsWith("http://localhost")) {
+                    cordova.getActivity().runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            android.view.View view = webView.getView();
+                            if (view instanceof android.webkit.WebView) {
+                                ((android.webkit.WebView) view).getSettings().setCacheMode(android.webkit.WebSettings.LOAD_NO_CACHE);
+                            }
+                        }
+                    });
+                }
+            }
+        }
+
         if ("onPageFinished".equals(id)) {
             String url = data == null ? "" : data.toString();
             if (url.startsWith("http://") || url.startsWith("https://")) {
