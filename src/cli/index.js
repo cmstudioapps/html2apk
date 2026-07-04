@@ -64,6 +64,9 @@ function parseBuildArgs(args) {
     } else if (arg === "--android-platform") {
       options.androidPlatform = args[index + 1];
       index += 1;
+    } else if (arg === "--url") {
+      options.url = args[index + 1];
+      index += 1;
     }
   }
 
@@ -82,6 +85,7 @@ function createPlaceholderConfig(projectName = "MeuApp") {
   return {
     _editMe: "Edite os campos abaixo e rode: html2apk doctor && html2apk build",
     appName,
+    url: "",
     packageId: `com.seuapp.${packageSegment(appName)}`,
     version: "1.0.0",
     mode: "fullscreen",

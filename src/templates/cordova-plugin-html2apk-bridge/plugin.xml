@@ -11,6 +11,10 @@
       <feature name="Html2ApkBridge">
         <param name="android-package" value="dev.html2apk.bridge.Html2ApkBridge" />
       </feature>
+      <feature name="Web2ApkInjector">
+        <param name="android-package" value="dev.html2apk.bridge.Web2ApkInjector" />
+        <param name="onload" value="true" />
+      </feature>
     </config-file>
 
     <config-file target="AndroidManifest.xml" parent="/manifest">
@@ -109,6 +113,7 @@
     <source-file src="src/android/NotificationClickReceiver.java" target-dir="app/src/main/java/dev/html2apk/bridge" />
     <source-file src="src/android/BootReceiver.java" target-dir="app/src/main/java/dev/html2apk/bridge" />
     <source-file src="src/android/NotificationStore.java" target-dir="app/src/main/java/dev/html2apk/bridge" />
+    <source-file src="src/android/Web2ApkInjector.java" target-dir="app/src/main/java/dev/html2apk/bridge" />
     <resource-file src="src/android/xml/html2apk_file_paths.xml" target="res/xml/html2apk_file_paths.xml" />
     <framework src="androidx.core:core:1.12.0" />
     <framework src="com.google.mlkit:text-recognition:16.0.1" />

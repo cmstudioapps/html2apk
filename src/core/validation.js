@@ -27,8 +27,10 @@ async function validateEntryFile(projectRoot, options) {
   const entryPath = path.resolve(webRoot, entryFile);
   assertInside(webRoot, entryPath, "entryFile");
 
-  if (!(await exists(entryPath))) {
-    throw new Error(`Entry file not found: ${path.relative(projectRoot, entryPath)}`);
+  if (!options.url) {
+    if (!(await exists(entryPath))) {
+      throw new Error(`Entry file not found: ${path.relative(projectRoot, entryPath)}`);
+    }
   }
 
   return {
