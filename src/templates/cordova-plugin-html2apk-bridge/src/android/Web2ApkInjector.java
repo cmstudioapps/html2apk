@@ -12,7 +12,7 @@ public class Web2ApkInjector extends CordovaPlugin {
     public void initialize(CordovaInterface cordova, CordovaWebView webView) {
         super.initialize(cordova, webView);
         
-        boolean isWeb2Apk = preferences.getBoolean("Html2ApkIsWeb2Apk", false);
+        boolean isWeb2Apk = preferences.getBoolean("html2apkisweb2apk", false);
         if (isWeb2Apk) {
             cordova.getActivity().runOnUiThread(new Runnable() {
                 @Override
