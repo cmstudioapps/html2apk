@@ -33,6 +33,8 @@ const i18n = {
     appName: "Nome do app",
     packageId: "Package ID",
     appVersion: "Versao do app",
+    url: "URL do Site (Web2Apk)",
+    urlHint: "Se preenchido, o app ira carregar este site em vez de arquivos locais.",
     buildFormat: "Formato",
     formatApk: "APK",
     formatAab: "AAB",
@@ -248,6 +250,8 @@ const i18n = {
     appName: "App name",
     packageId: "Package ID",
     appVersion: "App version",
+    url: "Website URL (Web2Apk)",
+    urlHint: "If set, the app will load this remote site instead of local files.",
     buildFormat: "Format",
     formatApk: "APK",
     formatAab: "AAB",
@@ -2449,6 +2453,7 @@ function collectElements() {
     "appNameInput",
     "packageIdInput",
     "versionInput",
+    "urlInput",
     "buildFormatInput",
     "modeInput",
     "orientationInput",
@@ -3345,6 +3350,7 @@ function populateSettings(config = {}, project = state.project) {
   elements.appNameInput.value = config.appName || projectName || "";
   elements.packageIdInput.value = config.packageId || `com.html2apk.${packageSegment(projectName)}`;
   elements.versionInput.value = config.version || "1.0.0";
+  elements.urlInput.value = config.url || "";
   elements.buildFormatInput.value = normalizeBuildFormat(config.buildFormat || config.outputFormat || config.artifactType || config.packageType);
   elements.modeInput.value = config.mode || "fullscreen";
   elements.orientationInput.value = normalizeOrientationInputValue(config.orientation);
@@ -3445,6 +3451,7 @@ function renderReview() {
     [text("appName"), elements.appNameInput.value.trim()],
     [text("packageId"), elements.packageIdInput.value.trim()],
     [text("appVersion"), elements.versionInput.value.trim()],
+    [text("url"), elements.urlInput.value.trim()],
     [text("buildFormat"), selectedOptionText(elements.buildFormatInput)],
     [text("mode"), selectedOptionText(elements.modeInput)],
     [text("orientation"), selectedOptionText(elements.orientationInput)],
@@ -3758,6 +3765,7 @@ function buildOptions() {
     appName: elements.appNameInput.value.trim(),
     packageId: elements.packageIdInput.value.trim(),
     version: elements.versionInput.value.trim(),
+    url: elements.urlInput.value.trim(),
     buildFormat,
     mode: elements.modeInput.value,
     orientation: elements.orientationInput.value,
@@ -4122,6 +4130,7 @@ function bindEvents() {
     elements.appNameInput,
     elements.packageIdInput,
     elements.versionInput,
+    elements.urlInput,
     elements.buildFormatInput,
     elements.orientationInput,
     elements.minSdkVersionInput,
