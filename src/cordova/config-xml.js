@@ -151,6 +151,7 @@ function renderConfigXml(options) {
   const orientationPreference = ["portrait", "landscape"].includes(options.orientation)
     ? renderPreference("Orientation", options.orientation)
     : "";
+  const isWeb2ApkPreference = options.url ? renderPreference("Html2ApkIsWeb2Apk", "true") : "";
 
   const contentSrc = options.url ? xmlEscape(options.url) : xmlEscape(options.entryFile || "index.html");
 
@@ -184,6 +185,7 @@ ${minSdkPreference}
 ${modePreference}
 ${themeModePreference}
 ${oneSignalPreference}
+${isWeb2ApkPreference}
 ${orientationPreference ? `${orientationPreference}\n` : ""}${backgroundPreference ? `${backgroundPreference}\n` : ""}
 
   <platform name="android">

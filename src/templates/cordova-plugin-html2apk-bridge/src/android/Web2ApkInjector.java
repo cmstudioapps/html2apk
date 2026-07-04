@@ -12,21 +12,19 @@ public class Web2ApkInjector extends CordovaPlugin {
     public void initialize(CordovaInterface cordova, CordovaWebView webView) {
         super.initialize(cordova, webView);
         
-        String url = preferences.getString("content", "index.html");
-        if (url.startsWith("http://") || url.startsWith("https://")) {
-            if (!url.startsWith("https://localhost") && !url.startsWith("http://localhost")) {
-                cordova.getActivity().runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        android.view.View view = webView.getView();
-                        if (view instanceof android.webkit.WebView) {
-                            android.webkit.WebView web = (android.webkit.WebView) view;
-                            web.getSettings().setCacheMode(android.webkit.WebSettings.LOAD_NO_CACHE);
-                            web.clearCache(true);
-                        }
+        boolean isWeb2Apk = preferences.getBoolean("Html2ApkIsWeb2Apk", false);
+        if (isWeb2Apk) {
+            cordova.getActivity().runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    android.view.View view = webView.getView();
+                    if (view instanceof android.webkit.WebView) {
+                        android.webkit.WebView web = (android.webkit.WebView) view;
+                        web.getSettings().setCacheMode(android.webkit.WebSettings.LOAD_NO_CACHE);
+                        web.clearCache(true);
                     }
-                });
-            }
+                }
+            });
         }
     }
 

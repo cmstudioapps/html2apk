@@ -410,20 +410,28 @@ async function prepareCordovaProject(projectRoot, buildDir, options, runner, log
   cordovaOptions.splash = await copyCordovaAsset(projectRoot, buildDir, effectiveSplash, "splash");
   cordovaOptions.androidSplashScreenAnimatedIcon = toBuildAssetPath(buildDir, cordovaOptions.splash);
   await writeConfigXml(path.join(buildDir, "config.xml"), cordovaOptions);
-  await copyWebAssets(path.resolve(projectRoot, options.webRoot || "."), path.join(buildDir, "www"), options, projectRoot);
-  const injectedRuntimePages = await installCordovaRuntimeScript(buildDir, options);
-  if (injectedRuntimePages) {
-    log(`Cordova runtime: injected scripts into ${injectedRuntimePages} HTML page(s).`);
+  if (!options.url) {
+    await copyWebAssets(path.resolve(projectRoot, options.webRoot || "."), path.join(buildDir, "www"), options, projectRoot);
+    const injectedRuntimePages = await installCordovaRuntimeScript(buildDir, options);
+    if (injectedRuntimePages) {
+      log(`Cordova runtime: injected scripts into ${injectedRuntimePages} HTML page(s).`);
+    }
+    if (options.showRuntimeLogs) {
+      log("Runtime console: enabled inside the generated APK.");
+    }
+    if (await installAutoThemeScript(buildDir, options)) {
+      log("Theme mode: auto (system bars follow the visible screen color).");
+    }
+    if (await installOneSignalScript(buildDir, options)) {
+      log("OneSignal: enabled for remote push notifications.");
+    }
+  } else {
+    const wwwDir = path.join(buildDir, "www");
+    await removePath(wwwDir);
+    await ensureDir(wwwDir);
+    log("Web2Apk: skipping local web assets and script injections (using remote URL).");
   }
-  if (options.showRuntimeLogs) {
-    log("Runtime console: enabled inside the generated APK.");
-  }
-  if (await installAutoThemeScript(buildDir, options)) {
-    log("Theme mode: auto (system bars follow the visible screen color).");
-  }
-  if (await installOneSignalScript(buildDir, options)) {
-    log("OneSignal: enabled for remote push notifications.");
-  }
+
 
   const bridgePluginPath = await installBridgePlugin(buildDir);
   await addCordovaPlugin(buildDir, bridgePluginPath, runner);
