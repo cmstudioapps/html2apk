@@ -2439,6 +2439,8 @@ function collectElements() {
     "themeToggleLarge",
     "themeName",
     "dropZone",
+    "urlZone",
+    "homeUrlInput",
     "selectFolderButton",
     "nextSettingsButton",
     "projectSummary",
@@ -3760,12 +3762,13 @@ async function runDoctorOnly() {
 function buildOptions() {
   const buildFormat = normalizeBuildFormat(elements.buildFormatInput.value);
   const keystore = keystoreFromInputs();
+  const isUrlSource = document.querySelector('input[name="sourceType"]:checked').value === 'url';
   const options = {
-    projectRoot: state.project.projectRoot,
+    projectRoot: state.project ? state.project.projectRoot : process.cwd(),
     appName: elements.appNameInput.value.trim(),
     packageId: elements.packageIdInput.value.trim(),
     version: elements.versionInput.value.trim(),
-    url: elements.urlInput.value.trim(),
+    url: isUrlSource ? elements.urlInput.value.trim() : "",
     buildFormat,
     mode: elements.modeInput.value,
     orientation: elements.orientationInput.value,
@@ -4055,6 +4058,40 @@ function bindEvents() {
 
   elements.themeToggle.addEventListener("click", toggleTheme);
   elements.themeToggleLarge.addEventListener("click", toggleTheme);
+  document.querySelectorAll('input[name="sourceType"]').forEach(radio => {
+    radio.addEventListener('change', (e) => {
+      const isUrl = e.target.value === 'url';
+      if (isUrl) {
+        elements.dropZone.classList.add("hidden");
+        elements.projectSummary.classList.add("hidden");
+        elements.urlZone.classList.remove("hidden");
+        elements.nextSettingsButton.disabled = !elements.homeUrlInput.value.trim();
+        elements.urlInput.value = elements.homeUrlInput.value.trim();
+      } else {
+        elements.urlZone.classList.add("hidden");
+        elements.dropZone.classList.remove("hidden");
+        elements.nextSettingsButton.disabled = !state.project;
+        if (state.project) {
+          elements.projectSummary.classList.remove("hidden");
+        }
+      }
+    });
+  });
+
+  elements.homeUrlInput.addEventListener('input', () => {
+    elements.urlInput.value = elements.homeUrlInput.value.trim();
+    if (document.querySelector('input[name="sourceType"]:checked').value === 'url') {
+      elements.nextSettingsButton.disabled = !elements.homeUrlInput.value.trim();
+    }
+  });
+
+  elements.urlInput.addEventListener('input', () => {
+    elements.homeUrlInput.value = elements.urlInput.value.trim();
+    if (elements.urlInput.value.trim() && document.querySelector('input[name="sourceType"]:checked').value === 'local') {
+      document.querySelector('input[name="sourceType"][value="url"]').click();
+    }
+  });
+
   elements.selectFolderButton.addEventListener("click", chooseFolder);
   elements.nextSettingsButton.addEventListener("click", ensureEnvironmentBeforeSettings);
   elements.settingsNextButton.addEventListener("click", goToReview);
@@ -4241,7 +4278,7 @@ async function init() {
       elements.iconPreview.src = iconPreviewPath(state.defaultIconPath);
     }
   } catch {
-    elements.appVersion.textContent = "v12.0.13";
+    elements.appVersion.textContent = "v12.0.14";
   }
 
   setTimeout(finishBoot, 1800);

@@ -49,7 +49,7 @@
         <img src="../../../html2apk.png" alt="" class="brand-icon">
         <div>
           <strong>html<span>2apk</span></strong>
-          <small id="appVersion">v12.0.13</small>
+          <small id="appVersion">v12.0.14</small>
         </div>
       </div>
 
@@ -83,6 +83,17 @@
           <button id="selectFolderButton" class="secondary-action" type="button" data-i18n="chooseFolder">Escolher pasta</button>
         </header>
 
+        <div class="source-toggle">
+          <label>
+            <input type="radio" name="sourceType" value="local" checked>
+            <span data-i18n="sourceLocal">Pasta Local</span>
+          </label>
+          <label>
+            <input type="radio" name="sourceType" value="url">
+            <span data-i18n="sourceUrl">URL (Web2Apk)</span>
+          </label>
+        </div>
+
         <div id="dropZone" class="drop-zone">
           <div class="folder-illustration">
             <div class="folder-tab"></div>
@@ -92,6 +103,15 @@
           <h2 data-i18n="dropTitle">Solte a pasta do seu projeto HTML aqui</h2>
           <p data-i18n="dropText">Depois confirme o build. O APK sera salvo em dist.</p>
           <div class="info-pill" data-i18n="indexHint">A pasta deve conter index.html ou configurar entryFile no app.json</div>
+        </div>
+
+        <div id="urlZone" class="drop-zone hidden">
+          <div class="folder-illustration" style="--folder-color: var(--primary)">
+            <div class="upload-mark"></div>
+          </div>
+          <h2 data-i18n="urlZoneTitle">Digite a URL do site</h2>
+          <p data-i18n="urlZoneText">O aplicativo carregara essa URL remotamente (Web2Apk).</p>
+          <input type="url" id="homeUrlInput" placeholder="https://seu-site.com" class="home-url-input">
         </div>
 
         <section id="projectSummary" class="summary-grid hidden">
