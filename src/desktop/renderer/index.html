@@ -49,7 +49,7 @@
         <img src="../../../html2apk.png" alt="" class="brand-icon">
         <div>
           <strong>html<span>2apk</span></strong>
-          <small id="appVersion">v12.0.14</small>
+          <small id="appVersion">v12.0.15</small>
         </div>
       </div>
 
@@ -112,6 +112,9 @@
           <h2 data-i18n="urlZoneTitle">Digite a URL do site</h2>
           <p data-i18n="urlZoneText">O aplicativo carregara essa URL remotamente (Web2Apk).</p>
           <input type="url" id="homeUrlInput" placeholder="https://seu-site.com" class="home-url-input">
+          <div style="margin-top: 1rem;">
+            <button id="importJsonButton" class="secondary-action" type="button" data-i18n="importJsonTitle">Importar app.json (Opcional)</button>
+          </div>
         </div>
 
         <section id="projectSummary" class="summary-grid hidden">
@@ -158,7 +161,7 @@
             <span data-i18n="appVersion">Versao do app</span>
             <input id="versionInput" type="text" placeholder="1.0.0">
           </label>
-          <label class="field">
+          <label id="urlField" class="field">
             <span data-i18n="url">URL do Site (Opcional)</span>
             <input id="urlInput" type="url" placeholder="https://seu-site.com">
             <small data-i18n="urlHint">Se preenchido, vai gerar um Web2Apk.</small>

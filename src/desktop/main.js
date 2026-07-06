@@ -374,7 +374,7 @@ function cleanBuildOptions(options = {}) {
     release: Boolean(options.release)
   };
 
-  for (const key of ["mode", "appName", "packageId", "version", "icon", "androidPlatform", "minSdkVersion", "themeColor", "themeMode", "theme", "oneSignalAppId", "orientation", "permissions", "deepLinks", "buildFormat"]) {
+  for (const key of ["mode", "appName", "packageId", "version", "url", "icon", "androidPlatform", "minSdkVersion", "themeColor", "themeMode", "theme", "oneSignalAppId", "orientation", "permissions", "deepLinks", "buildFormat"]) {
     if (Array.isArray(options[key]) || options[key]) {
       output[key] = options[key];
     }
@@ -1536,6 +1536,29 @@ ipcMain.handle("dialog:select-folder", async () => {
   }
 
   return inspectProject(result.filePaths[0]);
+});
+
+ipcMain.handle("dialog:select-json", async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: "Select app.json",
+    properties: ["openFile"],
+    filters: [
+      { name: "JSON files", extensions: ["json"] },
+      { name: "All files", extensions: ["*"] }
+    ]
+  });
+
+  if (result.canceled || !result.filePaths.length) {
+    return null;
+  }
+
+  const filePath = result.filePaths[0];
+  try {
+    const raw = await fs.readFile(filePath, "utf8");
+    return JSON.parse(raw);
+  } catch (error) {
+    throw new Error(`Failed to read or parse JSON file: ${error.message}`);
+  }
 });
 
 ipcMain.handle("dialog:select-icon", async () => {

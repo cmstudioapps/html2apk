@@ -5,6 +5,7 @@ const { contextBridge, ipcRenderer, webUtils } = require("electron");
 contextBridge.exposeInMainWorld("html2apkDesktop", {
   appInfo: () => ipcRenderer.invoke("app:info"),
   selectFolder: () => ipcRenderer.invoke("dialog:select-folder"),
+  selectJsonFile: () => ipcRenderer.invoke("dialog:select-json"),
   selectIcon: () => ipcRenderer.invoke("dialog:select-icon"),
   selectKeystore: () => ipcRenderer.invoke("dialog:select-keystore"),
   inspectProject: (projectRoot) => ipcRenderer.invoke("project:inspect", projectRoot),

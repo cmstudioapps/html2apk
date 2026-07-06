@@ -161,6 +161,9 @@ const i18n = {
     detected: "Detectado",
     notDetected: "Nao detectado",
     folderReady: "Pasta pronta para build",
+    urlReady: "URL definida",
+    missingUrl: "Aguardando URL",
+    importJsonTitle: "Importar app.json",
     chooseProjectFirst: "Escolha uma pasta primeiro",
     doctorRunning: "Verificando ambiente",
     doctorOk: "Ambiente pronto",
@@ -378,6 +381,9 @@ const i18n = {
     detected: "Detected",
     notDetected: "Not detected",
     folderReady: "Folder ready for build",
+    urlReady: "URL set",
+    missingUrl: "Waiting for URL",
+    importJsonTitle: "Import app.json",
     chooseProjectFirst: "Choose a folder first",
     doctorRunning: "Checking environment",
     doctorOk: "Environment ready",
@@ -2441,6 +2447,8 @@ function collectElements() {
     "dropZone",
     "urlZone",
     "homeUrlInput",
+    "importJsonButton",
+    "urlField",
     "selectFolderButton",
     "nextSettingsButton",
     "projectSummary",
@@ -2685,13 +2693,14 @@ function setProgress(percent, message, stateClass = "") {
 }
 
 function updateActionButtons() {
-  const hasProject = Boolean(state.project);
+  const isUrlSource = document.querySelector('input[name="sourceType"]:checked').value === 'url';
+  const hasProject = Boolean(state.project) || isUrlSource;
   const isBusy = state.environmentChecking || state.buildRunning;
 
-  elements.nextSettingsButton.disabled = !hasProject || isBusy || !state.environmentOk;
+  elements.nextSettingsButton.disabled = !hasProject || isBusy || !state.environmentOk || (isUrlSource && !elements.homeUrlInput.value.trim());
   elements.doctorButton.disabled = !hasProject || isBusy;
   elements.settingsNextButton.disabled = !hasProject || !state.settingsValid || !state.environmentOk || isBusy;
-  elements.newFileButton.disabled = !hasProject;
+  elements.newFileButton.disabled = !state.project;
   elements.nativeFunctionLabButton.disabled = isBusy;
   setBuildButtons(hasProject && state.settingsValid && state.environmentOk && !isBusy);
 }
@@ -3352,7 +3361,16 @@ function populateSettings(config = {}, project = state.project) {
   elements.appNameInput.value = config.appName || projectName || "";
   elements.packageIdInput.value = config.packageId || `com.html2apk.${packageSegment(projectName)}`;
   elements.versionInput.value = config.version || "1.0.0";
-  elements.urlInput.value = config.url || "";
+  const loadedUrl = config.url || "";
+  elements.urlInput.value = loadedUrl;
+  elements.homeUrlInput.value = loadedUrl;
+  if (loadedUrl) {
+    const urlRadio = document.querySelector('input[name="sourceType"][value="url"]');
+    if (urlRadio && !urlRadio.checked) {
+      urlRadio.checked = true;
+      urlRadio.dispatchEvent(new Event('change'));
+    }
+  }
   elements.buildFormatInput.value = normalizeBuildFormat(config.buildFormat || config.outputFormat || config.artifactType || config.packageType);
   elements.modeInput.value = config.mode || "fullscreen";
   elements.orientationInput.value = normalizeOrientationInputValue(config.orientation);
@@ -3383,8 +3401,9 @@ function validateSettings() {
   const versionPattern = /^\d+\.\d+\.\d+([-.+][0-9A-Za-z.-]+)?$/;
   const buildFormat = normalizeBuildFormat(elements.buildFormatInput.value);
   const keystore = keystoreFromInputs();
+  const isUrlSource = document.querySelector('input[name="sourceType"]:checked').value === 'url';
 
-  if (!state.project) {
+  if (!state.project && !isUrlSource) {
     errors.push(text("missingProject"));
   }
   if (!elements.appNameInput.value.trim()) {
@@ -3443,13 +3462,14 @@ function validateSettings() {
 }
 
 function renderReview() {
-  if (!state.project) {
+  const isUrlSource = document.querySelector('input[name="sourceType"]:checked').value === 'url';
+  if (!state.project && !isUrlSource) {
     elements.reviewGrid.innerHTML = "";
     return;
   }
 
   const items = [
-    [text("project"), state.project.projectRoot],
+    [text("project"), state.project ? state.project.projectRoot : "(URL remota)"],
     [text("appName"), elements.appNameInput.value.trim()],
     [text("packageId"), elements.packageIdInput.value.trim()],
     [text("appVersion"), elements.versionInput.value.trim()],
@@ -3556,7 +3576,8 @@ async function installAndroidRequirements() {
 }
 
 async function verifyEnvironment({ allowInstall = true, requireSettings = false } = {}) {
-  if (!state.project) {
+  const isUrlSource = document.querySelector('input[name="sourceType"]:checked').value === 'url';
+  if (!state.project && !isUrlSource) {
     setStatus("error", text("chooseProjectFirst"));
     return false;
   }
@@ -3577,7 +3598,7 @@ async function verifyEnvironment({ allowInstall = true, requireSettings = false 
   appendLog(text("environmentPreparing"), "animated");
 
   try {
-    const firstResponse = await api.runDoctor(state.project.projectRoot);
+    const firstResponse = await api.runDoctor(state.project ? state.project.projectRoot : null);
     appendLog(firstResponse.text, firstResponse.ok ? "success" : "error");
 
     if (firstResponse.ok) {
@@ -3596,7 +3617,7 @@ async function verifyEnvironment({ allowInstall = true, requireSettings = false 
       setProgress(55, text("progressDoctor"), "active");
       appendLog(text("environmentPreparing"), "animated");
 
-      const retryResponse = await api.runDoctor(state.project.projectRoot);
+      const retryResponse = await api.runDoctor(state.project ? state.project.projectRoot : null);
       appendLog(retryResponse.text, retryResponse.ok ? "success" : "error");
       if (retryResponse.ok) {
         markEnvironmentReady();
@@ -3751,7 +3772,8 @@ async function chooseFolder() {
 }
 
 async function runDoctorOnly() {
-  if (!state.project) {
+  const isUrlSource = document.querySelector('input[name="sourceType"]:checked').value === 'url';
+  if (!state.project && !isUrlSource) {
     setStatus("error", text("chooseProjectFirst"));
     return false;
   }
@@ -3762,13 +3784,13 @@ async function runDoctorOnly() {
 function buildOptions() {
   const buildFormat = normalizeBuildFormat(elements.buildFormatInput.value);
   const keystore = keystoreFromInputs();
-  const isUrlSource = document.querySelector('input[name="sourceType"]:checked').value === 'url';
+  const url = elements.urlInput.value.trim();
   const options = {
-    projectRoot: state.project ? state.project.projectRoot : process.cwd(),
+    projectRoot: state.project ? state.project.projectRoot : undefined,
     appName: elements.appNameInput.value.trim(),
     packageId: elements.packageIdInput.value.trim(),
     version: elements.versionInput.value.trim(),
-    url: isUrlSource ? elements.urlInput.value.trim() : "",
+    url: url,
     buildFormat,
     mode: elements.modeInput.value,
     orientation: elements.orientationInput.value,
@@ -3809,7 +3831,9 @@ function stopAnimatedLogs() {
 }
 
 async function runBuildFlow() {
-  if (!state.project || state.buildRunning) {
+  const isUrlSource = document.querySelector('input[name="sourceType"]:checked').value === 'url';
+  
+  if ((!isUrlSource && !state.project) || state.buildRunning) {
     setStatus("error", state.project ? text("buildRunning") : text("chooseProjectFirst"));
     return;
   }
@@ -3852,7 +3876,7 @@ async function runBuildFlow() {
 
     const result = response.result;
     state.lastApkPath = result.apkPath;
-    state.lastDistPath = state.project.distPath;
+    state.lastDistPath = state.project ? state.project.distPath : null;
     elements.apkPath.textContent = result.apkPath;
     elements.successTitle.textContent = text("successTitle");
     elements.successText.textContent = text("successText");
@@ -3876,7 +3900,9 @@ async function runBuildFlow() {
 }
 
 async function runUsbDebugFlow() {
-  if (!state.project || state.buildRunning) {
+  const isUrlSource = document.querySelector('input[name="sourceType"]:checked').value === 'url';
+  
+  if ((!isUrlSource && !state.project) || state.buildRunning) {
     setStatus("error", state.project ? text("usbDebugRunning") : text("chooseProjectFirst"));
     return;
   }
@@ -3919,7 +3945,7 @@ async function runUsbDebugFlow() {
 
     const result = response.result;
     state.lastApkPath = result.apkPath;
-    state.lastDistPath = state.project.distPath;
+    state.lastDistPath = state.project ? state.project.distPath : null;
     elements.apkPath.textContent = result.apkPath;
     elements.successTitle.textContent = text("usbSuccessTitle");
     elements.successText.textContent = text("usbSuccessText");
@@ -4061,15 +4087,26 @@ function bindEvents() {
   document.querySelectorAll('input[name="sourceType"]').forEach(radio => {
     radio.addEventListener('change', (e) => {
       const isUrl = e.target.value === 'url';
+      
+      const stepButton = document.querySelector('button[data-step="folder"] .step-info strong');
+      
       if (isUrl) {
         elements.dropZone.classList.add("hidden");
         elements.projectSummary.classList.add("hidden");
         elements.urlZone.classList.remove("hidden");
+        elements.urlField.style.display = "none";
+        if (stepButton) stepButton.textContent = "1. Web2Apk (URL)";
+        setStep("folder", elements.homeUrlInput.value.trim() ? "done" : "active", elements.homeUrlInput.value.trim() ? text("urlReady") : text("missingUrl"));
+        
         elements.nextSettingsButton.disabled = !elements.homeUrlInput.value.trim();
         elements.urlInput.value = elements.homeUrlInput.value.trim();
       } else {
         elements.urlZone.classList.add("hidden");
         elements.dropZone.classList.remove("hidden");
+        elements.urlField.style.display = "block";
+        if (stepButton) stepButton.textContent = "1. " + text("project");
+        setStep("folder", state.project?.hasEntryFile ? "done" : "active", state.project?.hasEntryFile ? text("folderReady") : text("missing"));
+        
         elements.nextSettingsButton.disabled = !state.project;
         if (state.project) {
           elements.projectSummary.classList.remove("hidden");
@@ -4078,10 +4115,26 @@ function bindEvents() {
     });
   });
 
+  elements.importJsonButton.addEventListener("click", async () => {
+    try {
+      const config = await api.selectJsonFile();
+      if (config) {
+        populateSettings(config, null);
+        if (config.url) {
+          elements.homeUrlInput.value = config.url;
+          elements.homeUrlInput.dispatchEvent(new Event('input'));
+        }
+      }
+    } catch (error) {
+      console.error("Failed to import app.json:", error);
+    }
+  });
+
   elements.homeUrlInput.addEventListener('input', () => {
     elements.urlInput.value = elements.homeUrlInput.value.trim();
     if (document.querySelector('input[name="sourceType"]:checked').value === 'url') {
       elements.nextSettingsButton.disabled = !elements.homeUrlInput.value.trim();
+      setStep("folder", elements.homeUrlInput.value.trim() ? "done" : "active", elements.homeUrlInput.value.trim() ? text("urlReady") : text("missingUrl"));
     }
   });
 
@@ -4278,10 +4331,11 @@ async function init() {
       elements.iconPreview.src = iconPreviewPath(state.defaultIconPath);
     }
   } catch {
-    elements.appVersion.textContent = "v12.0.14";
+    elements.appVersion.textContent = "v12.0.15";
   }
 
   setTimeout(finishBoot, 1800);
+  populateSettings({}, null);
 }
 
 document.addEventListener("DOMContentLoaded", init);

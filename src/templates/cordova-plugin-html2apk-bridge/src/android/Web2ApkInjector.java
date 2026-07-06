@@ -45,6 +45,12 @@ public class Web2ApkInjector extends CordovaPlugin {
     private void injectCordova() {
         String js = "javascript:(function() {" +
             "  if (window.cordova) return;" +
+            "  var c = document.createElement('script');" +
+            "  c.src = 'https://localhost/html2apk-runtime-console.js';" +
+            "  document.head.appendChild(c);" +
+            "  var b = document.createElement('script');" +
+            "  b.src = 'https://localhost/html2apk-early-bridge.js';" +
+            "  document.head.appendChild(b);" +
             "  var s = document.createElement('script');" +
             "  s.src = 'https://localhost/cordova.js';" +
             "  document.head.appendChild(s);" +
