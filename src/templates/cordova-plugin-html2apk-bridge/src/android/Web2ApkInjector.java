@@ -29,6 +29,14 @@ public class Web2ApkInjector extends CordovaPlugin {
     }
 
     @Override
+    public Boolean shouldAllowBridgeAccess(String url) {
+        if (preferences.getBoolean("html2apkisweb2apk", false)) {
+            return true;
+        }
+        return null;
+    }
+
+    @Override
     public Object onMessage(String id, Object data) {
 
         if ("onPageFinished".equals(id)) {
