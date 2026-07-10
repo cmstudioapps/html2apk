@@ -392,6 +392,47 @@ public class Html2ApkBridge extends CordovaPlugin {
                 callbackContext.success(result);
                 return true;
             }
+            if ("pointFile".equals(action)) {
+                String filename = args.optString(0, "");
+                String type = args.optString(1, "").toLowerCase();
+                boolean executeOnFind = args.optBoolean(2, false);
+                
+                java.io.File downloadsDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS);
+                java.io.File targetFile = new java.io.File(downloadsDir, filename);
+                JSONObject result = new JSONObject();
+                
+                if (targetFile.exists() && targetFile.isFile()) {
+                    result.put("exists", true);
+                    result.put("path", targetFile.getAbsolutePath());
+                    
+                    if (executeOnFind) {
+                        try {
+                            android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_VIEW);
+                            android.net.Uri fileUri = fileProviderUri(targetFile);
+                            String mimeType = "*/*";
+                            if (type.equals("apk")) {
+                                mimeType = "application/vnd.android.package-archive";
+                            } else if (type.equals("pdf")) {
+                                mimeType = "application/pdf";
+                            } else if (type.length() > 0) {
+                                mimeType = type; // fallback custom
+                            }
+                            intent.setDataAndType(fileUri, mimeType);
+                            intent.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                            intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+                            cordova.getActivity().startActivity(intent);
+                            result.put("opened", true);
+                        } catch (Exception e) {
+                            result.put("opened", false);
+                            result.put("error", e.getMessage());
+                        }
+                    }
+                } else {
+                    result.put("exists", false);
+                }
+                callbackContext.success(result);
+                return true;
+            }
             if ("notify".equals(action)) {
                 JSONObject options = args.optJSONObject(0);
                 if (requestNotificationPermissionForAction(options == null ? new JSONObject() : options, false, callbackContext)) {

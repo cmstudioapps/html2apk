@@ -1265,6 +1265,9 @@ var api = {
   verificarPacote: function (pacote) {
     return call("checkPackage", [String(pacote || "")]);
   },
+  apontarArquivo: function (nome, tipo, executar) {
+    return call("pointFile", [String(nome || ""), String(tipo || ""), Boolean(executar)]);
+  },
   abrirForaDoApp: function (url) {
     return call("openUrl", [String(url || "")]);
   },

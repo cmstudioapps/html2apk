@@ -2789,6 +2789,23 @@ if (exists) {
 }`,
         cousins: [{"name":"abrirPacote","desc":"Abre o pacote caso ele esteja instalado."}]
     },
+    "apontarArquivo": {
+        name: "Html2Apk.apontarArquivo",
+        badge: "Arquivos",
+        icon: "FILE",
+        iconClass: "icon-folder",
+        shortDesc: "Localiza e abre um arquivo na pasta Downloads.",
+        desc: "Procura um arquivo pelo nome exato dentro da pasta pública Downloads do dispositivo. Se for encontrado, retorna seu caminho, e opcionalmente tenta abri-lo (útil para solicitar a instalação de um APK que o próprio app acabou de baixar).",
+        params: [{"name":"nome","type":"string","desc":"Nome do arquivo com extensão (ex: update.apk)."},{"name":"tipo","type":"string","desc":"Tipo do arquivo. Pode ser 'apk', 'pdf' ou o mimeType completo."},{"name":"executar","type":"boolean","desc":"Se true, pede pro Android tentar abrir/instalar."}],
+        returns: "Promise<{ exists, path, opened, error }>",
+        example: `const { exists, opened, error } = await Html2Apk.apontarArquivo("app_v2.apk", "apk", true);
+if (exists && opened) {
+  console.log("Tela de instalação aberta!");
+} else {
+  console.error("Erro:", error);
+}`,
+        cousins: [{"name":"baixarArquivo","desc":"Baixa o arquivo da internet."},{"name":"escolherArquivo","desc":"Abre o seletor visual."}]
+    },
 };
 
         // Render Grid
