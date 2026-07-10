@@ -1339,6 +1339,12 @@ var api = {
   solicitarPermissaoInstalacao: function () {
     return call("requestInstallPermission");
   },
+  solicitarPermissaoArmazenamento: function () {
+    return call("requestStoragePermission");
+  },
+  statusPermissaoArmazenamento: function () {
+    return call("storagePermissionStatus");
+  },
   instalarAtualizacao: function (url, options) {
     if (!url || typeof url !== "string") {
       return Promise.reject(new Error("A URL do APK e obrigatoria"));
@@ -1762,6 +1768,10 @@ Object.assign(api, {
   shareStoredFile: api.compartilharArquivo,
   solicitarPermissaoInstalacao: api.solicitarPermissaoInstalacao,
   requestInstallPermission: api.solicitarPermissaoInstalacao,
+  solicitarPermissaoArmazenamento: api.solicitarPermissaoArmazenamento,
+  requestStoragePermission: api.solicitarPermissaoArmazenamento,
+  statusPermissaoArmazenamento: api.statusPermissaoArmazenamento,
+  storagePermissionStatus: api.statusPermissaoArmazenamento,
   installUpdate: api.instalarAtualizacao,
   downloadFile: api.baixarArquivo,
   downloadBase64: api.baixarBase64,

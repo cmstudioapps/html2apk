@@ -2806,6 +2806,34 @@ if (exists && opened) {
 }`,
         cousins: [{"name":"baixarArquivo","desc":"Baixa o arquivo da internet."},{"name":"escolherArquivo","desc":"Abre o seletor visual."}]
     },
+    "solicitarPermissaoArmazenamento": {
+        name: "Html2Apk.solicitarPermissaoArmazenamento",
+        badge: "Permissão",
+        icon: "FOLDER",
+        iconClass: "icon-folder",
+        shortDesc: "Solicita a permissão de armazenamento moderna (Android 11+).",
+        desc: "Solicita o acesso a todos os arquivos para poder ler da pasta pública Downloads. No Android 11+ ele abre a aba nativa do sistema. Em aparelhos antigos, aciona o popup padrão.",
+        params: [],
+        returns: "Promise<{ permission, granted, permissionGranted, requiresSettings, requested, settingsOpened }>",
+        example: `const { granted } = await Html2Apk.solicitarPermissaoArmazenamento();
+if (granted) {
+  console.log("Tenho acesso total à pasta Downloads!");
+}`,
+        cousins: [{"name":"statusPermissaoArmazenamento","desc":"Checa o status sem solicitar."},{"name":"apontarArquivo","desc":"Usa essa permissão para encontrar e abrir arquivos no Android."}]
+    },
+    "statusPermissaoArmazenamento": {
+        name: "Html2Apk.statusPermissaoArmazenamento",
+        badge: "Permissão",
+        icon: "FOLDER_LOCK",
+        iconClass: "icon-folder",
+        shortDesc: "Retorna o status atual da permissão de armazenamento.",
+        desc: "Lê silenciosamente se o usuário já possui acesso total à pasta de Downloads (MANAGE_EXTERNAL_STORAGE).",
+        params: [],
+        returns: "Promise<{ permission, granted, permissionGranted, requiresSettings }>",
+        example: `const status = await Html2Apk.statusPermissaoArmazenamento();
+console.log("Liberado?", status.granted);`,
+        cousins: [{"name":"solicitarPermissaoArmazenamento","desc":"Solicita a permissão se estiver bloqueado."}]
+    },
 };
 
         // Render Grid

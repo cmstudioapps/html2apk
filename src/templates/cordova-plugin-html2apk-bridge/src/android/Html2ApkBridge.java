@@ -844,6 +844,37 @@ public class Html2ApkBridge extends CordovaPlugin {
                 return true;
             }
 
+            if ("storagePermissionStatus".equals(action)) {
+                callbackContext.success(storagePermissionStatus());
+                return true;
+            }
+
+            if ("requestStoragePermission".equals(action)) {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                    if (!android.os.Environment.isExternalStorageManager()) {
+                        try {
+                            android.content.Intent intent = new android.content.Intent(android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
+                            intent.addCategory("android.intent.category.DEFAULT");
+                            intent.setData(android.net.Uri.parse(String.format("package:%s", context().getPackageName())));
+                            cordova.getActivity().startActivity(intent);
+                        } catch (Exception e) {
+                            android.content.Intent intent = new android.content.Intent();
+                            intent.setAction(android.provider.Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
+                            cordova.getActivity().startActivity(intent);
+                        }
+                    }
+                } else {
+                    if (!cordova.hasPermission(android.Manifest.permission.READ_EXTERNAL_STORAGE) || !cordova.hasPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+                        cordova.requestPermissions(this, 2296, new String[]{android.Manifest.permission.READ_EXTERNAL_STORAGE, android.Manifest.permission.WRITE_EXTERNAL_STORAGE});
+                    }
+                }
+                JSONObject result = storagePermissionStatus();
+                result.put("requested", true);
+                result.put("settingsOpened", result.optBoolean("requiresSettings"));
+                callbackContext.success(result);
+                return true;
+            }
+
             if ("requestOverlayPermission".equals(action) || "openOverlaySettings".equals(action)) {
                 openOverlaySettings();
                 JSONObject result = overlayPermissionStatus();
@@ -1352,6 +1383,23 @@ public class Html2ApkBridge extends CordovaPlugin {
 
     private boolean canDrawOverlays() {
         return Build.VERSION.SDK_INT < Build.VERSION_CODES.M || Settings.canDrawOverlays(context());
+    }
+
+    private JSONObject storagePermissionStatus() throws Exception {
+        JSONObject result = new JSONObject();
+        result.put("permission", "android.permission.MANAGE_EXTERNAL_STORAGE");
+        
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            result.put("granted", android.os.Environment.isExternalStorageManager());
+            result.put("permissionGranted", android.os.Environment.isExternalStorageManager());
+            result.put("requiresSettings", true);
+        } else {
+            boolean granted = cordova.hasPermission(android.Manifest.permission.READ_EXTERNAL_STORAGE) && cordova.hasPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE);
+            result.put("granted", granted);
+            result.put("permissionGranted", granted);
+            result.put("requiresSettings", false);
+        }
+        return result;
     }
 
     private JSONObject overlayPermissionStatus() throws Exception {

@@ -718,6 +718,11 @@ Atualizações via OTA (Over The Air):
 
 ```js
 const permInstalacao = await solicitarPermissaoInstalacao();
+
+// Permissão de Arquivos (Acesso Completo/Android 11+)
+const permArmazenamento = await solicitarPermissaoArmazenamento();
+// Ler status silenciosamente:
+const statusArmazenamento = await statusPermissaoArmazenamento();
 if (permInstalacao.permitido || permInstalacao.solicitado) {
   await instalarAtualizacao("https://site.com/app.apk", {
     titulo: "Nova Versão",
@@ -743,6 +748,11 @@ O método `solicitarPermissaoInstalacao()` (`requestInstallPermission()`) checa 
 - Se a permissão já foi concedida (`permitido: true`), não faz nada.
 - Se não possui a permissão (`permitido: false`), ele automaticamente abre a tela nativa de configurações de "Instalar apps desconhecidos" do Android (`solicitado: true`) para o usuário ativar a chavinha.
 - Em Androids mais antigos (< 8.0), retorna `suportado: false` e `permitido: true`.
+
+O método `solicitarPermissaoArmazenamento()` lida com a restrição moderna do Android 11+ sobre arquivos.
+- Se o celular for Android 11+, ele lança o usuário diretamente para a aba "Acesso a todos os arquivos" do sistema.
+- Se for Android 10 para baixo, ele invoca o popup de permissão tradicional.
+Retorno: `{ permission: "android.permission.MANAGE_EXTERNAL_STORAGE", granted: false, requiresSettings: true, requested: true, settingsOpened: true }`
 
 O método `instalarAtualizacao(url, opções)` (`installUpdate()`) baixa e abre o APK via `PackageInstaller` nativo. Ideal para atualizações diretas de APKs hospedados fora da Play Store. Opções suportadas incluem:
 - `titulo`: Título do modal bloqueante de progresso (ex: "Nova Versão").
