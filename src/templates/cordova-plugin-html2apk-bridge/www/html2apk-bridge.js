@@ -1259,6 +1259,12 @@ var api = {
   abrirUrlExterno: function (url) {
     return call("openUrl", [String(url || "")]);
   },
+  abrirPacote: function (pacote) {
+    return call("openPackage", [String(pacote || "")]);
+  },
+  verificarPacote: function (pacote) {
+    return call("checkPackage", [String(pacote || "")]);
+  },
   abrirForaDoApp: function (url) {
     return call("openUrl", [String(url || "")]);
   },
@@ -1940,6 +1946,8 @@ if (typeof window !== "undefined") {
 
     window[key] = api[key];
   });
+
+  window.Html2Apk = api;
 
   window.addEventListener("html2apk:notification", function (event) {
     emitNotificationClick(event.detail);

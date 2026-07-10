@@ -3,6 +3,7 @@
   <name>Html2ApkBridge</name>
 
   <js-module src="www/html2apk-bridge.js" name="Html2ApkBridge">
+    <clobbers target="Html2Apk" />
     <clobbers target="Html2ApkNative" />
   </js-module>
 

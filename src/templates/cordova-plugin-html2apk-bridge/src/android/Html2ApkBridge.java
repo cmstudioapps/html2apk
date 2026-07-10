@@ -367,6 +367,31 @@ public class Html2ApkBridge extends CordovaPlugin {
                 callbackContext.success(new JSONObject(sessionStore));
                 return true;
             }
+            if ("openPackage".equals(action)) {
+                String packageName = args.optString(0, "");
+                android.content.Intent launchIntent = cordova.getActivity().getPackageManager().getLaunchIntentForPackage(packageName);
+                JSONObject result = new JSONObject();
+                if (launchIntent != null) {
+                    cordova.getActivity().startActivity(launchIntent);
+                    result.put("success", true);
+                } else {
+                    result.put("success", false);
+                }
+                callbackContext.success(result);
+                return true;
+            }
+            if ("checkPackage".equals(action)) {
+                String packageName = args.optString(0, "");
+                JSONObject result = new JSONObject();
+                try {
+                    cordova.getActivity().getPackageManager().getPackageInfo(packageName, 0);
+                    result.put("exists", true);
+                } catch (android.content.pm.PackageManager.NameNotFoundException e) {
+                    result.put("exists", false);
+                }
+                callbackContext.success(result);
+                return true;
+            }
             if ("notify".equals(action)) {
                 JSONObject options = args.optJSONObject(0);
                 if (requestNotificationPermissionForAction(options == null ? new JSONObject() : options, false, callbackContext)) {

@@ -1844,6 +1844,7 @@
   });
 
   window.Html2ApkEarlyBridge = api;
+  window.Html2Apk = api;
 
   window.addEventListener("html2apk:notification", function (event) {
     emitNotificationClick(event.detail);

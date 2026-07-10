@@ -1,6 +1,6 @@
 {
   "name": "html2apk",
-  "version": "12.0.15",
+  "version": "12.0.16",
   "author": {
     "name": "Dev Caio Multiversando",
     "email": "dev@caio.local"
@@ -44,7 +44,7 @@
     "appId": "dev.caiomultiversando.html2apk",
     "productName": "html2apk",
     "copyright": "Copyright © Dev Caio Multiversando",
-    "asar": false,
+    "asar": true,
     "directories": {
       "output": "dist-desktop"
     },
