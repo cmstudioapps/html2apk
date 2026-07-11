@@ -786,8 +786,9 @@ const { exists, version } = await verificarPacote("com.whatsapp");
 // Abre o aplicativo de terceiro caso ele esteja instalado (Retorna { success: true/false })
 const { success } = await abrirPacote("com.whatsapp");
 
-// Localiza um arquivo na pasta Downloads e solicita que o Android o abra (ex: tela de instalação de APK)
-const { exists, opened, error } = await apontarArquivo("app_atualizado.apk", "apk", true);
+// Encontra e aponta para um arquivo na pasta de Downloads (Android apenas)
+// O sistema faz busca inteligente! Você pode passar o nome exato ou apenas uma palavra-chave (ex: "app_atualizado").
+const { exists, opened, error } = await apontarArquivo("app_atualizado", "apk", true);
 ```
 
 Cuidados:

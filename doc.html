@@ -2793,15 +2793,12 @@ if(exists) console.log("Instalado, versão:", version);`,
         icon: "FILE",
         iconClass: "icon-folder",
         shortDesc: "Localiza e abre um arquivo na pasta Downloads.",
-        desc: "Procura um arquivo pelo nome exato dentro da pasta pública Downloads do dispositivo. Se for encontrado, retorna seu caminho, e opcionalmente tenta abri-lo (útil para solicitar a instalação de um APK que o próprio app acabou de baixar).",
+        desc: "Acha um arquivo baixado usando o nome exato ou um trecho do nome (Busca Inteligente). Por exemplo, se você digitar 'app' ele pode achar 'meu_app_v2.apk'. É altamente recomendado primeiro garantir a permissão de armazenamento em Android 11+.",
         params: [{"name":"nome","type":"string","desc":"Nome do arquivo com extensão (ex: update.apk)."},{"name":"tipo","type":"string","desc":"Tipo do arquivo. Pode ser 'apk', 'pdf' ou o mimeType completo."},{"name":"executar","type":"boolean","desc":"Se true, pede pro Android tentar abrir/instalar."}],
         returns: "Promise<{ exists, path, opened, error }>",
-        example: `const { exists, opened, error } = await Html2Apk.apontarArquivo("app_v2.apk", "apk", true);
-if (exists && opened) {
-  console.log("Tela de instalação aberta!");
-} else {
-  console.error("Erro:", error);
-}`,
+        example: `// Você pode passar só um trecho do nome do arquivo!
+const res = await Html2Apk.apontarArquivo("meu_app", "apk", true);
+if(res.exists) console.log("Abriu:", res.path);`,
         cousins: [{"name":"baixarArquivo","desc":"Baixa o arquivo da internet."},{"name":"escolherArquivo","desc":"Abre o seletor visual."}]
     },
     "solicitarPermissaoArmazenamento": {

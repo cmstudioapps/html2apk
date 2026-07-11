@@ -399,10 +399,10 @@ public class Html2ApkBridge extends CordovaPlugin {
                 boolean executeOnFind = args.optBoolean(2, false);
                 
                 java.io.File downloadsDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS);
-                java.io.File targetFile = new java.io.File(downloadsDir, filename);
+                java.io.File targetFile = findMostSimilarFile(downloadsDir, filename);
                 JSONObject result = new JSONObject();
                 
-                if (targetFile.exists() && targetFile.isFile()) {
+                if (targetFile != null && targetFile.exists() && targetFile.isFile()) {
                     result.put("exists", true);
                     result.put("path", targetFile.getAbsolutePath());
                     
@@ -1384,6 +1384,35 @@ public class Html2ApkBridge extends CordovaPlugin {
 
     private boolean canDrawOverlays() {
         return Build.VERSION.SDK_INT < Build.VERSION_CODES.M || Settings.canDrawOverlays(context());
+    }
+
+    private java.io.File findMostSimilarFile(java.io.File dir, String query) {
+        if (!dir.exists() || !dir.isDirectory()) return null;
+        java.io.File[] files = dir.listFiles();
+        if (files == null) return null;
+        
+        String q = query.toLowerCase();
+        
+        // 1. Exact match
+        for (java.io.File f : files) {
+            if (f.getName().equalsIgnoreCase(query)) return f;
+        }
+        
+        // 2. Contains match (prioritize smallest length difference)
+        java.io.File bestMatch = null;
+        int bestDiff = Integer.MAX_VALUE;
+        for (java.io.File f : files) {
+            String name = f.getName().toLowerCase();
+            if (name.contains(q)) {
+                int diff = Math.abs(name.length() - q.length());
+                if (diff < bestDiff) {
+                    bestDiff = diff;
+                    bestMatch = f;
+                }
+            }
+        }
+        
+        return bestMatch;
     }
 
     private JSONObject storagePermissionStatus() throws Exception {
