@@ -2780,10 +2780,10 @@ if (success) {
         icon: "SYS",
         iconClass: "icon-system",
         shortDesc: "Verifica se um pacote de terceiros está instalado.",
-        desc: "Verifica silenciosamente se o app solicitado (Package ID) está presente no dispositivo. Importante: Em Androids recentes (API 30+) exige a permissão QUERY_ALL_PACKAGES no AndroidManifest para não retornar falsos-negativos.",
+        desc: "Verifica silenciosamente se um aplicativo de terceiro existe (Retorna se existe, versão, ID do pacote e o nome real do App). Usa busca inteligente, podendo encontrar tanto pelo ID exato quanto por partes do nome (ex: 'whatsapp'). Em Android 11+, exige a permissão QUERY_ALL_PACKAGES no manifesto para não dar falso-negativo.",
         params: [{"name":"pacote","type":"string","desc":"Package ID do aplicativo destino."}],
         returns: "Promise<{ exists, version, packageId, appName }>",
-        example: `const { exists, version, packageId, appName } = await Html2Apk.verificarPacote("com.whatsapp");
+        example: `const { exists, version, packageId, appName } = await Html2Apk.verificarPacote("WhatsApp");
 if(exists) console.log(appName + " instalado (v" + version + ")");`,
         cousins: [{"name":"abrirPacote","desc":"Abre o pacote caso ele esteja instalado."}]
     },

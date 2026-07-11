@@ -383,16 +383,18 @@ public class Html2ApkBridge extends CordovaPlugin {
             if ("checkPackage".equals(action)) {
                 String packageName = args.optString(0, "");
                 JSONObject result = new JSONObject();
-                try {
-                    android.content.pm.PackageInfo info = cordova.getActivity().getPackageManager().getPackageInfo(packageName, 0);
+                android.content.pm.PackageInfo info = findMostSimilarPackage(packageName);
+                
+                if (info != null) {
                     result.put("exists", true);
                     result.put("version", info.versionName != null ? info.versionName : "0.0.0");
                     result.put("packageId", info.packageName);
                     CharSequence appLabel = cordova.getActivity().getPackageManager().getApplicationLabel(info.applicationInfo);
                     result.put("appName", appLabel != null ? appLabel.toString() : "");
-                } catch (android.content.pm.PackageManager.NameNotFoundException e) {
+                } else {
                     result.put("exists", false);
                 }
+                
                 callbackContext.success(result);
                 return true;
             }
@@ -1411,6 +1413,41 @@ public class Html2ApkBridge extends CordovaPlugin {
                 if (diff < bestDiff) {
                     bestDiff = diff;
                     bestMatch = f;
+                }
+            }
+        }
+        
+        return bestMatch;
+    }
+
+    private android.content.pm.PackageInfo findMostSimilarPackage(String query) {
+        android.content.pm.PackageManager pm = cordova.getActivity().getPackageManager();
+        try {
+            // 1. Exact match
+            return pm.getPackageInfo(query, 0);
+        } catch (android.content.pm.PackageManager.NameNotFoundException e) {
+            // Fuzzy search below
+        }
+
+        String q = query.toLowerCase();
+        java.util.List<android.content.pm.PackageInfo> packages = pm.getInstalledPackages(0);
+        android.content.pm.PackageInfo bestMatch = null;
+        int bestDiff = Integer.MAX_VALUE;
+
+        for (android.content.pm.PackageInfo info : packages) {
+            String pkgName = info.packageName.toLowerCase();
+            CharSequence appLabelSeq = pm.getApplicationLabel(info.applicationInfo);
+            String appName = appLabelSeq != null ? appLabelSeq.toString().toLowerCase() : "";
+
+            if (pkgName.contains(q) || appName.contains(q)) {
+                int diff = Math.min(
+                    pkgName.contains(q) ? Math.abs(pkgName.length() - q.length()) : Integer.MAX_VALUE,
+                    appName.contains(q) ? Math.abs(appName.length() - q.length()) : Integer.MAX_VALUE
+                );
+                
+                if (diff < bestDiff) {
+                    bestDiff = diff;
+                    bestMatch = info;
                 }
             }
         }

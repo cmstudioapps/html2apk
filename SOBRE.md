@@ -780,8 +780,9 @@ Abrir ou verificar outros aplicativos (Pacotes):
 
 ```js
 // Verifica silenciosamente se um aplicativo de terceiro existe (Retorna { exists: true/false, version: "x.x.x", packageId: "com...", appName: "Nome" })
+// Busca inteligente ativa: Você pode passar tanto o ID do pacote exato ("com.whatsapp") quanto apenas o nome ("WhatsApp").
 // *Aviso*: Em Android 11+ exige QUERY_ALL_PACKAGES no manifesto para não dar falso-negativo.
-const { exists, version, packageId, appName } = await verificarPacote("com.whatsapp");
+const { exists, version, packageId, appName } = await verificarPacote("WhatsApp");
 
 // Abre o aplicativo de terceiro caso ele esteja instalado (Retorna { success: true/false })
 const { success } = await abrirPacote("com.whatsapp");
