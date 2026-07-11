@@ -384,8 +384,9 @@ public class Html2ApkBridge extends CordovaPlugin {
                 String packageName = args.optString(0, "");
                 JSONObject result = new JSONObject();
                 try {
-                    cordova.getActivity().getPackageManager().getPackageInfo(packageName, 0);
+                    android.content.pm.PackageInfo info = cordova.getActivity().getPackageManager().getPackageInfo(packageName, 0);
                     result.put("exists", true);
+                    result.put("version", info.versionName != null ? info.versionName : "0.0.0");
                 } catch (android.content.pm.PackageManager.NameNotFoundException e) {
                     result.put("exists", false);
                 }

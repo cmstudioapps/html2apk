@@ -779,9 +779,9 @@ await abrirMapa("Avenida Paulista, Sao Paulo");
 Abrir ou verificar outros aplicativos (Pacotes):
 
 ```js
-// Verifica silenciosamente se um aplicativo de terceiro existe (Retorna { exists: true/false })
+// Verifica silenciosamente se um aplicativo de terceiro existe (Retorna { exists: true/false, version: "x.x.x" })
 // *Aviso*: Em Android 11+ exige QUERY_ALL_PACKAGES no manifesto para não dar falso-negativo.
-const { exists } = await verificarPacote("com.whatsapp");
+const { exists, version } = await verificarPacote("com.whatsapp");
 
 // Abre o aplicativo de terceiro caso ele esteja instalado (Retorna { success: true/false })
 const { success } = await abrirPacote("com.whatsapp");
