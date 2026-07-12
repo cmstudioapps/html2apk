@@ -189,7 +189,6 @@ public class Html2ApkBridge extends CordovaPlugin {
     private CallbackContext pendingSpeakCallback;
     private CallbackContext bluetoothDiscoveryCallback;
     private CallbackContext wifiDiscoveryCallback;
-    private CallbackContext pendingBluetoothCallback;
     private JSONObject pendingSaveFile;
     private JSONObject pendingMediaCaptureOptions;
     private JSONObject pendingLocationOptions;
