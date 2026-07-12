@@ -826,6 +826,7 @@ Sempre que o App consultar a sua URL via método `GET`, ele espera receber um JS
 
 ```json
 {
+  "title": "Promoção Imperdível!",
   "msg": "Texto da notificação que vai aparecer na tela",
   "id": "abc1234",
   "public": true,
@@ -833,6 +834,8 @@ Sempre que o App consultar a sua URL via método `GET`, ele espera receber um JS
   "clickOpen": "https://meu-site.com/promo"
 }
 ```
+
+O `title` também é opcional. Se você não enviar, o próprio aplicativo usará o Nome do App por padrão.
 
 O aplicativo sempre salva internamente o último `id` recebido. Se, na próxima consulta, o `id` retornado pela sua API for diferente do gravado no celular, a nova notificação pulará instantaneamente na tela do usuário!
 

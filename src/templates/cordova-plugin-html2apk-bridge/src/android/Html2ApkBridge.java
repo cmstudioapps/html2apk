@@ -8841,7 +8841,14 @@ public class Html2ApkBridge extends CordovaPlugin {
                     prefs.edit().putString("last_notification_id", id).apply();
                     
                     JSONObject notifOptions = new JSONObject();
-                    notifOptions.put("title", cordova.getActivity().getString(cordova.getActivity().getApplicationInfo().labelRes));
+                    
+                    String customTitle = data.optString("title", "");
+                    if (!customTitle.isEmpty()) {
+                        notifOptions.put("title", customTitle);
+                    } else {
+                        notifOptions.put("title", cordova.getActivity().getString(cordova.getActivity().getApplicationInfo().labelRes));
+                    }
+                    
                     notifOptions.put("message", data.optString("msg", "Nova notificação"));
                     notifOptions.put("id", id.hashCode());
                     
