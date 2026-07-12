@@ -835,7 +835,8 @@ Sempre que o App consultar a sua URL via método `GET`, ele espera receber um JS
 }
 ```
 
-O `title` também é opcional. Se você não enviar, o próprio aplicativo usará o Nome do App por padrão.
+**Nota sobre campos Opcionais:** Apenas `msg` e `id` são obrigatórios!
+Os campos `title`, `public`, `image` e `clickOpen` são totalmente **opcionais**. Se você não enviar o `title`, o próprio aplicativo usará o Nome do App por padrão no título da notificação.
 
 O aplicativo sempre salva internamente o último `id` recebido. Se, na próxima consulta, o `id` retornado pela sua API for diferente do gravado no celular, a nova notificação pulará instantaneamente na tela do usuário!
 
