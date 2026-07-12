@@ -1806,6 +1806,17 @@ ipcMain.on("logcat:start", (event, filter) => {
     }
   });
   
+  logcatProcess.on("error", (err) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      if (err.code === "ENOENT") {
+        mainWindow.webContents.send("logcat:data", "[Erro] O comando 'adb' não foi encontrado. Certifique-se de que o Android SDK está instalado e o 'adb' está no PATH do sistema.");
+      } else {
+        mainWindow.webContents.send("logcat:data", `[Erro] Falha ao iniciar adb: ${err.message}`);
+      }
+    }
+    logcatProcess = null;
+  });
+  
   logcatProcess.on("close", () => {
     logcatProcess = null;
   });

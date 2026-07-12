@@ -13,6 +13,7 @@ const i18n = {
     navFiles: "Arquivos",
     navCodes: "Codigos",
     navLogs: "Logs",
+    navLogcat: "Android",
     navHelp: "Ajuda",
     theme: "Tema",
     themeLight: "Claro",
@@ -225,7 +226,10 @@ const i18n = {
     successText: "Seu arquivo Android esta pronto na pasta dist.",
     usbSuccessTitle: "APK instalado no celular",
     usbSuccessText: "O build debug foi enviado por USB. O app deve abrir no aparelho conectado.",
-    newBuild: "Novo build"
+    newBuild: "Novo build",
+    logcatEyebrow: "Dispositivo USB",
+    logcatTitle: "Logs do Android",
+    startLogcat: "Iniciar Captura"
   },
   en: {
     creditTitle: "Opening credits",
@@ -237,6 +241,7 @@ const i18n = {
     navFiles: "Files",
     navCodes: "Code",
     navLogs: "Logs",
+    navLogcat: "Android",
     navHelp: "Help",
     theme: "Theme",
     themeLight: "Light",
@@ -448,8 +453,11 @@ const i18n = {
     successTitle: "APK generated successfully",
     successText: "Your Android file is ready in the dist folder.",
     usbSuccessTitle: "APK installed on phone",
-    usbSuccessText: "The debug build was sent over USB. The app should open on the connected device.",
-    newBuild: "New build"
+    usbSuccessText: "Debug build was sent via USB. The app should open on the connected device.",
+    newBuild: "New build",
+    logcatEyebrow: "USB Device",
+    logcatTitle: "Android Logs",
+    startLogcat: "Start Capture"
   }
 };
 
@@ -2528,6 +2536,7 @@ function collectElements() {
     "fileHighlight",
     "viewLogs",
     "logConsole",
+    "bottomLogConsole",
     "clearLogsButton",
     "viewLogcat",
     "logcatConsole",
@@ -4405,7 +4414,7 @@ async function init() {
       elements.iconPreview.src = iconPreviewPath(state.defaultIconPath);
     }
   } catch {
-    elements.appVersion.textContent = "v12.1.4";
+    elements.appVersion.textContent = "v12.1.5";
   }
 
   setTimeout(finishBoot, 1800);
