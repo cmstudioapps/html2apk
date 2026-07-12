@@ -431,6 +431,12 @@ async function prepareCordovaProject(projectRoot, buildDir, options, runner, log
     await ensureDir(wwwDir);
     log("Web2Apk: skipping local web assets and HTML script injections (using remote URL).");
     
+    try {
+      await copyFile(path.join(projectRoot, "app.json"), path.join(wwwDir, "app.json"));
+    } catch (e) {
+      // Ignora se não existir
+    }
+    
     // Web2ApkInjector.java needs to inject the bridge script, so we must bundle it in www/
     const earlyBridgeSource = path.resolve(__dirname, "..", "templates", EARLY_BRIDGE_SCRIPT_NAME);
     const earlyBridgeTarget = path.join(wwwDir, EARLY_BRIDGE_SCRIPT_NAME);

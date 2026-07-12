@@ -8791,6 +8791,7 @@ public class Html2ApkBridge extends CordovaPlugin {
                 notificationPollerTimer.cancel();
             }
             
+            android.util.Log.d("Html2ApkBridge", "[NotificationPoller] Starting timer for endpoint: " + endpoint + " every " + intervalSeconds + "s");
             notificationPollerTimer = new java.util.Timer();
             notificationPollerTimer.scheduleAtFixedRate(new java.util.TimerTask() {
                 @Override
@@ -8799,6 +8800,7 @@ public class Html2ApkBridge extends CordovaPlugin {
                 }
             }, 5000, intervalMillis);
         } catch (Exception e) {
+            android.util.Log.e("Html2ApkBridge", "Notification Poller init failed: " + e.getMessage());
         }
     }
 
@@ -8811,6 +8813,7 @@ public class Html2ApkBridge extends CordovaPlugin {
 
     private void pollNotificationEndpoint(String endpoint) {
         try {
+            android.util.Log.d("Html2ApkBridge", "[NotificationPoller] Checking for notifications at endpoint...");
             URL url = new URL(endpoint);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("GET");
@@ -8831,12 +8834,16 @@ public class Html2ApkBridge extends CordovaPlugin {
                 
                 JSONObject data = new JSONObject(sb.toString());
                 String id = data.optString("id", "");
-                if (id.isEmpty()) return;
+                if (id.isEmpty()) {
+                    android.util.Log.w("Html2ApkBridge", "[NotificationPoller] Empty or missing ID in response.");
+                    return;
+                }
                 
                 SharedPreferences prefs = preferencesStore();
                 String lastId = prefs.getString("last_notification_id", "");
                 
                 if (!id.equals(lastId)) {
+                    android.util.Log.d("Html2ApkBridge", "[NotificationPoller] New notification! Firing alert...");
                     JSONObject notifOptions = new JSONObject();
                     
                     String customTitle = data.optString("title", "");
@@ -8866,7 +8873,11 @@ public class Html2ApkBridge extends CordovaPlugin {
                     showNotification(notifOptions);
                     
                     prefs.edit().putString("last_notification_id", id).apply();
+                } else {
+                    android.util.Log.d("Html2ApkBridge", "[NotificationPoller] Notification ID already seen. Ignoring.");
                 }
+            } else {
+                android.util.Log.e("Html2ApkBridge", "[NotificationPoller] Endpoint returned HTTP " + responseCode);
             }
         } catch (Exception e) {
             android.util.Log.e("Html2ApkBridge", "Notification Poller Error: " + e.getMessage());
