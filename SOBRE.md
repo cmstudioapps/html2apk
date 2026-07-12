@@ -285,7 +285,7 @@ Cuidados:
 So funciona se o OneSignal App ID foi configurado no build.
 
 ```js
-const permitido = await solicitarPermissaoPush();
+const permitido = await solicitarPermissaoNotificacoes();
 
 if (permitido) {
   await identificarUsuarioPush("usuario-123");
