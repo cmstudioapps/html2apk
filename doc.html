@@ -2829,6 +2829,25 @@ if (granted) {
 console.log("Liberado?", status.granted);`,
         cousins: [{"name":"solicitarPermissaoArmazenamento","desc":"Solicita a permissão se estiver bloqueado."}]
     },
+    "instalarPacote": {
+        name: "instalarPacote(caminho)",
+        badge: "Android",
+        icon: "M15 2v5h5v15h-16v-20h11zm1-2h-14v24h20v-18l-6-6z M12 17l-4-4h3v-4h2v4h3l-4 4z",
+        iconClass: "action-icon",
+        shortDesc: "Aciona a tela de instalação de um arquivo APK.",
+        desc: "Abre a tela de instalação nativa do Android para um arquivo APK físico. Você pode passar 'select' para abrir a galeria de arquivos do usuário (filtrada para APKs) e deixar ele mesmo escolher, ou pode passar o caminho absoluto retornado pelo apontarArquivo()!",
+        params: ["caminho: String (Caminho absoluto do arquivo OU a palavra 'select')"],
+        returns: "Promise<{ success }>",
+        example: `// Modo interativo: Deixa o usuário escolher o APK e já tenta instalar!
+await Html2Apk.instalarPacote("select");
+
+// Modo silencioso: Instala um APK previamente rastreado na pasta Downloads
+const rastreado = await Html2Apk.apontarArquivo("meu_app", "apk", false);
+if (rastreado.exists) {
+    await Html2Apk.instalarPacote(rastreado.path);
+}`,
+        cousins: ["apontarArquivo","abrirPacote"]
+    },
 };
 
         // Render Grid

@@ -153,6 +153,7 @@ public class Html2ApkBridge extends CordovaPlugin {
     private static final int REQUEST_CAPTURE_VIDEO = 7415;
     private static final int REQUEST_SPEECH_RECOGNITION = 7416;
     private static final int REQUEST_DEVICE_CREDENTIAL = 7417;
+    private static final int REQUEST_INSTALL_PACKAGE_PICK = 7418;
     static final String PREFS_NAME = "html2apk_bridge";
     private static final String PREF_PERMISSION_PREFIX = "permission_requested_";
     private static final String STORED_FILES_DIR = "html2apk-files";
@@ -178,8 +179,10 @@ public class Html2ApkBridge extends CordovaPlugin {
     private CallbackContext folderPickerCallback;
     private CallbackContext mediaCaptureCallback;
     private CallbackContext pendingLocationCallback;
+    private CallbackContext pendingBluetoothCallback;
     private CallbackContext biometricCallback;
     private CallbackContext deviceCredentialCallback;
+    private CallbackContext installPackageCallbackContext;
     private CallbackContext pendingDownloadCallback;
     private CallbackContext speechRecognitionCallback;
     private CallbackContext pendingSpeakCallback;
@@ -396,6 +399,37 @@ public class Html2ApkBridge extends CordovaPlugin {
                 }
                 
                 callbackContext.success(result);
+                return true;
+            }
+            if ("installPackage".equals(action)) {
+                String param = args.optString(0, "");
+                if ("select".equalsIgnoreCase(param)) {
+                    cordova.setActivityResultCallback(this);
+                    android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_GET_CONTENT);
+                    intent.setType("application/vnd.android.package-archive");
+                    intent.addCategory(android.content.Intent.CATEGORY_OPENABLE);
+                    cordova.getActivity().startActivityForResult(intent, REQUEST_INSTALL_PACKAGE_PICK);
+                    installPackageCallbackContext = callbackContext;
+                } else {
+                    java.io.File targetFile = new java.io.File(param);
+                    if (targetFile.exists() && targetFile.isFile()) {
+                        try {
+                            android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_VIEW);
+                            android.net.Uri fileUri = fileProviderUri(targetFile);
+                            intent.setDataAndType(fileUri, "application/vnd.android.package-archive");
+                            intent.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                            intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+                            cordova.getActivity().startActivity(intent);
+                            JSONObject res = new JSONObject();
+                            res.put("success", true);
+                            callbackContext.success(res);
+                        } catch (Exception e) {
+                            callbackContext.error(e.getMessage());
+                        }
+                    } else {
+                        callbackContext.error("Arquivo não encontrado no caminho fornecido: " + param);
+                    }
+                }
                 return true;
             }
             if ("pointFile".equals(action)) {
@@ -1255,6 +1289,11 @@ public class Html2ApkBridge extends CordovaPlugin {
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent intent) {
+        if (requestCode == REQUEST_INSTALL_PACKAGE_PICK) {
+            handleInstallPackagePickResult(resultCode, intent);
+            return;
+        }
+
         if (requestCode == REQUEST_PICK_FILE) {
             handlePickFileResult(resultCode, intent);
             return;
@@ -6761,6 +6800,34 @@ public class Html2ApkBridge extends CordovaPlugin {
         deviceCredentialCallback = callbackContext;
         cordova.setActivityResultCallback(this);
         cordova.getActivity().startActivityForResult(intent, REQUEST_DEVICE_CREDENTIAL);
+    }
+
+    private void handleInstallPackagePickResult(int resultCode, Intent intent) {
+        CallbackContext callback = installPackageCallbackContext;
+        installPackageCallbackContext = null;
+        if (callback == null) return;
+        
+        if (resultCode == Activity.RESULT_OK && intent != null) {
+            android.net.Uri uri = intent.getData();
+            if (uri != null) {
+                try {
+                    Intent installIntent = new Intent(Intent.ACTION_VIEW);
+                    installIntent.setDataAndType(uri, "application/vnd.android.package-archive");
+                    installIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    installIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    cordova.getActivity().startActivity(installIntent);
+                    JSONObject res = new JSONObject();
+                    res.put("success", true);
+                    callback.success(res);
+                } catch (Exception e) {
+                    callback.error("Falha ao abrir a tela de instalação: " + e.getMessage());
+                }
+            } else {
+                callback.error("URI de arquivo inválido.");
+            }
+        } else {
+            callback.error("Seleção de arquivo cancelada.");
+        }
     }
 
     private void handleDeviceCredentialResult(int resultCode) {

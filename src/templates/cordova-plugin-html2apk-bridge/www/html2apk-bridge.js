@@ -1268,6 +1268,9 @@ var api = {
   apontarArquivo: function (nome, tipo, executar) {
     return call("pointFile", [String(nome || ""), String(tipo || ""), Boolean(executar)]);
   },
+  instalarPacote: function (caminho) {
+    return call("installPackage", [String(caminho || "")]);
+  },
   abrirForaDoApp: function (url) {
     return call("openUrl", [String(url || "")]);
   },

@@ -788,8 +788,15 @@ const { exists, version, packageId, appName } = await verificarPacote("WhatsApp"
 const { success } = await abrirPacote("com.whatsapp");
 
 // Encontra e aponta para um arquivo na pasta de Downloads (Android apenas)
-// O sistema faz busca inteligente! Você pode passar o nome exato ou apenas uma palavra-chave (ex: "app_atualizado").
-const { exists, opened, error } = await apontarArquivo("app_atualizado", "apk", true);
+// Busca inteligente ativa: Você pode passar o nome exato ou apenas uma palavra-chave (ex: "app_atualizado").
+const rastreado = await apontarArquivo("app_atualizado", "apk", false);
+
+// Abre a tela de instalação nativa do Android para um APK físico. 
+// Você pode usar o "path" retornado pelo apontarArquivo, ou usar a palavra "select"
+// para abrir o seletor nativo do sistema e pedir para o próprio usuário escolher o arquivo!
+await instalarPacote(rastreado.path); // Tenta instalar silenciosamente o APK que foi localizado nos downloads
+// ou
+await instalarPacote("select"); // Abre a galeria pedindo pro usuário apontar o APK
 ```
 
 Cuidados:
