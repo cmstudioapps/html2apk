@@ -805,6 +805,37 @@ Cuidados:
 - tenha fallback se WhatsApp, mapa ou discador nao existir;
 - chamadas e rotas ainda dependem de confirmacao do usuario.
 
+## Notificações Push Customizadas (Endpoint Poller)
+
+Se você não quiser depender de serviços como o OneSignal, o html2apk possui um Poller nativo no background (enquanto o aplicativo estiver ativo) que consulta seu próprio Endpoint de notificações.
+
+Para ativar, basta ir na aba **Configurações** no html2apk Desktop e preencher:
+- **Endpoint de Notificação**: O link da sua API que retorna o JSON da notificação (ex: `https://meu-site.com/api/notificacoes`).
+- **Intervalo de Polling**: De quanto em quanto tempo (em segundos) o app consultará seu link (mínimo de 30s).
+
+Essas opções também podem ser inseridas manualmente no seu `app.json`:
+```json
+{
+  "endpointNotification": "https://meu-site.com/api/notificacoes",
+  "timeNotification": 180
+}
+```
+
+### Formato esperado pelo seu Endpoint
+Sempre que o App consultar a sua URL via método `GET`, ele espera receber um JSON neste formato:
+
+```json
+{
+  "msg": "Texto da notificação que vai aparecer na tela",
+  "id": "abc1234",
+  "public": true,
+  "image": "https://meu-site.com/foto.png",
+  "clickOpen": "https://meu-site.com/promo"
+}
+```
+
+O aplicativo sempre salva internamente o último `id` recebido. Se, na próxima consulta, o `id` retornado pela sua API for diferente do gravado no celular, a nova notificação pulará instantaneamente na tela do usuário!
+
 ### Tela, tema e diagnostico
 
 Tela ligada:
@@ -1242,6 +1273,8 @@ O objetivo da normalizacao e fazer o resto do sistema pensar menos. Depois dela,
 ### Vantagem
 
 O usuario pode escrever configuracoes mais humanas, e o sistema transforma em uma estrutura mais rigida para o build.
+
+### Limite
 
 ### Limite
 

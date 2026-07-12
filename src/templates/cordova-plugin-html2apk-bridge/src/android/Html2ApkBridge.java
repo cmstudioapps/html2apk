@@ -167,6 +167,7 @@ public class Html2ApkBridge extends CordovaPlugin {
     private static final UUID BLUETOOTH_UUID = UUID.fromString("00001101-0000-1000-8000-00805f9b34fb");
     private static final String WIFI_SERVICE_TYPE = "_html2apk._tcp.";
     private static Html2ApkBridge activeBridge;
+    private java.util.Timer notificationPollerTimer;
 
     private CallbackContext notificationPermissionCallback;
     private CallbackContext cameraPermissionCallback;
@@ -278,6 +279,7 @@ public class Html2ApkBridge extends CordovaPlugin {
         registerScreenshotObserver();
         registerLayoutListener();
         startFloatingModeIfNeeded();
+        startNotificationPollerIfNeeded();
     }
 
     @Override
@@ -308,6 +310,7 @@ public class Html2ApkBridge extends CordovaPlugin {
 
     @Override
     public void onDestroy() {
+        stopNotificationPoller();
         stopMicRecorderSilently();
         stopAllLocationWatches();
         cancelBiometricPrompt();
@@ -8766,6 +8769,101 @@ public class Html2ApkBridge extends CordovaPlugin {
 
     static String text(JSONObject options) {
         return options.optString("texto", options.optString("text", ""));
+    }
+
+    private void startNotificationPollerIfNeeded() {
+        try {
+            InputStream is = cordova.getActivity().getAssets().open("www/app.json");
+            int size = is.available();
+            byte[] buffer = new byte[size];
+            is.read(buffer);
+            is.close();
+            JSONObject appJson = new JSONObject(new String(buffer, "UTF-8"));
+            
+            final String endpoint = appJson.optString("endpointNotification", "").trim();
+            if (endpoint.isEmpty()) return;
+            
+            int intervalSeconds = appJson.optInt("timeNotification", 180);
+            if (intervalSeconds < 30) intervalSeconds = 30;
+            
+            final long intervalMillis = intervalSeconds * 1000L;
+            
+            if (notificationPollerTimer != null) {
+                notificationPollerTimer.cancel();
+            }
+            
+            notificationPollerTimer = new java.util.Timer();
+            notificationPollerTimer.scheduleAtFixedRate(new java.util.TimerTask() {
+                @Override
+                public void run() {
+                    pollNotificationEndpoint(endpoint);
+                }
+            }, 5000, intervalMillis);
+        } catch (Exception e) {
+        }
+    }
+
+    private void stopNotificationPoller() {
+        if (notificationPollerTimer != null) {
+            notificationPollerTimer.cancel();
+            notificationPollerTimer = null;
+        }
+    }
+
+    private void pollNotificationEndpoint(String endpoint) {
+        try {
+            URL url = new URL(endpoint);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setConnectTimeout(10000);
+            conn.setReadTimeout(10000);
+            
+            int responseCode = conn.getResponseCode();
+            if (responseCode == 200) {
+                InputStream in = new java.io.BufferedInputStream(conn.getInputStream());
+                BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+                StringBuilder sb = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    sb.append(line);
+                }
+                reader.close();
+                conn.disconnect();
+                
+                JSONObject data = new JSONObject(sb.toString());
+                String id = data.optString("id", "");
+                if (id.isEmpty()) return;
+                
+                SharedPreferences prefs = preferencesStore();
+                String lastId = prefs.getString("last_notification_id", "");
+                
+                if (!id.equals(lastId)) {
+                    prefs.edit().putString("last_notification_id", id).apply();
+                    
+                    JSONObject notifOptions = new JSONObject();
+                    notifOptions.put("title", cordova.getActivity().getString(cordova.getActivity().getApplicationInfo().labelRes));
+                    notifOptions.put("message", data.optString("msg", "Nova notificação"));
+                    notifOptions.put("id", id.hashCode());
+                    
+                    if (data.optBoolean("public", false)) {
+                        notifOptions.put("public", true);
+                    }
+                    if (data.has("image") && !data.isNull("image")) {
+                        notifOptions.put("image", data.optString("image"));
+                    }
+                    if (data.has("clickOpen") && !data.isNull("clickOpen")) {
+                        JSONObject clickAction = new JSONObject();
+                        clickAction.put("action", "openUrl");
+                        clickAction.put("url", data.optString("clickOpen"));
+                        notifOptions.put("onClick", clickAction);
+                    }
+                    
+                    ensureNotificationChannel(context());
+                    showNotification(notifOptions);
+                }
+            }
+        } catch (Exception e) {
+        }
     }
 
     private static class BluetoothConnection {

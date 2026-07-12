@@ -49,6 +49,10 @@ const i18n = {
     orientationPortrait: "Vertical",
     orientationLandscape: "Horizontal",
     minSdkVersion: "Android minimo",
+    endpointNotification: "Endpoint de Notificacao (Opcional)",
+    endpointNotificationHint: "O APK vai checar este link para baixar push notifications.",
+    timeNotification: "Intervalo de Polling (Segundos)",
+    timeNotificationHint: "Tempo em segundos (Minimo: 30s) para o App consultar novas notificacoes.",
     appIcon: "Icone do app",
     appThemeColor: "Cor do tema/fallback",
     themeMode: "Tema do APK",
@@ -265,10 +269,14 @@ const i18n = {
     modeStandalone: "Normal",
     modeFloating: "Floating",
     orientation: "Orientation",
-    orientationDefault: "Auto",
+    orientationDefault: "Automatic",
     orientationPortrait: "Portrait",
     orientationLandscape: "Landscape",
     minSdkVersion: "Minimum Android",
+    endpointNotification: "Notification Endpoint (Optional)",
+    endpointNotificationHint: "The APK will check this link to download push notifications.",
+    timeNotification: "Polling Interval (Seconds)",
+    timeNotificationHint: "Time in seconds (Min: 30s) for the App to fetch new notifications.",
     appIcon: "App icon",
     appThemeColor: "Theme/fallback color",
     themeMode: "APK theme",
@@ -2468,6 +2476,8 @@ function collectElements() {
     "modeInput",
     "orientationInput",
     "minSdkVersionInput",
+    "endpointNotificationInput",
+    "timeNotificationInput",
     "androidPlatformInput",
     "themeModeInput",
     "themeColorInput",
@@ -3375,6 +3385,8 @@ function populateSettings(config = {}, project = state.project) {
   elements.modeInput.value = config.mode || "fullscreen";
   elements.orientationInput.value = normalizeOrientationInputValue(config.orientation);
   elements.minSdkVersionInput.value = String(normalizeMinSdkVersion(config.minSdkVersion || config.androidMinSdkVersion));
+  elements.endpointNotificationInput.value = config.endpointNotification || "";
+  elements.timeNotificationInput.value = config.timeNotification || "180";
   elements.androidPlatformInput.value = config.androidPlatform || "android@15.0.0";
   elements.themeModeInput.value = normalizeThemeMode(config.themeMode || config.theme || (String(config.themeColor || "").toLowerCase() === "auto" ? "auto" : "fixed"));
   const themeColor = normalizeHexColor(config.themeColor || config.splashBackgroundColor || config.backgroundColor);
@@ -3478,6 +3490,8 @@ function renderReview() {
     [text("mode"), selectedOptionText(elements.modeInput)],
     [text("orientation"), selectedOptionText(elements.orientationInput)],
     [text("minSdkVersion"), selectedOptionText(elements.minSdkVersionInput)],
+    [text("endpointNotification"), elements.endpointNotificationInput.value.trim() || "-"],
+    [text("timeNotification"), elements.timeNotificationInput.value.trim() || "-"],
     [text("themeMode"), selectedOptionText(elements.themeModeInput)],
     [text("appThemeColor"), elements.themeColorTextInput.value.trim()],
     [text("oneSignalAppId"), elements.oneSignalAppIdInput.value.trim() || "-"],
@@ -3795,6 +3809,8 @@ function buildOptions() {
     mode: elements.modeInput.value,
     orientation: elements.orientationInput.value,
     minSdkVersion: normalizeMinSdkVersion(elements.minSdkVersionInput.value),
+    endpointNotification: elements.endpointNotificationInput.value.trim(),
+    timeNotification: Number(elements.timeNotificationInput.value) >= 30 ? Number(elements.timeNotificationInput.value) : 180,
     themeColor: normalizeHexColor(elements.themeColorTextInput.value),
     themeMode: normalizeThemeMode(elements.themeModeInput.value),
     theme: normalizeThemeMode(elements.themeModeInput.value),
@@ -4331,7 +4347,7 @@ async function init() {
       elements.iconPreview.src = iconPreviewPath(state.defaultIconPath);
     }
   } catch {
-    elements.appVersion.textContent = "v12.0.23";
+    elements.appVersion.textContent = "v12.1.0";
   }
 
   setTimeout(finishBoot, 1800);

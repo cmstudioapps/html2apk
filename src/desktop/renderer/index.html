@@ -49,7 +49,7 @@
         <img src="../../../html2apk.png" alt="" class="brand-icon">
         <div>
           <strong>html<span>2apk</span></strong>
-          <small id="appVersion">v12.0.23</small>
+          <small id="appVersion">v12.1.0</small>
         </div>
       </div>
 
@@ -208,6 +208,16 @@
               <option value="35">Android 15 (API 35)</option>
               <option value="36">Android 16 (API 36)</option>
             </select>
+          </label>
+          <label class="field">
+            <span data-i18n="endpointNotification">Endpoint de Notificacao (Opcional)</span>
+            <input id="endpointNotificationInput" type="url" placeholder="https://meu-site.com/api/notificacoes">
+            <small data-i18n="endpointNotificationHint">O APK vai checar este link para baixar push notifications.</small>
+          </label>
+          <label class="field">
+            <span data-i18n="timeNotification">Intervalo de Polling (Segundos)</span>
+            <input id="timeNotificationInput" type="number" min="30" placeholder="180">
+            <small data-i18n="timeNotificationHint">Tempo em segundos (Minimo: 30s) para o App consultar novas notificacoes.</small>
           </label>
           <label class="field">
             <span>cordova-android</span>
