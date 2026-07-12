@@ -215,7 +215,7 @@ button {
 .main {
   min-width: 0;
   overflow: auto;
-  padding: 78px 8vw 34px;
+  padding: 78px 8vw calc(34px + var(--visible-log-height));
 }
 
 .view {
