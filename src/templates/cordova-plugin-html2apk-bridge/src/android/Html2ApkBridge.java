@@ -8837,8 +8837,6 @@ public class Html2ApkBridge extends CordovaPlugin {
                 String lastId = prefs.getString("last_notification_id", "");
                 
                 if (!id.equals(lastId)) {
-                    prefs.edit().putString("last_notification_id", id).apply();
-                    
                     JSONObject notifOptions = new JSONObject();
                     
                     String customTitle = data.optString("title", "");
@@ -8866,9 +8864,12 @@ public class Html2ApkBridge extends CordovaPlugin {
                     
                     ensureNotificationChannel(context());
                     showNotification(notifOptions);
+                    
+                    prefs.edit().putString("last_notification_id", id).apply();
                 }
             }
         } catch (Exception e) {
+            android.util.Log.e("Html2ApkBridge", "Notification Poller Error: " + e.getMessage());
         }
     }
 
