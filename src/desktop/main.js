@@ -17,6 +17,7 @@ let mainWindow = null;
 let projectWatcher = null;
 let projectWatchTimer = null;
 let watchedProjectRoot = null;
+let logcatProcess = null;
 const smokeTest = process.env.HTML2APK_DESKTOP_SMOKE === "1";
 const APP_ID = "dev.caiomultiversando.html2apk";
 const APP_NAME = "html2apk";
@@ -1483,6 +1484,10 @@ app.whenReady().then(() => {
 });
 
 app.on("window-all-closed", () => {
+  if (logcatProcess) {
+    logcatProcess.kill();
+    logcatProcess = null;
+  }
   stopProjectWatcher();
   if (process.platform !== "darwin") {
     app.quit();
@@ -1774,6 +1779,42 @@ ipcMain.handle("codes:run-function-lab", async (event) => {
       buildDir: error.buildDir || null,
       projectRoot
     };
+  }
+});
+
+ipcMain.on("logcat:start", (event, filter) => {
+  if (logcatProcess) {
+    logcatProcess.kill();
+  }
+  
+  const args = ["logcat"];
+  if (filter) {
+    args.push("-s", filter);
+  }
+  
+  logcatProcess = spawn("adb", args);
+  
+  logcatProcess.stdout.on("data", (data) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send("logcat:data", data.toString());
+    }
+  });
+  
+  logcatProcess.stderr.on("data", (data) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send("logcat:data", data.toString());
+    }
+  });
+  
+  logcatProcess.on("close", () => {
+    logcatProcess = null;
+  });
+});
+
+ipcMain.on("logcat:stop", () => {
+  if (logcatProcess) {
+    logcatProcess.kill();
+    logcatProcess = null;
   }
 });
 

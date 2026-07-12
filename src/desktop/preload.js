@@ -28,6 +28,13 @@ contextBridge.exposeInMainWorld("html2apkDesktop", {
   closeWindow: () => ipcRenderer.invoke("window:close"),
   setWindowTheme: (theme) => ipcRenderer.invoke("window:set-theme", theme),
   pathForFile: (file) => webUtils.getPathForFile(file),
+  startLogcat: (filter) => ipcRenderer.send("logcat:start", filter),
+  stopLogcat: () => ipcRenderer.send("logcat:stop"),
+  onLogcatData: (listener) => {
+    const handler = (_event, payload) => listener(payload);
+    ipcRenderer.on("logcat:data", handler);
+    return () => ipcRenderer.removeListener("logcat:data", handler);
+  },
   onBuildLog: (listener) => {
     const handler = (_event, payload) => listener(payload);
     ipcRenderer.on("build:log", handler);

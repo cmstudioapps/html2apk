@@ -49,7 +49,7 @@
         <img src="../../../html2apk.png" alt="" class="brand-icon">
         <div>
           <strong>html<span>2apk</span></strong>
-          <small id="appVersion">v12.1.1</small>
+          <small id="appVersion">v12.1.2</small>
         </div>
       </div>
 
@@ -61,6 +61,7 @@
         <button class="nav-item" data-view="files"><span class="nav-icon">F</span><span data-i18n="navFiles">Arquivos</span></button>
         <button class="nav-item" data-view="codes"><span class="nav-icon">J</span><span data-i18n="navCodes">Codigos</span></button>
         <button class="nav-item" data-view="logs"><span class="nav-icon">L</span><span data-i18n="navLogs">Logs</span></button>
+        <button class="nav-item" data-view="logcat"><span class="nav-icon">A</span><span data-i18n="navLogcat">Android</span></button>
       </nav>
 
       <div class="sidebar-bottom">
@@ -433,6 +434,24 @@
           <button id="clearLogsButton" class="secondary-action" type="button" data-i18n="clearLogs">Limpar logs</button>
         </header>
         <div id="logConsole" class="log-console"></div>
+      </section>
+
+      <section id="view-logcat" class="view">
+        <header class="view-header compact">
+          <div>
+            <p class="eyebrow" data-i18n="logcatEyebrow">Dispositivo USB</p>
+            <h1 data-i18n="logcatTitle">Logs do Android</h1>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button id="toggleLogcatButton" class="primary-action" type="button" data-i18n="startLogcat">Iniciar Captura</button>
+            <button id="clearLogcatButton" class="secondary-action" type="button" data-i18n="clearLogs">Limpar logs</button>
+          </div>
+        </header>
+        <div class="logcat-controls" style="padding: 10px 24px; display: flex; align-items: center; gap: 10px; background: var(--bg-color);">
+          <label for="logcatFilter" style="font-size: 13px; font-weight: 500;">Filtro (Tag):</label>
+          <input type="text" id="logcatFilter" value="Html2ApkBridge" style="padding: 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--surface-color); color: var(--text-color); font-family: monospace; width: 200px;">
+        </div>
+        <div id="logcatConsole" class="log-console"></div>
       </section>
 
       <section id="view-codes" class="view">

@@ -2526,9 +2526,14 @@ function collectElements() {
     "fileLanguageBadge",
     "fileEditorInput",
     "fileHighlight",
+    "viewLogs",
     "logConsole",
-    "bottomLogConsole",
     "clearLogsButton",
+    "viewLogcat",
+    "logcatConsole",
+    "toggleLogcatButton",
+    "clearLogcatButton",
+    "logcatFilter",
     "toggleLogsButton",
     "bottomToggleLogsButton",
     "bottomClearLogsButton",
@@ -2658,6 +2663,52 @@ function clearLogs() {
     elements.bottomLogConsole.innerHTML = "";
   }
   appendLog(text("logsCleared"), "system");
+}
+
+let isLogcatRunning = false;
+
+function appendLogcatData(data) {
+  const line = document.createElement("div");
+  line.className = "log-line";
+  
+  if (data.includes(" E ") || data.includes("Error") || data.toLowerCase().includes("failed") || data.includes("Exception")) {
+    line.classList.add("error");
+  } else if (data.includes(" W ") || data.includes("Warning")) {
+    line.classList.add("warning");
+  } else if (data.includes(" D ") || data.includes("Debug")) {
+    line.classList.add("debug");
+  }
+
+  line.textContent = data.trimEnd();
+  elements.logcatConsole.appendChild(line);
+
+  if (elements.logcatConsole.children.length > 2000) {
+    elements.logcatConsole.removeChild(elements.logcatConsole.firstChild);
+  }
+
+  elements.logcatConsole.scrollTop = elements.logcatConsole.scrollHeight;
+}
+
+function clearLogcat() {
+  elements.logcatConsole.innerHTML = "";
+}
+
+function toggleLogcat() {
+  if (isLogcatRunning) {
+    api.stopLogcat();
+    isLogcatRunning = false;
+    elements.toggleLogcatButton.textContent = "Iniciar Captura";
+    elements.toggleLogcatButton.classList.replace("danger-action", "primary-action");
+    appendLogcatData("[Sistema] Captura interrompida.");
+  } else {
+    clearLogcat();
+    const filter = elements.logcatFilter.value.trim();
+    api.startLogcat(filter);
+    isLogcatRunning = true;
+    elements.toggleLogcatButton.textContent = "Parar Captura";
+    elements.toggleLogcatButton.classList.replace("primary-action", "danger-action");
+    appendLogcatData(`[Sistema] Iniciando captura de logs (Filtro: ${filter || "Nenhum"})...`);
+  }
 }
 
 function setStep(step, status, message) {
@@ -4181,7 +4232,14 @@ function bindEvents() {
     updateFilePreview();
   });
   elements.fileEditorInput.addEventListener("scroll", syncFileEditorHighlightScroll);
+  
   elements.clearLogsButton.addEventListener("click", clearLogs);
+  elements.toggleLogcatButton.addEventListener("click", toggleLogcat);
+  elements.clearLogcatButton.addEventListener("click", clearLogcat);
+  
+  api.onLogcatData((data) => {
+    if (isLogcatRunning) appendLogcatData(data);
+  });
   elements.toggleLogsButton.addEventListener("click", toggleLogBar);
   elements.bottomToggleLogsButton.addEventListener("click", toggleLogBar);
   elements.bottomClearLogsButton.addEventListener("click", clearLogs);
@@ -4347,7 +4405,7 @@ async function init() {
       elements.iconPreview.src = iconPreviewPath(state.defaultIconPath);
     }
   } catch {
-    elements.appVersion.textContent = "v12.1.1";
+    elements.appVersion.textContent = "v12.1.2";
   }
 
   setTimeout(finishBoot, 1800);
