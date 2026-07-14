@@ -421,6 +421,15 @@ public class Html2ApkBridge extends CordovaPlugin {
                             intent.setDataAndType(fileUri, "application/vnd.android.package-archive");
                             intent.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
                             intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+                            intent.addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                            
+                            // Explicitly grant permission to all apps that can handle this intent (PackageInstaller)
+                            java.util.List<android.content.pm.ResolveInfo> resInfoList = cordova.getActivity().getPackageManager().queryIntentActivities(intent, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY);
+                            for (android.content.pm.ResolveInfo resolveInfo : resInfoList) {
+                                String packageName = resolveInfo.activityInfo.packageName;
+                                cordova.getActivity().grantUriPermission(packageName, fileUri, android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION | android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                            }
+                            
                             cordova.getActivity().startActivity(intent);
                             JSONObject res = new JSONObject();
                             res.put("success", true);
@@ -462,6 +471,14 @@ public class Html2ApkBridge extends CordovaPlugin {
                             intent.setDataAndType(fileUri, mimeType);
                             intent.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
                             intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+                            intent.addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                            
+                            java.util.List<android.content.pm.ResolveInfo> resInfoList = cordova.getActivity().getPackageManager().queryIntentActivities(intent, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY);
+                            for (android.content.pm.ResolveInfo resolveInfo : resInfoList) {
+                                String packageName = resolveInfo.activityInfo.packageName;
+                                cordova.getActivity().grantUriPermission(packageName, fileUri, android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION | android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                            }
+                            
                             cordova.getActivity().startActivity(intent);
                             result.put("opened", true);
                         } catch (Exception e) {
