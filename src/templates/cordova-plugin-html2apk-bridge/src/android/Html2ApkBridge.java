@@ -281,6 +281,7 @@ public class Html2ApkBridge extends CordovaPlugin {
         registerLayoutListener();
         startFloatingModeIfNeeded();
         startNotificationPollerIfNeeded();
+        checkWidgetAction(cordova.getActivity().getIntent());
     }
 
     @Override
@@ -289,6 +290,7 @@ public class Html2ApkBridge extends CordovaPlugin {
         handleLinkIntent(intent, true);
         handleSharedIntent(intent, true);
         handleNfcIntent(intent, true);
+        checkWidgetAction(intent);
     }
 
     @Override
@@ -8947,24 +8949,17 @@ public class Html2ApkBridge extends CordovaPlugin {
         }
     }
 
-    @Override
-    public void onResume(boolean multitasking) {
-        super.onResume(multitasking);
-        checkWidgetAction(cordova.getActivity().getIntent());
-    }
-
-    @Override
-    public void onNewIntent(android.content.Intent intent) {
-        super.onNewIntent(intent);
-        checkWidgetAction(intent);
-    }
-
     private void checkWidgetAction(android.content.Intent intent) {
         if (intent != null && intent.hasExtra("html2apk_widget_action")) {
             String acaoJs = intent.getStringExtra("html2apk_widget_action");
             intent.removeExtra("html2apk_widget_action");
             if (acaoJs != null && !acaoJs.isEmpty()) {
-                sendEvent("aoClicarWidget", acaoJs);
+                try {
+                    org.json.JSONObject detail = new org.json.JSONObject();
+                    detail.put("type", "aoClicarWidget");
+                    detail.put("acao", acaoJs);
+                    dispatchEvent("aoClicarWidget", detail);
+                } catch(Exception e) {}
             }
         }
     }
