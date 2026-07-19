@@ -887,6 +887,35 @@ await entrarPip({ aspectRatio: "16:9" });
 // await fecharApp();
 ```
 
+Widgets na Tela Inicial:
+
+```js
+// Atualiza o Widget do app na tela inicial do usuário
+await atualizarWidget({
+  titulo: "Novo Alerta",
+  descricao: "Seu processamento terminou!",
+  fundo: true,
+  fundoCor: "#000000",
+  corTexto: "#ffffff",
+  fundoImagem: "https://example.com/imagem.png", // ou base64 data URI
+  fundoBlur: 10,
+  imagem: "data:image/png;base64,...", // ícone lateral
+  botao1: { texto: "Abrir", acao: "abrir_app" },
+  botao2: { texto: "Dispensar", acao: "dispensar_alerta" }
+});
+```
+
+Para interceptar o clique nos botões do Widget quando o app abrir ou voltar para o primeiro plano:
+
+```js
+window.addEventListener("aoClicarWidget", (event) => {
+  const acao = event.detail;
+  if (acao === "abrir_app") {
+    // fazer algo...
+  }
+});
+```
+
 Barras do Android:
 
 ```js

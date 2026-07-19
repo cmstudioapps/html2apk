@@ -1265,6 +1265,9 @@ var api = {
   pesquisarContato: function (query) {
     return call("pesquisarContato", [String(query || "")]);
   },
+  atualizarWidget: function (opcoes) {
+    return call("atualizarWidget", [opcoes || {}]);
+  },
   entrarPip: function (options) {
     return call("enterPip", [options || {}]);
   },

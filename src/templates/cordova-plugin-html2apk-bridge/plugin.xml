@@ -90,6 +90,12 @@
           <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
         </intent-filter>
       </receiver>
+      <receiver android:name="dev.html2apk.bridge.Html2ApkWidgetProvider" android:exported="true">
+        <intent-filter>
+          <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+        </intent-filter>
+        <meta-data android:name="android.appwidget.provider" android:resource="@xml/html2apk_widget_info" />
+      </receiver>
     </config-file>
 
     <edit-config file="AndroidManifest.xml" target="/manifest/application/activity" mode="merge">
@@ -126,7 +132,11 @@
     <source-file src="src/android/BootReceiver.java" target-dir="app/src/main/java/dev/html2apk/bridge" />
     <source-file src="src/android/NotificationStore.java" target-dir="app/src/main/java/dev/html2apk/bridge" />
     <source-file src="src/android/Web2ApkInjector.java" target-dir="app/src/main/java/dev/html2apk/bridge" />
+    <source-file src="src/android/Html2ApkWidgetProvider.java" target-dir="app/src/main/java/dev/html2apk/bridge" />
+    <source-file src="src/android/Html2ApkWidgetManager.java" target-dir="app/src/main/java/dev/html2apk/bridge" />
     <resource-file src="src/android/xml/html2apk_file_paths.xml" target="res/xml/html2apk_file_paths.xml" />
+    <resource-file src="src/android/res/layout/html2apk_widget_layout.xml" target="res/layout/html2apk_widget_layout.xml" />
+    <resource-file src="src/android/res/xml/html2apk_widget_info.xml" target="res/xml/html2apk_widget_info.xml" />
     <framework src="androidx.core:core:1.12.0" />
     <framework src="com.google.mlkit:text-recognition:16.0.1" />
   </platform>

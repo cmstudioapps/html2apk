@@ -874,7 +874,8 @@ function nativeFunctionLabHtml() {
           ["aoDarErroBT", "erro bluetooth"],
           ["aoConectarWiFi", "wifi conectado"],
           ["aoReceberDadosWiFi", "dados wifi"],
-          ["aoDarErroWiFi", "erro wifi"]
+          ["aoDarErroWiFi", "erro wifi"],
+          ["aoClicarWidget", "clique no widget"]
         ].forEach(function (item) {
           listen(item[0], item[1]);
         });
@@ -942,6 +943,7 @@ function nativeFunctionLabHtml() {
         configurarIconeFlutuante: { title: "configurarIconeFlutuante()", run: function () { return fn("configurarIconeFlutuante")({ opacidade: 0.65, tamanho: 58 }); } },
         definirOpacidadeIconeFlutuante: { title: "definirOpacidadeIconeFlutuante()", run: function () { return fn("definirOpacidadeIconeFlutuante")(0.55); } },
         pararIconeFlutuante: { title: "pararIconeFlutuante()", run: function () { return fn("pararIconeFlutuante")(); } },
+        atualizarWidget: { title: "atualizarWidget()", run: function () { return fn("atualizarWidget")({ titulo: "Alerta do Teste", descricao: "Funcionou!", fundoCor: "#ff0000", corTexto: "#ffffff", botao1: { texto: "Ação", acao: "botao_1_clicado" } }); } },
         minimizarApp: { title: "minimizarApp()", run: function () { return fn("minimizarApp")(); } },
         entrarPip: { title: "entrarPip()", run: function () { return fn("entrarPip")({ aspectRatio: "16:9" }); } },
         fecharApp: { title: "fecharApp()", run: function () { return fn("fecharApp")(); } },
@@ -1038,7 +1040,7 @@ function nativeFunctionLabHtml() {
         { title: "Wi-Fi local", ids: ["iniciarWifi", "procurarWifi", "conectarWifi", "enviarWifi"] },
         { title: "Notificacoes", ids: ["notificar", "agendarNotificacao", "agendarNotificacoes", "cancelarNotificacao", "agendarLoopNotificacoes", "cancelarLoopNotificacoes", "pushInfo"] },
         { title: "Permissoes e configuracoes", ids: ["statusPermissoes", "permissaoNotificacao", "statusPermissaoNotificacoes", "permissaoCamera", "permissaoMicrofone", "statusMicrofone", "solicitarPermissaoContatos", "alarmeExato", "abrirAlarmeExato", "statusSobreposicao", "solicitarSobreposicao", "abrirSobreposicao"] },
-        { title: "Tela e hardware", ids: ["fullscreenOn", "fullscreenOff", "telaAcordadaOn", "telaAcordadaOff", "brilhoTela", "corTema", "corBarrasSistema", "lanternaOn", "lanternaOff", "lanterna", "statusLanterna", "capturarTela", "tirarPrint", "volumeAtual", "definirVolume", "aumentarVolume", "diminuirVolume", "iniciarIconeFlutuante", "configurarIconeFlutuante", "definirOpacidadeIconeFlutuante", "pararIconeFlutuante", "minimizarApp", "entrarPip", "fecharApp"] },
+        { title: "Tela e hardware", ids: ["fullscreenOn", "fullscreenOff", "telaAcordadaOn", "telaAcordadaOff", "brilhoTela", "corTema", "corBarrasSistema", "lanternaOn", "lanternaOff", "lanterna", "statusLanterna", "capturarTela", "tirarPrint", "volumeAtual", "definirVolume", "aumentarVolume", "diminuirVolume", "iniciarIconeFlutuante", "configurarIconeFlutuante", "definirOpacidadeIconeFlutuante", "pararIconeFlutuante", "atualizarWidget", "minimizarApp", "entrarPip", "fecharApp"] },
         { title: "Camera, QR Code e microfone", ids: ["tirarFoto", "capturarVideo", "escanearQRCode", "ouvirMic", "pararMic"] },
         { title: "Texto e voz", ids: ["ocr", "falar", "pararFala", "ouvir"] },
         { title: "Arquivos e midia", ids: ["escolherImagem", "escolherImagens", "escolherArquivo", "escolherArquivos", "escolherVideo", "escolherPasta", "salvarArquivoPicker", "salvarArquivoCrud", "lerArquivo", "lerArquivoCompleto", "listarArquivos", "infoArquivo", "arquivoExiste", "abrirArquivo", "compartilharArquivo", "baixarArquivo", "baixarBase64", "baixarArquivoLocal", "excluirArquivo", "instalarAtualizacao", "solicitarPermissaoInstalacao"] },

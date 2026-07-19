@@ -353,6 +353,11 @@ public class Html2ApkBridge extends CordovaPlugin {
                 JSONObject options = args.optJSONObject(0);
                 return Html2ApkPipManager.enterPip(this, callbackContext, options);
             }
+            if ("atualizarWidget".equals(action)) {
+                JSONObject options = args.optJSONObject(0);
+                Html2ApkWidgetManager.atualizarWidget(this, options, callbackContext);
+                return true;
+            }
             if ("solicitarPermissaoContatos".equals(action)) {
                 if (cordova.hasPermission(android.Manifest.permission.READ_CONTACTS)) {
                     callbackContext.success();
@@ -8939,6 +8944,28 @@ public class Html2ApkBridge extends CordovaPlugin {
             }
         } catch (Exception e) {
             android.util.Log.e("Html2ApkBridge", "Notification Poller Error: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public void onResume(boolean multitasking) {
+        super.onResume(multitasking);
+        checkWidgetAction(cordova.getActivity().getIntent());
+    }
+
+    @Override
+    public void onNewIntent(android.content.Intent intent) {
+        super.onNewIntent(intent);
+        checkWidgetAction(intent);
+    }
+
+    private void checkWidgetAction(android.content.Intent intent) {
+        if (intent != null && intent.hasExtra("html2apk_widget_action")) {
+            String acaoJs = intent.getStringExtra("html2apk_widget_action");
+            intent.removeExtra("html2apk_widget_action");
+            if (acaoJs != null && !acaoJs.isEmpty()) {
+                sendEvent("aoClicarWidget", acaoJs);
+            }
         }
     }
 
