@@ -1259,6 +1259,12 @@ var api = {
   abrirUrlExterno: function (url) {
     return call("openUrl", [String(url || "")]);
   },
+  solicitarPermissaoContatos: function () {
+    return call("solicitarPermissaoContatos", []);
+  },
+  pesquisarContato: function (query) {
+    return call("pesquisarContato", [String(query || "")]);
+  },
   entrarPip: function (options) {
     return call("enterPip", [options || {}]);
   },

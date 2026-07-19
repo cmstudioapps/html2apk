@@ -911,6 +911,21 @@ const bateria = await infoBateria();
 const memoria = await infoMemoria();
 // Retorna: { availableBytes, totalBytes, lowMemory, thresholdBytes, appUsedBytes, appMaxBytes }
 
+Agenda de Contatos:
+
+```js
+// Primeiro, garanta que tem permissão
+const perm = await solicitarPermissaoContatos();
+if (perm.granted) {
+  // Pesquisa todos os contatos que tenham "Maria" (ou busca por número)
+  const maria = await pesquisarContato("Maria");
+  console.log(maria); // [{ nome: "Maria da Silva", numero: "+551199999999" }]
+  
+  // Ou busca todos os contatos da agenda (vazio)
+  const todos = await pesquisarContato();
+}
+```
+
 const armazenamento = await infoArmazenamento();
 // Retorna: { internal: { available, total, free }, cache: {...}, appExternal: {...}, external: {...} }
 

@@ -1017,6 +1017,9 @@ function nativeFunctionLabHtml() {
         removerDaSessao: { title: "removerDaSessao()", run: function () { return fn("removerDaSessao")("testeChave"); } },
         listarSessao: { title: "listarSessao()", run: function () { return fn("listarSessao")(); } },
         limparSessao: { title: "limparSessao()", run: function () { return fn("limparSessao")(); } },
+        
+        solicitarPermissaoContatos: { title: "solicitarPermissaoContatos()", run: function () { return fn("solicitarPermissaoContatos")(); } },
+        pesquisarContato: { title: "pesquisarContato()", run: function () { return fn("pesquisarContato")("a"); } },
 
         infoPapelParede: { title: "infoPapelParede()", run: function () { return fn("infoPapelParede")(); } },
         definirPapelParede: { title: "definirPapelParede()", run: function () { return fn("definirPapelParede")({ base64: sampleImageBase64, mimeType: "image/png", alvo: "inicio" }); } },
@@ -1034,14 +1037,16 @@ function nativeFunctionLabHtml() {
         { title: "Bluetooth", ids: ["iniciarBt", "procurarBt", "conectarBt", "enviarBt"] },
         { title: "Wi-Fi local", ids: ["iniciarWifi", "procurarWifi", "conectarWifi", "enviarWifi"] },
         { title: "Notificacoes", ids: ["notificar", "agendarNotificacao", "agendarNotificacoes", "cancelarNotificacao", "agendarLoopNotificacoes", "cancelarLoopNotificacoes", "pushInfo"] },
-        { title: "Permissoes e configuracoes", ids: ["statusPermissoes", "permissaoNotificacao", "statusPermissaoNotificacoes", "permissaoCamera", "permissaoMicrofone", "statusMicrofone", "alarmeExato", "abrirAlarmeExato", "statusSobreposicao", "solicitarSobreposicao", "abrirSobreposicao"] },
+        { title: "Permissoes e configuracoes", ids: ["statusPermissoes", "permissaoNotificacao", "statusPermissaoNotificacoes", "permissaoCamera", "permissaoMicrofone", "statusMicrofone", "solicitarPermissaoContatos", "alarmeExato", "abrirAlarmeExato", "statusSobreposicao", "solicitarSobreposicao", "abrirSobreposicao"] },
         { title: "Tela e hardware", ids: ["fullscreenOn", "fullscreenOff", "telaAcordadaOn", "telaAcordadaOff", "brilhoTela", "corTema", "corBarrasSistema", "lanternaOn", "lanternaOff", "lanterna", "statusLanterna", "capturarTela", "tirarPrint", "volumeAtual", "definirVolume", "aumentarVolume", "diminuirVolume", "iniciarIconeFlutuante", "configurarIconeFlutuante", "definirOpacidadeIconeFlutuante", "pararIconeFlutuante", "minimizarApp", "entrarPip", "fecharApp"] },
         { title: "Camera, QR Code e microfone", ids: ["tirarFoto", "capturarVideo", "escanearQRCode", "ouvirMic", "pararMic"] },
         { title: "Texto e voz", ids: ["ocr", "falar", "pararFala", "ouvir"] },
         { title: "Arquivos e midia", ids: ["escolherImagem", "escolherImagens", "escolherArquivo", "escolherArquivos", "escolherVideo", "escolherPasta", "salvarArquivoPicker", "salvarArquivoCrud", "lerArquivo", "lerArquivoCompleto", "listarArquivos", "infoArquivo", "arquivoExiste", "abrirArquivo", "compartilharArquivo", "baixarArquivo", "baixarBase64", "baixarArquivoLocal", "excluirArquivo", "instalarAtualizacao", "solicitarPermissaoInstalacao"] },
         { title: "Abrir apps externos", ids: ["abrirNoApp", "abrirForaDoApp", "abrirUrl", "abrirUrlExterno", "discar", "abrirMapa", "abrirWhatsapp"] },
         { title: "Diagnostico", ids: ["infoDispositivo", "infoRede", "infoBateria", "infoMemoria", "infoArmazenamento", "infoDesempenho", "appsAbertos", "infoAppsAbertos"] },
-        { title: "Localizacao e seguranca", ids: ["obterLocalizacao", "acompanharLocalizacao", "pararLocalizacao", "aoMudarLocalizacao", "medirVelocidade", "pararVelocidade", "autenticarBiometria", "solicitarBloqueio", "solicitarSegundoPlano", "configurarInicioAutomatico", "salvarSeguro", "lerSeguro", "lerSeguroCompleto", "listarSeguro", "removerSeguro", "limparSeguro", "salvarNaSessao", "lerDaSessao", "removerDaSessao", "listarSessao", "limparSessao"] },
+        { title: "Localizacao e seguranca", ids: ["obterLocalizacao", "acompanharLocalizacao", "pararLocalizacao", "aoMudarLocalizacao", "medirVelocidade", "pararVelocidade"] },
+        { title: "Seguranca e armazenamento", ids: ["autenticarBiometria", "solicitarBloqueio", "solicitarSegundoPlano", "configurarInicioAutomatico", "salvarSeguro", "lerSeguro", "lerSeguroCompleto", "listarSeguro", "removerSeguro", "limparSeguro", "salvarNaSessao", "lerDaSessao", "removerDaSessao", "listarSessao", "limparSessao"] },
+        { title: "Agenda de Contatos", ids: ["solicitarPermissaoContatos", "pesquisarContato"] },
         { title: "Papel de parede", ids: ["infoPapelParede", "definirPapelParede", "abrirConfigPapel", "definirImagemEscolhida"] },
         { title: "Eventos", ids: ["registrarEventos", "obterNotificacaoInicial", "obterLinkInicial", "aoLigarDispositivo"] }
       ];
@@ -1068,7 +1073,7 @@ function nativeFunctionLabHtml() {
         "abrirSobreposicao", "abrirConfigPapel", "escolherImagem", "escolherImagens",
         "escolherArquivo", "escolherArquivos", "escolherVideo", "escolherPasta",
         "salvarArquivoPicker", "baixarArquivoLocal", "tirarFoto", "capturarVideo",
-        "escanearQRCode", "ouvir", "autenticarBiometria", "solicitarBloqueio"
+        "escanearQRCode", "ouvir", "autenticarBiometria", "solicitarBloqueio", "solicitarPermissaoContatos"
       ];
       var dangerActionIds = ["fecharApp", "minimizarApp", "entrarPip", "limparSeguro", "excluirArquivo", "pararIconeFlutuante"];
       var initialSmokeIds = ["registrarEventos", "statusPermissoes", "infoDispositivo", "infoRede", "infoBateria", "volumeAtual"];

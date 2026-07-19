@@ -176,6 +176,8 @@ public class Html2ApkBridge extends CordovaPlugin {
     private CallbackContext microphonePermissionCallback;
     private CallbackContext pendingMicStartCallback;
     private CallbackContext filePickerCallback;
+    private static final int REQUEST_CONTACTS = 7320;
+    private CallbackContext contactsPermissionCallback;
     private CallbackContext saveFileCallback;
     private CallbackContext folderPickerCallback;
     private CallbackContext mediaCaptureCallback;
@@ -350,6 +352,20 @@ public class Html2ApkBridge extends CordovaPlugin {
             if ("enterPip".equals(action)) {
                 JSONObject options = args.optJSONObject(0);
                 return Html2ApkPipManager.enterPip(this, callbackContext, options);
+            }
+            if ("solicitarPermissaoContatos".equals(action)) {
+                if (cordova.hasPermission(android.Manifest.permission.READ_CONTACTS)) {
+                    callbackContext.success();
+                } else {
+                    contactsPermissionCallback = callbackContext;
+                    cordova.requestPermission(this, REQUEST_CONTACTS, android.Manifest.permission.READ_CONTACTS);
+                }
+                return true;
+            }
+            if ("pesquisarContato".equals(action)) {
+                String query = args.optString(0, "");
+                Html2ApkContactsManager.pesquisarContato(this, query, callbackContext);
+                return true;
             }
             if ("sessionGet".equals(action)) {
                 String key = args.optString(0, "");
@@ -1079,6 +1095,27 @@ public class Html2ApkBridge extends CordovaPlugin {
 
     @Override
     public void onRequestPermissionResult(int requestCode, String[] permissions, int[] grantResults) {
+        if (requestCode == REQUEST_CONTACTS) {
+            if (contactsPermissionCallback != null) {
+                boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
+                try {
+                    JSONObject result = new JSONObject();
+                    result.put("requested", true);
+                    result.put("granted", granted);
+                    if (!granted && shouldOpenSettingsForRuntimePermission(android.Manifest.permission.READ_CONTACTS)) {
+                        result = openSettingsForRuntimePermission(android.Manifest.permission.READ_CONTACTS, true, true);
+                        result.put("requested", true);
+                        result.put("granted", false);
+                    }
+                    contactsPermissionCallback.success(result);
+                } catch (Exception e) {
+                    contactsPermissionCallback.error(e.getMessage());
+                }
+                contactsPermissionCallback = null;
+            }
+            return;
+        }
+        
         if (requestCode == REQUEST_CAMERA) {
             boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
             if (pendingFlashlightCallback != null) {
