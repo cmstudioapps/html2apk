@@ -943,6 +943,7 @@ function nativeFunctionLabHtml() {
         definirOpacidadeIconeFlutuante: { title: "definirOpacidadeIconeFlutuante()", run: function () { return fn("definirOpacidadeIconeFlutuante")(0.55); } },
         pararIconeFlutuante: { title: "pararIconeFlutuante()", run: function () { return fn("pararIconeFlutuante")(); } },
         minimizarApp: { title: "minimizarApp()", run: function () { return fn("minimizarApp")(); } },
+        entrarPip: { title: "entrarPip()", run: function () { return fn("entrarPip")({ aspectRatio: "16:9" }); } },
         fecharApp: { title: "fecharApp()", run: function () { return fn("fecharApp")(); } },
 
         tirarFoto: { title: "tirarFoto()", run: async function () { var result = await fn("tirarFoto")({ base64: true }); state.lastPhoto = result; return result; } },
@@ -1034,7 +1035,7 @@ function nativeFunctionLabHtml() {
         { title: "Wi-Fi local", ids: ["iniciarWifi", "procurarWifi", "conectarWifi", "enviarWifi"] },
         { title: "Notificacoes", ids: ["notificar", "agendarNotificacao", "agendarNotificacoes", "cancelarNotificacao", "agendarLoopNotificacoes", "cancelarLoopNotificacoes", "pushInfo"] },
         { title: "Permissoes e configuracoes", ids: ["statusPermissoes", "permissaoNotificacao", "statusPermissaoNotificacoes", "permissaoCamera", "permissaoMicrofone", "statusMicrofone", "alarmeExato", "abrirAlarmeExato", "statusSobreposicao", "solicitarSobreposicao", "abrirSobreposicao"] },
-        { title: "Tela e hardware", ids: ["fullscreenOn", "fullscreenOff", "telaAcordadaOn", "telaAcordadaOff", "brilhoTela", "corTema", "corBarrasSistema", "lanternaOn", "lanternaOff", "lanterna", "statusLanterna", "capturarTela", "tirarPrint", "volumeAtual", "definirVolume", "aumentarVolume", "diminuirVolume", "iniciarIconeFlutuante", "configurarIconeFlutuante", "definirOpacidadeIconeFlutuante", "pararIconeFlutuante", "minimizarApp", "fecharApp"] },
+        { title: "Tela e hardware", ids: ["fullscreenOn", "fullscreenOff", "telaAcordadaOn", "telaAcordadaOff", "brilhoTela", "corTema", "corBarrasSistema", "lanternaOn", "lanternaOff", "lanterna", "statusLanterna", "capturarTela", "tirarPrint", "volumeAtual", "definirVolume", "aumentarVolume", "diminuirVolume", "iniciarIconeFlutuante", "configurarIconeFlutuante", "definirOpacidadeIconeFlutuante", "pararIconeFlutuante", "minimizarApp", "entrarPip", "fecharApp"] },
         { title: "Camera, QR Code e microfone", ids: ["tirarFoto", "capturarVideo", "escanearQRCode", "ouvirMic", "pararMic"] },
         { title: "Texto e voz", ids: ["ocr", "falar", "pararFala", "ouvir"] },
         { title: "Arquivos e midia", ids: ["escolherImagem", "escolherImagens", "escolherArquivo", "escolherArquivos", "escolherVideo", "escolherPasta", "salvarArquivoPicker", "salvarArquivoCrud", "lerArquivo", "lerArquivoCompleto", "listarArquivos", "infoArquivo", "arquivoExiste", "abrirArquivo", "compartilharArquivo", "baixarArquivo", "baixarBase64", "baixarArquivoLocal", "excluirArquivo", "instalarAtualizacao", "solicitarPermissaoInstalacao"] },
@@ -1069,7 +1070,7 @@ function nativeFunctionLabHtml() {
         "salvarArquivoPicker", "baixarArquivoLocal", "tirarFoto", "capturarVideo",
         "escanearQRCode", "ouvir", "autenticarBiometria", "solicitarBloqueio"
       ];
-      var dangerActionIds = ["fecharApp", "minimizarApp", "limparSeguro", "excluirArquivo", "pararIconeFlutuante"];
+      var dangerActionIds = ["fecharApp", "minimizarApp", "entrarPip", "limparSeguro", "excluirArquivo", "pararIconeFlutuante"];
       var initialSmokeIds = ["registrarEventos", "statusPermissoes", "infoDispositivo", "infoRede", "infoBateria", "volumeAtual"];
 
       function toSet(ids) {
