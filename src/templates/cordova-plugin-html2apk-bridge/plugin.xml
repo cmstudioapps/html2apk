@@ -90,6 +90,10 @@
       </receiver>
     </config-file>
 
+    <edit-config file="AndroidManifest.xml" target="/manifest/application/activity" mode="merge">
+      <activity android:supportsPictureInPicture="true" />
+    </edit-config>
+
     <config-file target="AndroidManifest.xml" parent="/manifest/application/activity">
       <intent-filter>
         <action android:name="android.intent.action.SEND" />
@@ -112,6 +116,7 @@
     </config-file>
 
     <source-file src="src/android/Html2ApkBridge.java" target-dir="app/src/main/java/dev/html2apk/bridge" />
+    <source-file src="src/android/Html2ApkPipManager.java" target-dir="app/src/main/java/dev/html2apk/bridge" />
     <source-file src="src/android/FloatingIconService.java" target-dir="app/src/main/java/dev/html2apk/bridge" />
     <source-file src="src/android/NotificationReceiver.java" target-dir="app/src/main/java/dev/html2apk/bridge" />
     <source-file src="src/android/NotificationClickReceiver.java" target-dir="app/src/main/java/dev/html2apk/bridge" />

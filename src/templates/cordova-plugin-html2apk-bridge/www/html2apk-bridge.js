@@ -1259,6 +1259,9 @@ var api = {
   abrirUrlExterno: function (url) {
     return call("openUrl", [String(url || "")]);
   },
+  entrarPip: function (options) {
+    return call("enterPip", [options || {}]);
+  },
   abrirPacote: function (pacote) {
     return call("openPackage", [String(pacote || "")]);
   },

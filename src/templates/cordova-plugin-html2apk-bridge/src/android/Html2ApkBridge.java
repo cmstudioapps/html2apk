@@ -347,6 +347,10 @@ public class Html2ApkBridge extends CordovaPlugin {
                 callbackContext.success();
                 return true;
             }
+            if ("enterPip".equals(action)) {
+                JSONObject options = args.optJSONObject(0);
+                return Html2ApkPipManager.enterPip(this, callbackContext, options);
+            }
             if ("sessionGet".equals(action)) {
                 String key = args.optString(0, "");
                 String value = sessionStore.get(key);
