@@ -880,6 +880,9 @@ Controle da Activity:
 ```js
 await minimizarApp();
 
+// Reduz o aplicativo para uma janela miniatura flutuante (requer Android 8+)
+await entrarPip({ aspectRatio: "16:9" });
+
 // Depois de salvar estado importante:
 // await fecharApp();
 ```
