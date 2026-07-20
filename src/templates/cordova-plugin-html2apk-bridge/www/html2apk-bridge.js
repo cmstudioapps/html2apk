@@ -1817,6 +1817,7 @@ Object.assign(api, {
   pickImages: api.escolherImagens,
   pickVideo: api.escolherVideo,
   pickFolder: api.escolherPasta,
+  pastaSelect: api.escolherPasta,
   saveFile: api.salvarArquivo,
   readFile: api.lerArquivo,
   readStoredFile: api.lerArquivo,
@@ -1984,6 +1985,7 @@ if (typeof window !== "undefined") {
   window.escolherImagens = api.escolherImagens;
   window.escolherVideo = api.escolherVideo;
   window.escolherPasta = api.escolherPasta;
+  window.pastaSelect = api.escolherPasta;
   window.salvarArquivo = api.salvarArquivo;
   window.definirPapelParede = api.definirPapelParede;
   window.infoPapelParede = api.infoPapelParede;

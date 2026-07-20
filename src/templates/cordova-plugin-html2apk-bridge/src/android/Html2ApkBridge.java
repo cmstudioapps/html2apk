@@ -4529,6 +4529,7 @@ public class Html2ApkBridge extends CordovaPlugin {
             result.put("uri", uri.toString());
             result.put("name", folderDisplayName(uri));
             result.put("nome", result.optString("name"));
+            result.put("arquivos", fileManager.listarArquivosDaUri(uri));
             callback.success(result);
         } catch (Exception error) {
             callback.error(error.getMessage());

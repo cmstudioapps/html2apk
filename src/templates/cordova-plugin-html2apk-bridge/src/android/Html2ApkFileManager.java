@@ -65,43 +65,79 @@ public class Html2ApkFileManager {
     }
 
     public String lerArquivoExterno(String path, String formato) throws Exception {
-        File file = new File(path);
-        if (!file.exists() || !file.isFile()) {
-            throw new Exception("Arquivo não existe: " + path);
-        }
-
-        try (FileInputStream fis = new FileInputStream(file)) {
-            byte[] bytes = new byte[(int) file.length()];
-            fis.read(bytes);
-            if ("base64".equalsIgnoreCase(formato)) {
-                return Base64.encodeToString(bytes, Base64.NO_WRAP);
-            } else {
-                return new String(bytes, "UTF-8");
+        if (path.startsWith("content://")) {
+            Uri uri = Uri.parse(path);
+            try (InputStream is = context.getContentResolver().openInputStream(uri)) {
+                return readStreamToString(is, formato);
+            }
+        } else {
+            File file = new File(path);
+            if (!file.exists() || !file.isFile()) {
+                throw new Exception("Arquivo não existe: " + path);
+            }
+            if (file.length() > 25 * 1024 * 1024) { // Limite de 25MB para evitar OOM
+                throw new Exception("Arquivo muito grande para ser lido na memória RAM (>25MB).");
+            }
+            try (FileInputStream fis = new FileInputStream(file)) {
+                return readStreamToString(fis, formato);
             }
         }
     }
 
-    public void salvarArquivoExterno(String path, String conteudo, String formato) throws Exception {
-        File file = new File(path);
-        File parent = file.getParentFile();
-        if (parent != null && !parent.exists()) {
-            parent.mkdirs();
+    private String readStreamToString(InputStream is, String formato) throws Exception {
+        java.io.ByteArrayOutputStream buffer = new java.io.ByteArrayOutputStream();
+        int nRead;
+        byte[] data = new byte[16384];
+        while ((nRead = is.read(data, 0, data.length)) != -1) {
+            buffer.write(data, 0, nRead);
         }
+        buffer.flush();
+        byte[] bytes = buffer.toByteArray();
+        
+        if ("base64".equalsIgnoreCase(formato)) {
+            return Base64.encodeToString(bytes, Base64.NO_WRAP);
+        } else {
+            return new String(bytes, "UTF-8");
+        }
+    }
 
-        try (FileOutputStream fos = new FileOutputStream(file)) {
-            if ("base64".equalsIgnoreCase(formato)) {
-                byte[] bytes = Base64.decode(conteudo, Base64.DEFAULT);
-                fos.write(bytes);
-            } else {
-                fos.write(conteudo.getBytes("UTF-8"));
+    public void salvarArquivoExterno(String path, String conteudo, String formato) throws Exception {
+        if (path.startsWith("content://")) {
+            Uri uri = Uri.parse(path);
+            try (OutputStream os = context.getContentResolver().openOutputStream(uri, "wt")) {
+                if ("base64".equalsIgnoreCase(formato)) {
+                    byte[] bytes = Base64.decode(conteudo, Base64.DEFAULT);
+                    os.write(bytes);
+                } else {
+                    os.write(conteudo.getBytes("UTF-8"));
+                }
+            }
+        } else {
+            File file = new File(path);
+            File parent = file.getParentFile();
+            if (parent != null && !parent.exists()) {
+                parent.mkdirs();
+            }
+
+            try (FileOutputStream fos = new FileOutputStream(file)) {
+                if ("base64".equalsIgnoreCase(formato)) {
+                    byte[] bytes = Base64.decode(conteudo, Base64.DEFAULT);
+                    fos.write(bytes);
+                } else {
+                    fos.write(conteudo.getBytes("UTF-8"));
+                }
             }
         }
     }
 
     public void excluirExterno(String path) throws Exception {
-        File file = new File(path);
-        if (file.exists()) {
-            deleteRecursively(file);
+        if (path.startsWith("content://")) {
+            android.provider.DocumentsContract.deleteDocument(context.getContentResolver(), Uri.parse(path));
+        } else {
+            File file = new File(path);
+            if (file.exists()) {
+                deleteRecursively(file);
+            }
         }
     }
 
@@ -120,6 +156,9 @@ public class Html2ApkFileManager {
     }
 
     public void moverExterno(String sourcePath, String destPath) throws Exception {
+        if (sourcePath.startsWith("content://") || destPath.startsWith("content://")) {
+            throw new Exception("Mover não suportado para URIs content:// ainda.");
+        }
         File source = new File(sourcePath);
         File dest = new File(destPath);
         
@@ -139,6 +178,9 @@ public class Html2ApkFileManager {
     }
 
     public void copiarExterno(String sourcePath, String destPath) throws Exception {
+        if (sourcePath.startsWith("content://") || destPath.startsWith("content://")) {
+            throw new Exception("Copiar não suportado para URIs content:// ainda.");
+        }
         File source = new File(sourcePath);
         File dest = new File(destPath);
 
@@ -170,27 +212,41 @@ public class Html2ApkFileManager {
     }
 
     public void abrirArquivoExterno(String path, boolean exibirUi) throws Exception {
-        File file = new File(path);
-        if (!file.exists() || !file.isFile()) {
-            throw new Exception("Arquivo não existe para abrir: " + path);
+        boolean isUri = path.startsWith("content://");
+        Uri uri;
+        String mime;
+
+        if (isUri) {
+            uri = Uri.parse(path);
+            mime = context.getContentResolver().getType(uri);
+            if (mime == null) mime = guessMimeType(path);
+        } else {
+            File file = new File(path);
+            if (!file.exists() || !file.isFile()) {
+                throw new Exception("Arquivo não existe para abrir: " + path);
+            }
+            mime = guessMimeType(file.getName());
+            try {
+                uri = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", file);
+            } catch (Exception e) {
+                uri = Uri.fromFile(file);
+            }
         }
 
         if (!exibirUi) {
             fecharArquivoExterno(); // para o anterior, se houver
             mediaPlayer = new MediaPlayer();
-            mediaPlayer.setDataSource(file.getAbsolutePath());
+            if (isUri) {
+                mediaPlayer.setDataSource(context, uri);
+            } else {
+                mediaPlayer.setDataSource(path);
+            }
             mediaPlayer.prepare();
             mediaPlayer.start();
         } else {
             Intent intent = new Intent(Intent.ACTION_VIEW);
-            Uri uri;
-            try {
-                uri = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", file);
-                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            } catch (Exception e) {
-                uri = Uri.fromFile(file);
-            }
-            intent.setDataAndType(uri, guessMimeType(file.getName()));
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            intent.setDataAndType(uri, mime);
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             context.startActivity(intent);
         }
@@ -207,6 +263,42 @@ public class Html2ApkFileManager {
             }
             mediaPlayer = null;
         }
+    }
+
+    public JSONArray listarArquivosDaUri(Uri treeUri) throws Exception {
+        JSONArray arquivos = new JSONArray();
+        Uri childrenUri = android.provider.DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, android.provider.DocumentsContract.getTreeDocumentId(treeUri));
+        android.database.Cursor cursor = null;
+        try {
+            cursor = context.getContentResolver().query(childrenUri, new String[]{
+                    android.provider.DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                    android.provider.DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+                    android.provider.DocumentsContract.Document.COLUMN_MIME_TYPE,
+                    android.provider.DocumentsContract.Document.COLUMN_SIZE,
+                    android.provider.DocumentsContract.Document.COLUMN_LAST_MODIFIED
+            }, null, null, null);
+            if (cursor != null) {
+                while (cursor.moveToNext()) {
+                    String docId = cursor.getString(0);
+                    String docName = cursor.getString(1);
+                    String docMime = cursor.getString(2);
+                    long docSize = cursor.isNull(3) ? 0 : cursor.getLong(3);
+                    long lastModified = cursor.isNull(4) ? 0 : cursor.getLong(4);
+                    
+                    JSONObject child = new JSONObject();
+                    child.put("name", docName);
+                    child.put("mimeType", docMime);
+                    child.put("size", docSize);
+                    child.put("lastModified", lastModified);
+                    child.put("isDir", android.provider.DocumentsContract.Document.MIME_TYPE_DIR.equals(docMime));
+                    child.put("uri", android.provider.DocumentsContract.buildDocumentUriUsingTree(treeUri, docId).toString());
+                    arquivos.put(child);
+                }
+            }
+        } finally {
+            if (cursor != null) cursor.close();
+        }
+        return arquivos;
     }
 
     private String guessMimeType(String name) {
