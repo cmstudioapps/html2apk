@@ -1536,6 +1536,9 @@ var api = {
   abrirConfiguracaoSobreposicao: function () {
     return call("openOverlaySettings");
   },
+  abrirConfiguracoesDeeplink: function () {
+    return call("abrirConfiguracoesDeeplink");
+  },
   iniciarIconeFlutuante: function (options) {
     return call("startFloatingIcon", [floatingIconOptions(options)]);
   },

@@ -921,6 +921,7 @@ function nativeFunctionLabHtml() {
         statusSobreposicao: { title: "statusPermissaoSobreposicao()", run: function () { return fn("statusPermissaoSobreposicao")(); } },
         solicitarSobreposicao: { title: "solicitarPermissaoSobreposicao()", run: function () { return fn("solicitarPermissaoSobreposicao")(); } },
         abrirSobreposicao: { title: "abrirConfiguracaoSobreposicao()", run: function () { return fn("abrirConfiguracaoSobreposicao")(); } },
+        abrirConfiguracoesDeeplink: { title: "abrirConfiguracoesDeeplink()", run: function () { return fn("abrirConfiguracoesDeeplink")(); } },
 
         fullscreenOn: { title: "fullscreen(true)", run: function () { return fn("fullscreen")(true); } },
         fullscreenOff: { title: "fullscreen(false)", run: function () { return fn("fullscreen")(false); } },
@@ -1044,7 +1045,7 @@ function nativeFunctionLabHtml() {
         { title: "Bluetooth", ids: ["iniciarBt", "procurarBt", "conectarBt", "enviarBt"] },
         { title: "Wi-Fi local", ids: ["iniciarWifi", "procurarWifi", "conectarWifi", "enviarWifi"] },
         { title: "Notificacoes", ids: ["notificar", "agendarNotificacao", "agendarNotificacoes", "cancelarNotificacao", "agendarLoopNotificacoes", "cancelarLoopNotificacoes", "pushInfo"] },
-        { title: "Permissoes e configuracoes", ids: ["statusPermissoes", "permissaoNotificacao", "statusPermissaoNotificacoes", "permissaoCamera", "permissaoMicrofone", "statusMicrofone", "solicitarPermissaoContatos", "alarmeExato", "abrirAlarmeExato", "statusSobreposicao", "solicitarSobreposicao", "abrirSobreposicao"] },
+        { title: "Permissoes e configuracoes", ids: ["statusPermissoes", "permissaoNotificacao", "statusPermissaoNotificacoes", "permissaoCamera", "permissaoMicrofone", "statusMicrofone", "solicitarPermissaoContatos", "alarmeExato", "abrirAlarmeExato", "statusSobreposicao", "solicitarSobreposicao", "abrirSobreposicao", "abrirConfiguracoesDeeplink"] },
         { title: "Background e Worker", ids: ["ativarSegundoPlano", "desativarSegundoPlano"] },
         { title: "Tela e hardware", ids: ["fullscreenOn", "fullscreenOff", "telaAcordadaOn", "telaAcordadaOff", "brilhoTela", "corTema", "corBarrasSistema", "lanternaOn", "lanternaOff", "lanterna", "statusLanterna", "capturarTela", "tirarPrint", "volumeAtual", "definirVolume", "aumentarVolume", "diminuirVolume", "iniciarIconeFlutuante", "configurarIconeFlutuante", "definirOpacidadeIconeFlutuante", "pararIconeFlutuante", "abrirOverlay", "fecharOverlay", "solicitarCriacaoWidget", "atualizarWidget", "minimizarApp", "entrarPip", "fecharApp"] },
         { title: "Camera, QR Code e microfone", ids: ["tirarFoto", "capturarVideo", "escanearQRCode", "ouvirMic", "pararMic"] },

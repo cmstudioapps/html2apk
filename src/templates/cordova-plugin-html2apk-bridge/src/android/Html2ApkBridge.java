@@ -404,6 +404,22 @@ public class Html2ApkBridge extends CordovaPlugin {
                 callbackContext.success();
                 return true;
             }
+            if ("abrirConfiguracoesDeeplink".equals(action)) {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                    android.content.Intent intent = new android.content.Intent(android.provider.Settings.ACTION_APP_OPEN_BY_DEFAULT_SETTINGS);
+                    intent.setData(android.net.Uri.parse("package:" + cordova.getActivity().getPackageName()));
+                    intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+                    cordova.getActivity().startActivity(intent);
+                } else {
+                    // Fallback para versões mais antigas
+                    android.content.Intent intent = new android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                    intent.setData(android.net.Uri.parse("package:" + cordova.getActivity().getPackageName()));
+                    intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+                    cordova.getActivity().startActivity(intent);
+                }
+                callbackContext.success();
+                return true;
+            }
             if ("solicitarPermissaoContatos".equals(action)) {
                 if (cordova.hasPermission(android.Manifest.permission.READ_CONTACTS)) {
                     callbackContext.success();
