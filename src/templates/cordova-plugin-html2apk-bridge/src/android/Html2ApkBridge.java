@@ -4089,11 +4089,40 @@ public class Html2ApkBridge extends CordovaPlugin {
             textToSpeech.setSpeechRate(speed);
             textToSpeech.setPitch(pitch);
 
-            String utteranceId = "html2apk-tts-" + System.currentTimeMillis();
-            int speakResult = textToSpeech.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId);
-            if (speakResult == TextToSpeech.ERROR) {
-                callbackContext.error("Text to speech failed.");
-                return;
+            int maxLength = 3999;
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN_MR2) {
+                maxLength = TextToSpeech.getMaxSpeechInputLength();
+            }
+            
+            android.os.Bundle params = new android.os.Bundle();
+
+            if (text.length() <= maxLength) {
+                String utteranceId = "html2apk-tts-" + System.currentTimeMillis();
+                int speakResult = textToSpeech.speak(text, TextToSpeech.QUEUE_FLUSH, params, utteranceId);
+                if (speakResult == TextToSpeech.ERROR) {
+                    callbackContext.error("Text to speech failed.");
+                    return;
+                }
+            } else {
+                int start = 0;
+                boolean first = true;
+                while (start < text.length()) {
+                    int end = Math.min(start + maxLength, text.length());
+                    if (end < text.length()) {
+                        int breakPoint = text.lastIndexOf(' ', end);
+                        if (breakPoint > start) {
+                            end = breakPoint;
+                        }
+                    }
+                    String chunk = text.substring(start, end).trim();
+                    if (chunk.length() > 0) {
+                        String utteranceId = "html2apk-tts-" + System.currentTimeMillis() + "-" + start;
+                        int queueMode = first ? TextToSpeech.QUEUE_FLUSH : TextToSpeech.QUEUE_ADD;
+                        textToSpeech.speak(chunk, queueMode, params, utteranceId);
+                        first = false;
+                    }
+                    start = end;
+                }
             }
 
             JSONObject result = new JSONObject();
