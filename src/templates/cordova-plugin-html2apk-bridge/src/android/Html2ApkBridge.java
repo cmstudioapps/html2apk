@@ -360,6 +360,10 @@ public class Html2ApkBridge extends CordovaPlugin {
                 Html2ApkWidgetManager.atualizarWidget(this, options, callbackContext);
                 return true;
             }
+            if ("solicitarCriacaoWidget".equals(action)) {
+                Html2ApkWidgetManager.solicitarCriacaoWidget(this, callbackContext);
+                return true;
+            }
             if ("solicitarPermissaoContatos".equals(action)) {
                 if (cordova.hasPermission(android.Manifest.permission.READ_CONTACTS)) {
                     callbackContext.success();

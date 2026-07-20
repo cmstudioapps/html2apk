@@ -1268,6 +1268,9 @@ var api = {
   atualizarWidget: function (opcoes) {
     return call("atualizarWidget", [opcoes || {}]);
   },
+  solicitarCriacaoWidget: function () {
+    return call("solicitarCriacaoWidget", []);
+  },
   entrarPip: function (options) {
     return call("enterPip", [options || {}]);
   },

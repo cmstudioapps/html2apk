@@ -890,6 +890,9 @@ await entrarPip({ aspectRatio: "16:9" });
 Widgets na Tela Inicial:
 
 ```js
+// Solicita ao usuário que adicione o widget na tela inicial (Apenas Android 8+)
+await solicitarCriacaoWidget();
+
 // Atualiza o Widget do app na tela inicial do usuário
 await atualizarWidget({
   titulo: "Novo Alerta",
