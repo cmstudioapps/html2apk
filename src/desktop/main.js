@@ -959,6 +959,8 @@ function nativeFunctionLabHtml() {
         tirarFoto: { title: "tirarFoto()", run: async function () { var result = await fn("tirarFoto")({ base64: true }); state.lastPhoto = result; return result; } },
         capturarVideo: { title: "capturarVideo()", run: function () { return fn("capturarVideo")({ duracaoSegundos: 5 }); } },
         escanearQRCode: { title: "escanearQRCode()", run: function () { return fn("escanearQRCode")(); } },
+        pastaSelect: { title: "pastaSelect()", run: function () { return fn("pastaSelect")(); } },
+
         obterRaizArmazenamento: { title: "obterRaizArmazenamento()", run: function () { return fn("obterRaizArmazenamento")(); } },
         listarDiretorio: { title: "listarDiretorio('/storage/emulated/0/')", run: function () { return fn("listarDiretorio")("/storage/emulated/0/"); } },
         criarDiretorio: { title: "criarDiretorio('/storage/emulated/0/Html2ApkManager')", run: function () { return fn("criarDiretorio")("/storage/emulated/0/Html2ApkManager"); } },
@@ -1057,8 +1059,8 @@ function nativeFunctionLabHtml() {
         { title: "Feedback e compartilhamento", ids: ["toast", "vibrar", "aguardar", "copiarTexto", "lerTextoCopiado", "compartilharTexto", "compartilhar", "compartilharApp", "receberCompartilhamento", "compartilhamentoInicial"] },
         { title: "Bluetooth", ids: ["iniciarBt", "procurarBt", "conectarBt", "enviarBt"] },
         { title: "Wi-Fi local", ids: ["iniciarWifi", "procurarWifi", "conectarWifi", "enviarWifi"] },
-        { title: "Arquivo, PDF e Galeria", ids: ["escolherArquivo", "escolherArquivos", "salvarArquivoPicker", "lerArquivo", "lerArquivoCompleto", "listarArquivos", "arquivoExiste", "abrirArquivo", "compartilharArquivo", "excluirArquivo", "baixarArquivo", "baixarArquivoLocal", "infoArmazenamento"] },
-        { title: "Gerenciador de Arquivos Externo (Root)", ids: ["obterRaizArmazenamento", "listarDiretorio", "criarDiretorio", "salvarArquivoExterno", "lerArquivoExterno", "abrirArquivoExterno", "abrirArquivoExternoSemUI", "fecharArquivoExterno", "copiarExterno", "moverExterno", "excluirExterno"] },
+        { title: "Arquivo, PDF e Galeria", ids: ["solicitarPermissaoArmazenamento", "statusPermissaoArmazenamento", "escolherArquivo", "escolherArquivos", "salvarArquivo", "apontarArquivo", "lerArquivo", "lerArquivoCompleto", "listarArquivos", "arquivoExiste", "abrirArquivo", "compartilharArquivo", "excluirArquivo", "baixarArquivo", "baixarArquivoLocal", "gerarPdfHTML", "salvarNaGaleria", "infoArmazenamento"] },
+        { title: "Gerenciador de Arquivos Externo (Root)", ids: ["obterRaizArmazenamento", "pastaSelect", "listarDiretorio", "criarDiretorio", "salvarArquivoExterno", "lerArquivoExterno", "abrirArquivoExterno", "abrirArquivoExternoSemUI", "fecharArquivoExterno", "copiarExterno", "moverExterno", "excluirExterno"] },
         { title: "Notificacoes", ids: ["notificar", "agendarNotificacao", "agendarNotificacoes", "cancelarNotificacao", "agendarLoopNotificacoes", "cancelarLoopNotificacoes", "pushInfo"] },
         { title: "Permissoes e configuracoes", ids: ["statusPermissoes", "permissaoNotificacao", "statusPermissaoNotificacoes", "permissaoCamera", "permissaoMicrofone", "statusMicrofone", "solicitarPermissaoContatos", "alarmeExato", "abrirAlarmeExato", "statusSobreposicao", "solicitarSobreposicao", "abrirSobreposicao", "abrirConfiguracoesDeeplink"] },
         { title: "Background e Worker", ids: ["ativarSegundoPlano", "desativarSegundoPlano"] },
@@ -1096,8 +1098,8 @@ function nativeFunctionLabHtml() {
         "compartilharTexto", "compartilhar", "compartilharApp", "abrirForaDoApp", "abrirUrl",
         "abrirUrlExterno", "discar", "abrirMapa", "abrirWhatsapp", "abrirAlarmeExato",
         "abrirSobreposicao", "abrirConfigPapel", "escolherImagem", "escolherImagens",
-        "escolherArquivo", "escolherArquivos", "escolherVideo", "escolherPasta",
-        "salvarArquivoPicker", "baixarArquivoLocal", "tirarFoto", "capturarVideo",
+        "escolherArquivo", "escolherArquivos", "escolherVideo", "escolherPasta", "pastaSelect",
+        "salvarArquivo", "salvarArquivoPicker", "baixarArquivoLocal", "tirarFoto", "capturarVideo",
         "escanearQRCode", "ouvir", "autenticarBiometria", "solicitarBloqueio", "solicitarPermissaoContatos"
       ];
       var dangerActionIds = ["fecharApp", "minimizarApp", "entrarPip", "limparSeguro", "excluirArquivo", "pararIconeFlutuante"];
