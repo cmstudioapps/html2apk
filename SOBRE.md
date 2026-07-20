@@ -2470,6 +2470,7 @@ Eventos incluem:
 - celular sacudido;
 - celular com tela para baixo;
 - proximidade perto;
+- luminosidade ambiente;
 - print detectado;
 - NFC recebido;
 - notificação recebida;

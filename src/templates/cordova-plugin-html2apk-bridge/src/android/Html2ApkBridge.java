@@ -227,7 +227,9 @@ public class Html2ApkBridge extends CordovaPlugin {
     private ViewTreeObserver.OnGlobalLayoutListener layoutListener;
     private CancellationSignal biometricCancellationSignal;
     private TextToSpeech textToSpeech;
+    private Context mContext;
     private SensorManager sensorManager;
+    private LightSensorManager lightSensorManager;
     private SensorEventListener motionSensorListener;
     private SensorEventListener proximitySensorListener;
     private NfcAdapter nfcAdapter;
@@ -7805,6 +7807,18 @@ public class Html2ApkBridge extends CordovaPlugin {
         if (proximity != null) {
             sensorManager.registerListener(proximitySensorListener, proximity, SensorManager.SENSOR_DELAY_NORMAL);
         }
+
+        if (lightSensorManager == null) {
+            lightSensorManager = new LightSensorManager(context(), lux -> {
+                try {
+                    JSONObject detail = new JSONObject();
+                    detail.put("lux", lux);
+                    dispatchEvent("luminosidade:mudou", detail);
+                } catch (Exception ignored) {
+                }
+            });
+        }
+        lightSensorManager.start();
     }
 
     private void unregisterSensorListeners() {
@@ -7820,6 +7834,9 @@ public class Html2ApkBridge extends CordovaPlugin {
                 sensorManager.unregisterListener(proximitySensorListener);
             }
         } catch (Exception ignored) {
+        }
+        if (lightSensorManager != null) {
+            lightSensorManager.stop();
         }
     }
 
