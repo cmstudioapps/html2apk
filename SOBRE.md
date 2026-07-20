@@ -892,6 +892,7 @@ Widgets na Tela Inicial:
 ```js
 // Solicita ao usuário que adicione o widget na tela inicial (Apenas Android 8+)
 await solicitarCriacaoWidget();
+// Retorna: void
 
 // Atualiza o Widget do app na tela inicial do usuário
 await atualizarWidget({
@@ -906,6 +907,7 @@ await atualizarWidget({
   botao1: { texto: "Abrir", acao: "abrir_app" },
   botao2: { texto: "Dispensar", acao: "dispensar_alerta" }
 });
+// Retorna: void
 ```
 
 Para interceptar o clique nos botões do Widget quando o app abrir ou voltar para o primeiro plano:
@@ -927,9 +929,11 @@ await Html2Apk.ativarSegundoPlano({
   titulo: "Sincronizando...",
   texto: "Aguarde a finalização dos downloads."
 });
+// Retorna: void
 
 // Desativa o processamento e permite que o sistema pause o seu app para economizar bateria
 await Html2Apk.desativarSegundoPlano();
+// Retorna: void
 ```
 
 Barras do Android:
@@ -961,13 +965,16 @@ Agenda de Contatos:
 ```js
 // Primeiro, garanta que tem permissão
 const perm = await solicitarPermissaoContatos();
+// Retorna: { granted: boolean, error?: string }
+
 if (perm.granted) {
   // Pesquisa todos os contatos que tenham "Maria" (ou busca por número)
   const maria = await pesquisarContato("Maria");
-  console.log(maria); // [{ nome: "Maria da Silva", numero: "+551199999999" }]
+  // Retorna: [{ nome: "Maria da Silva", numero: "+551199999999" }]
   
   // Ou busca todos os contatos da agenda (vazio)
   const todos = await pesquisarContato();
+  // Retorna: Array com todos os contatos
 }
 ```
 
