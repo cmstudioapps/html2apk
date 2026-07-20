@@ -2168,6 +2168,33 @@ O app consegue persistir arquivos sem pedir para o usuario escolher pasta toda h
 
 Esse armazenamento e do app. Se o app for removido, os dados podem ir junto. Para exportar para fora, use abrir/compartilhar/download ou seletor apropriado.
 
+## Neuronio 15.5 - Gerenciador de Arquivos Externo (Root e SAF)
+
+Alem do CRUD interno, a Bridge oferece controle total do armazenamento externo do celular para criar apps de File Manager reais (usando `Html2ApkFileManager.java`).
+
+Para acessar arquivos literais absolutos (como `/storage/emulated/0/Download`), o desenvolvedor **deve** pedir a permissao global de arquivos chamando `Html2Apk.solicitarPermissaoArmazenamento()`.
+Para acesso cirurgico a uma pasta sem a permissao global, basta usar `Html2Apk.pastaSelect()`, que usa o SAF (Storage Access Framework) do Android.
+
+### Novas funcoes publicas:
+- **`obterRaizArmazenamento()`**: Retorna a raiz literal do dispositivo (Geralmente `/storage/emulated/0`).
+- **`listarDiretorio(path)`**: Retorna array com `{ name, path, isDir, size, lastModified, mimeType }` do conteudo da pasta.
+- **`criarDiretorio(path)`**: Cria uma pasta no caminho absoluto fornecido.
+- **`lerArquivoExterno(path, { formato: 'texto'|'base64' })`**: Le o conteudo de arquivos absolutos ou URIs SAF (`content://`). Possui trava para arquivos >25MB para evitar OOM (estouro de RAM).
+- **`salvarArquivoExterno(path, conteudo, { formato: 'texto'|'base64' })`**: Salva texto ou binario em caminho absoluto ou URI SAF.
+- **`moverExterno(origem, destino)`** / **`copiarExterno(origem, destino)`**: Move ou copia arquivos e pastas (Ainda nao suporta URIs SAF).
+- **`excluirExterno(path)`**: Apaga recursivamente arquivos e pastas (absolutos ou URIs SAF).
+
+### Mídias e Execução:
+- **`abrirArquivoExterno(path, { exibirUi: true|false })`**: Abre o arquivo (`path` ou `uri`). 
+  - `exibirUi: true`: Abre o visualizador/player nativo do sistema para a extensao.
+  - `exibirUi: false`: **Toca audios/musicas invisivelmente em background** (usando o MediaPlayer interno).
+- **`fecharArquivoExterno()`**: Interrompe e encerra o audio invisivel que foi iniciado com `exibirUi: false`.
+
+### Pickers (Interfaces nativas do sistema):
+- **`escolherArquivo(options)` / `escolherArquivos()`**: Abre a UI para o usuario apontar um arquivo especifico, concedendo permissao direta do sistema ao app para manipula-lo (retorna URIs).
+- **`salvarArquivo(conteudo, { nome, mimeType })`**: Abre a UI "Salvar Como..." para o usuario exportar/salvar o conteudo num local de sua escolha, driblando a necessidade de permissao global.
+- **`pastaSelect()`**: Abre a UI nativa para escolher uma arvore de pasta inteira. Retorna um objeto com a `uri` da pasta e um array `arquivos` contendo detalhes de tudo que estava dentro da pasta!
+
 ## Neuronio 16 - Downloads
 
 Download no html2apk e mais amplo que "baixar uma URL".
