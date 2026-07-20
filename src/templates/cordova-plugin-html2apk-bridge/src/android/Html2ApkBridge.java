@@ -4095,6 +4095,8 @@ public class Html2ApkBridge extends CordovaPlugin {
             }
             
             android.os.Bundle params = new android.os.Bundle();
+            // Garante que o audio saia no volume de Midia do celular (STREAM_MUSIC = 3)
+            params.putInt(TextToSpeech.Engine.KEY_PARAM_STREAM, android.media.AudioManager.STREAM_MUSIC);
 
             if (text.length() <= maxLength) {
                 String utteranceId = "html2apk-tts-" + System.currentTimeMillis();

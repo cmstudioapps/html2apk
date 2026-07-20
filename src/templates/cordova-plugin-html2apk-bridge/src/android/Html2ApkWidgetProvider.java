@@ -26,6 +26,16 @@ public class Html2ApkWidgetProvider extends AppWidgetProvider {
         if (layoutId == 0) return;
         
         RemoteViews views = new RemoteViews(context.getPackageName(), layoutId);
+        
+        try {
+            android.content.pm.PackageManager pm = context.getPackageManager();
+            android.content.pm.ApplicationInfo ai = context.getApplicationInfo();
+            CharSequence appName = pm.getApplicationLabel(ai);
+            int titleId = context.getResources().getIdentifier("widget_title", "id", context.getPackageName());
+            if (titleId != 0 && appName != null) {
+                views.setTextViewText(titleId, appName.toString());
+            }
+        } catch (Exception e) {}
 
         // Ao clicar no widget inteiro, abre o App
         Intent intent = new Intent(context, Html2ApkWidgetProvider.class);
