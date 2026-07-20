@@ -385,6 +385,25 @@ public class Html2ApkBridge extends CordovaPlugin {
                 callbackContext.success();
                 return true;
             }
+            if ("abrirOverlay".equals(action)) {
+                org.json.JSONObject options = args.optJSONObject(0);
+                android.content.Intent overlayIntent = new android.content.Intent(cordova.getActivity(), FloatingOverlayService.class);
+                if (options != null) {
+                    overlayIntent.putExtra("url", options.optString("url", "file:///android_asset/www/bolha.html"));
+                    overlayIntent.putExtra("largura", options.optInt("largura", 300));
+                    overlayIntent.putExtra("altura", options.optInt("altura", 400));
+                }
+                cordova.getActivity().startService(overlayIntent);
+                callbackContext.success();
+                return true;
+            }
+            if ("fecharOverlay".equals(action)) {
+                android.content.Intent overlayIntent = new android.content.Intent(cordova.getActivity(), FloatingOverlayService.class);
+                overlayIntent.setAction(FloatingOverlayService.ACTION_CLOSE_OVERLAY);
+                cordova.getActivity().startService(overlayIntent);
+                callbackContext.success();
+                return true;
+            }
             if ("solicitarPermissaoContatos".equals(action)) {
                 if (cordova.hasPermission(android.Manifest.permission.READ_CONTACTS)) {
                     callbackContext.success();

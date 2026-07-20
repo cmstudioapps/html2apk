@@ -917,7 +917,31 @@ window.addEventListener("aoClicarWidget", (event) => {
   const acao = event.detail;
   if (acao === "abrir_app") {
     // fazer algo...
+  }
 });
+```
+
+Overlay (Bolha Flutuante):
+
+```js
+// Primeiro, garanta que o usuário deu permissão de sobreposição
+const status = await Html2Apk.statusPermissaoSobreposicao();
+if (status !== "granted") {
+  await Html2Apk.solicitarSobreposicao();
+}
+
+// Abre uma janela flutuante com um arquivo HTML local ou uma URL remota.
+// A janela aparece por cima de todos os apps e tem uma barra para arrastar.
+await Html2Apk.abrirOverlay({
+  url: "https://multiversando.com.br", // ou "file:///android_asset/www/bolha.html"
+  largura: 300, 
+  altura: 400
+});
+// Retorna: void
+
+// Para fechar a bolha programaticamente (o usuário também pode fechar no X nativo):
+await Html2Apk.fecharOverlay();
+// Retorna: void
 ```
 
 Background Worker:

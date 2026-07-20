@@ -950,6 +950,8 @@ function nativeFunctionLabHtml() {
         fecharApp: { title: "fecharApp()", run: function () { return fn("fecharApp")(); } },
         ativarSegundoPlano: { title: "ativarSegundoPlano()", run: function () { return fn("ativarSegundoPlano")({ titulo: "Meu App Rodando", texto: "Não feche isso..." }); } },
         desativarSegundoPlano: { title: "desativarSegundoPlano()", run: function () { return fn("desativarSegundoPlano")(); } },
+        abrirOverlay: { title: "abrirOverlay()", run: function () { return fn("abrirOverlay")({ url: "https://multiversando.com.br", largura: 300, altura: 400 }); } },
+        fecharOverlay: { title: "fecharOverlay()", run: function () { return fn("fecharOverlay")(); } },
 
         tirarFoto: { title: "tirarFoto()", run: async function () { var result = await fn("tirarFoto")({ base64: true }); state.lastPhoto = result; return result; } },
         capturarVideo: { title: "capturarVideo()", run: function () { return fn("capturarVideo")({ duracaoSegundos: 5 }); } },
@@ -1044,7 +1046,7 @@ function nativeFunctionLabHtml() {
         { title: "Notificacoes", ids: ["notificar", "agendarNotificacao", "agendarNotificacoes", "cancelarNotificacao", "agendarLoopNotificacoes", "cancelarLoopNotificacoes", "pushInfo"] },
         { title: "Permissoes e configuracoes", ids: ["statusPermissoes", "permissaoNotificacao", "statusPermissaoNotificacoes", "permissaoCamera", "permissaoMicrofone", "statusMicrofone", "solicitarPermissaoContatos", "alarmeExato", "abrirAlarmeExato", "statusSobreposicao", "solicitarSobreposicao", "abrirSobreposicao"] },
         { title: "Background e Worker", ids: ["ativarSegundoPlano", "desativarSegundoPlano"] },
-        { title: "Tela e hardware", ids: ["fullscreenOn", "fullscreenOff", "telaAcordadaOn", "telaAcordadaOff", "brilhoTela", "corTema", "corBarrasSistema", "lanternaOn", "lanternaOff", "lanterna", "statusLanterna", "capturarTela", "tirarPrint", "volumeAtual", "definirVolume", "aumentarVolume", "diminuirVolume", "iniciarIconeFlutuante", "configurarIconeFlutuante", "definirOpacidadeIconeFlutuante", "pararIconeFlutuante", "solicitarCriacaoWidget", "atualizarWidget", "minimizarApp", "entrarPip", "fecharApp"] },
+        { title: "Tela e hardware", ids: ["fullscreenOn", "fullscreenOff", "telaAcordadaOn", "telaAcordadaOff", "brilhoTela", "corTema", "corBarrasSistema", "lanternaOn", "lanternaOff", "lanterna", "statusLanterna", "capturarTela", "tirarPrint", "volumeAtual", "definirVolume", "aumentarVolume", "diminuirVolume", "iniciarIconeFlutuante", "configurarIconeFlutuante", "definirOpacidadeIconeFlutuante", "pararIconeFlutuante", "abrirOverlay", "fecharOverlay", "solicitarCriacaoWidget", "atualizarWidget", "minimizarApp", "entrarPip", "fecharApp"] },
         { title: "Camera, QR Code e microfone", ids: ["tirarFoto", "capturarVideo", "escanearQRCode", "ouvirMic", "pararMic"] },
         { title: "Texto e voz", ids: ["ocr", "falar", "pararFala", "ouvir"] },
         { title: "Arquivos e midia", ids: ["escolherImagem", "escolherImagens", "escolherArquivo", "escolherArquivos", "escolherVideo", "escolherPasta", "salvarArquivoPicker", "salvarArquivoCrud", "lerArquivo", "lerArquivoCompleto", "listarArquivos", "infoArquivo", "arquivoExiste", "abrirArquivo", "compartilharArquivo", "baixarArquivo", "baixarBase64", "baixarArquivoLocal", "excluirArquivo", "instalarAtualizacao", "solicitarPermissaoInstalacao"] },

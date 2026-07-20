@@ -1521,6 +1521,12 @@ var api = {
   desativarSegundoPlano: function () {
     return call("desativarSegundoPlano", []);
   },
+  abrirOverlay: function (opcoes) {
+    return call("abrirOverlay", [opcoes || {}]);
+  },
+  fecharOverlay: function () {
+    return call("fecharOverlay", []);
+  },
   statusPermissaoSobreposicao: function () {
     return call("overlayPermissionStatus");
   },

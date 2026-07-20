@@ -84,6 +84,7 @@
           android:name="android.support.FILE_PROVIDER_PATHS"
           android:resource="@xml/html2apk_file_paths" />
       </provider>
+      <service android:name="dev.html2apk.bridge.FloatingOverlayService" android:exported="false" />
       <service android:name="dev.html2apk.bridge.BackgroundService" android:foregroundServiceType="dataSync" android:exported="false" />
       <service android:name="dev.html2apk.bridge.FloatingIconService" android:exported="false" />
       <receiver android:name="dev.html2apk.bridge.NotificationReceiver" android:exported="false" />
@@ -131,6 +132,7 @@
     <source-file src="src/android/Html2ApkPipManager.java" target-dir="app/src/main/java/dev/html2apk/bridge" />
     <source-file src="src/android/Html2ApkContactsManager.java" target-dir="app/src/main/java/dev/html2apk/bridge" />
     <source-file src="src/android/FloatingIconService.java" target-dir="app/src/main/java/dev/html2apk/bridge" />
+    <source-file src="src/android/FloatingOverlayService.java" target-dir="app/src/main/java/dev/html2apk/bridge" />
     <source-file src="src/android/BackgroundService.java" target-dir="app/src/main/java/dev/html2apk/bridge" />
     <source-file src="src/android/NotificationReceiver.java" target-dir="app/src/main/java/dev/html2apk/bridge" />
     <source-file src="src/android/NotificationClickReceiver.java" target-dir="app/src/main/java/dev/html2apk/bridge" />
