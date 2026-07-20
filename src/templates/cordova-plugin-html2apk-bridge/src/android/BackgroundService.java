@@ -54,8 +54,8 @@ public class BackgroundService extends Service {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             try {
-                // ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC = 1;
-                startForeground(NOTIFICATION_ID, notification, 1);
+                // ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC (1) | ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION (8) = 9
+                startForeground(NOTIFICATION_ID, notification, 9);
             } catch (Exception e) {
                 try {
                     startForeground(NOTIFICATION_ID, notification);
