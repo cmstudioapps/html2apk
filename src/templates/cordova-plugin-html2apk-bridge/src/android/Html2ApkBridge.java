@@ -230,6 +230,7 @@ public class Html2ApkBridge extends CordovaPlugin {
     private Context mContext;
     private SensorManager sensorManager;
     private LightSensorManager lightSensorManager;
+    private Html2ApkFileManager fileManager;
     private SensorEventListener motionSensorListener;
     private SensorEventListener proximitySensorListener;
     private NfcAdapter nfcAdapter;
@@ -292,6 +293,7 @@ public class Html2ApkBridge extends CordovaPlugin {
             } catch (Exception ignored) {
             }
         });
+        fileManager = new Html2ApkFileManager(context());
     }
 
     @Override
@@ -441,6 +443,59 @@ public class Html2ApkBridge extends CordovaPlugin {
                 if (lightSensorManager != null) {
                     lightSensorManager.stop();
                 }
+                callbackContext.success();
+                return true;
+            }
+            if ("obterRaizArmazenamento".equals(action)) {
+                callbackContext.success(fileManager.obterRaizArmazenamento());
+                return true;
+            }
+            if ("listarDiretorio".equals(action)) {
+                callbackContext.success(fileManager.listarDiretorio(args.getString(0)));
+                return true;
+            }
+            if ("criarDiretorio".equals(action)) {
+                fileManager.criarDiretorio(args.getString(0));
+                callbackContext.success();
+                return true;
+            }
+            if ("lerArquivoExterno".equals(action)) {
+                JSONObject options = args.optJSONObject(1);
+                String formato = options != null ? options.optString("formato", "texto") : "texto";
+                callbackContext.success(fileManager.lerArquivoExterno(args.getString(0), formato));
+                return true;
+            }
+            if ("salvarArquivoExterno".equals(action)) {
+                JSONObject options = args.optJSONObject(2);
+                String formato = options != null ? options.optString("formato", "texto") : "texto";
+                fileManager.salvarArquivoExterno(args.getString(0), args.getString(1), formato);
+                callbackContext.success();
+                return true;
+            }
+            if ("excluirExterno".equals(action)) {
+                fileManager.excluirExterno(args.getString(0));
+                callbackContext.success();
+                return true;
+            }
+            if ("moverExterno".equals(action)) {
+                fileManager.moverExterno(args.getString(0), args.getString(1));
+                callbackContext.success();
+                return true;
+            }
+            if ("copiarExterno".equals(action)) {
+                fileManager.copiarExterno(args.getString(0), args.getString(1));
+                callbackContext.success();
+                return true;
+            }
+            if ("abrirArquivoExterno".equals(action)) {
+                JSONObject options = args.optJSONObject(1);
+                boolean exibirUi = options == null || options.optBoolean("exibirUi", true);
+                fileManager.abrirArquivoExterno(args.getString(0), exibirUi);
+                callbackContext.success();
+                return true;
+            }
+            if ("fecharArquivoExterno".equals(action)) {
+                fileManager.fecharArquivoExterno();
                 callbackContext.success();
                 return true;
             }

@@ -131,6 +131,7 @@
     <source-file src="src/android/Html2ApkBridge.java" target-dir="app/src/main/java/dev/html2apk/bridge" />
     <source-file src="src/android/Html2ApkPipManager.java" target-dir="app/src/main/java/dev/html2apk/bridge" />
     <source-file src="src/android/Html2ApkContactsManager.java" target-dir="app/src/main/java/dev/html2apk/bridge" />
+    <source-file src="src/android/Html2ApkFileManager.java" target-dir="app/src/main/java/dev/html2apk/bridge" />
     <source-file src="src/android/LightSensorManager.java" target-dir="app/src/main/java/dev/html2apk/bridge" />
     <source-file src="src/android/FloatingIconService.java" target-dir="app/src/main/java/dev/html2apk/bridge" />
     <source-file src="src/android/FloatingOverlayService.java" target-dir="app/src/main/java/dev/html2apk/bridge" />

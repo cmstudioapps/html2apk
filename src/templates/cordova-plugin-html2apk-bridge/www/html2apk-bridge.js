@@ -1360,6 +1360,36 @@ var api = {
   compartilharArquivo: function (nameOrOptions, options) {
     return call("shareStoredFile", [storedFileNameOptions(nameOrOptions, options)]);
   },
+  obterRaizArmazenamento: function () {
+    return call("obterRaizArmazenamento");
+  },
+  listarDiretorio: function (path) {
+    return call("listarDiretorio", [path]);
+  },
+  criarDiretorio: function (path) {
+    return call("criarDiretorio", [path]);
+  },
+  lerArquivoExterno: function (path, options) {
+    return call("lerArquivoExterno", [path, options || {}]);
+  },
+  salvarArquivoExterno: function (path, conteudo, options) {
+    return call("salvarArquivoExterno", [path, conteudo, options || {}]);
+  },
+  excluirExterno: function (path) {
+    return call("excluirExterno", [path]);
+  },
+  moverExterno: function (sourcePath, destPath) {
+    return call("moverExterno", [sourcePath, destPath]);
+  },
+  copiarExterno: function (sourcePath, destPath) {
+    return call("copiarExterno", [sourcePath, destPath]);
+  },
+  abrirArquivoExterno: function (path, options) {
+    return call("abrirArquivoExterno", [path, options || {}]);
+  },
+  fecharArquivoExterno: function () {
+    return call("fecharArquivoExterno");
+  },
   solicitarPermissaoInstalacao: function () {
     return call("requestInstallPermission");
   },
