@@ -364,6 +364,22 @@ public class Html2ApkBridge extends CordovaPlugin {
                 Html2ApkWidgetManager.solicitarCriacaoWidget(this, callbackContext);
                 return true;
             }
+            if ("ativarSegundoPlano".equals(action)) {
+                android.content.Intent bgIntent = new android.content.Intent(cordova.getActivity(), BackgroundService.class);
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    cordova.getActivity().startForegroundService(bgIntent);
+                } else {
+                    cordova.getActivity().startService(bgIntent);
+                }
+                callbackContext.success();
+                return true;
+            }
+            if ("desativarSegundoPlano".equals(action)) {
+                android.content.Intent bgIntent = new android.content.Intent(cordova.getActivity(), BackgroundService.class);
+                cordova.getActivity().stopService(bgIntent);
+                callbackContext.success();
+                return true;
+            }
             if ("solicitarPermissaoContatos".equals(action)) {
                 if (cordova.hasPermission(android.Manifest.permission.READ_CONTACTS)) {
                     callbackContext.success();

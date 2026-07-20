@@ -915,8 +915,18 @@ window.addEventListener("aoClicarWidget", (event) => {
   const acao = event.detail;
   if (acao === "abrir_app") {
     // fazer algo...
-  }
 });
+```
+
+Background Worker:
+
+```js
+// Ativa o processamento persistente. 
+// Seu Javascript (setInterval, WebSockets, downloads) continuará rodando mesmo minimizado.
+await Html2Apk.ativarSegundoPlano();
+
+// Desativa o processamento e permite que o sistema pause o seu app para economizar bateria
+await Html2Apk.desativarSegundoPlano();
 ```
 
 Barras do Android:

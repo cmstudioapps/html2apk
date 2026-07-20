@@ -948,6 +948,8 @@ function nativeFunctionLabHtml() {
         minimizarApp: { title: "minimizarApp()", run: function () { return fn("minimizarApp")(); } },
         entrarPip: { title: "entrarPip()", run: function () { return fn("entrarPip")({ aspectRatio: "16:9" }); } },
         fecharApp: { title: "fecharApp()", run: function () { return fn("fecharApp")(); } },
+        ativarSegundoPlano: { title: "ativarSegundoPlano()", run: function () { return fn("ativarSegundoPlano")(); } },
+        desativarSegundoPlano: { title: "desativarSegundoPlano()", run: function () { return fn("desativarSegundoPlano")(); } },
 
         tirarFoto: { title: "tirarFoto()", run: async function () { var result = await fn("tirarFoto")({ base64: true }); state.lastPhoto = result; return result; } },
         capturarVideo: { title: "capturarVideo()", run: function () { return fn("capturarVideo")({ duracaoSegundos: 5 }); } },
@@ -1041,6 +1043,7 @@ function nativeFunctionLabHtml() {
         { title: "Wi-Fi local", ids: ["iniciarWifi", "procurarWifi", "conectarWifi", "enviarWifi"] },
         { title: "Notificacoes", ids: ["notificar", "agendarNotificacao", "agendarNotificacoes", "cancelarNotificacao", "agendarLoopNotificacoes", "cancelarLoopNotificacoes", "pushInfo"] },
         { title: "Permissoes e configuracoes", ids: ["statusPermissoes", "permissaoNotificacao", "statusPermissaoNotificacoes", "permissaoCamera", "permissaoMicrofone", "statusMicrofone", "solicitarPermissaoContatos", "alarmeExato", "abrirAlarmeExato", "statusSobreposicao", "solicitarSobreposicao", "abrirSobreposicao"] },
+        { title: "Background e Worker", ids: ["ativarSegundoPlano", "desativarSegundoPlano"] },
         { title: "Tela e hardware", ids: ["fullscreenOn", "fullscreenOff", "telaAcordadaOn", "telaAcordadaOff", "brilhoTela", "corTema", "corBarrasSistema", "lanternaOn", "lanternaOff", "lanterna", "statusLanterna", "capturarTela", "tirarPrint", "volumeAtual", "definirVolume", "aumentarVolume", "diminuirVolume", "iniciarIconeFlutuante", "configurarIconeFlutuante", "definirOpacidadeIconeFlutuante", "pararIconeFlutuante", "solicitarCriacaoWidget", "atualizarWidget", "minimizarApp", "entrarPip", "fecharApp"] },
         { title: "Camera, QR Code e microfone", ids: ["tirarFoto", "capturarVideo", "escanearQRCode", "ouvirMic", "pararMic"] },
         { title: "Texto e voz", ids: ["ocr", "falar", "pararFala", "ouvir"] },
