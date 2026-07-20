@@ -1515,8 +1515,8 @@ var api = {
   abrirConfiguracaoAlarmeExato: function () {
     return call("openExactAlarmSettings");
   },
-  ativarSegundoPlano: function () {
-    return call("ativarSegundoPlano", []);
+  ativarSegundoPlano: function (opcoes) {
+    return call("ativarSegundoPlano", [opcoes || {}]);
   },
   desativarSegundoPlano: function () {
     return call("desativarSegundoPlano", []);

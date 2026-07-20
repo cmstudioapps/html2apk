@@ -922,8 +922,11 @@ Background Worker:
 
 ```js
 // Ativa o processamento persistente. 
-// Seu Javascript (setInterval, WebSockets, downloads) continuará rodando mesmo minimizado.
-await Html2Apk.ativarSegundoPlano();
+// Opcionalmente, você pode customizar o texto da notificação fixa. Se não passar, o nome do App será usado.
+await Html2Apk.ativarSegundoPlano({
+  titulo: "Sincronizando...",
+  texto: "Aguarde a finalização dos downloads."
+});
 
 // Desativa o processamento e permite que o sistema pause o seu app para economizar bateria
 await Html2Apk.desativarSegundoPlano();

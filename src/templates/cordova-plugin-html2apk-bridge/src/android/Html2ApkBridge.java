@@ -365,7 +365,12 @@ public class Html2ApkBridge extends CordovaPlugin {
                 return true;
             }
             if ("ativarSegundoPlano".equals(action)) {
+                JSONObject options = args.optJSONObject(0);
                 android.content.Intent bgIntent = new android.content.Intent(cordova.getActivity(), BackgroundService.class);
+                if (options != null) {
+                    bgIntent.putExtra("titulo", options.optString("titulo"));
+                    bgIntent.putExtra("texto", options.optString("texto"));
+                }
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                     cordova.getActivity().startForegroundService(bgIntent);
                 } else {

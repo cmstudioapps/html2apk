@@ -948,7 +948,7 @@ function nativeFunctionLabHtml() {
         minimizarApp: { title: "minimizarApp()", run: function () { return fn("minimizarApp")(); } },
         entrarPip: { title: "entrarPip()", run: function () { return fn("entrarPip")({ aspectRatio: "16:9" }); } },
         fecharApp: { title: "fecharApp()", run: function () { return fn("fecharApp")(); } },
-        ativarSegundoPlano: { title: "ativarSegundoPlano()", run: function () { return fn("ativarSegundoPlano")(); } },
+        ativarSegundoPlano: { title: "ativarSegundoPlano()", run: function () { return fn("ativarSegundoPlano")({ titulo: "Meu App Rodando", texto: "Não feche isso..." }); } },
         desativarSegundoPlano: { title: "desativarSegundoPlano()", run: function () { return fn("desativarSegundoPlano")(); } },
 
         tirarFoto: { title: "tirarFoto()", run: async function () { var result = await fn("tirarFoto")({ base64: true }); state.lastPhoto = result; return result; } },
