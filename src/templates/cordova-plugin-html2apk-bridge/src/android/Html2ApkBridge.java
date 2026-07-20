@@ -284,6 +284,14 @@ public class Html2ApkBridge extends CordovaPlugin {
         startFloatingModeIfNeeded();
         startNotificationPollerIfNeeded();
         checkWidgetAction(cordova.getActivity().getIntent());
+        lightSensorManager = new LightSensorManager(context(), lux -> {
+            try {
+                JSONObject detail = new JSONObject();
+                detail.put("lux", lux);
+                dispatchEvent("luminosidade:mudou", detail);
+            } catch (Exception ignored) {
+            }
+        });
     }
 
     @Override
@@ -418,6 +426,20 @@ public class Html2ApkBridge extends CordovaPlugin {
                     intent.setData(android.net.Uri.parse("package:" + cordova.getActivity().getPackageName()));
                     intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
                     cordova.getActivity().startActivity(intent);
+                }
+                callbackContext.success();
+                return true;
+            }
+            if ("ouvirLuminosidade".equals(action)) {
+                if (lightSensorManager != null) {
+                    lightSensorManager.start();
+                }
+                callbackContext.success();
+                return true;
+            }
+            if ("pararLuminosidade".equals(action)) {
+                if (lightSensorManager != null) {
+                    lightSensorManager.stop();
                 }
                 callbackContext.success();
                 return true;
@@ -7807,18 +7829,6 @@ public class Html2ApkBridge extends CordovaPlugin {
         if (proximity != null) {
             sensorManager.registerListener(proximitySensorListener, proximity, SensorManager.SENSOR_DELAY_NORMAL);
         }
-
-        if (lightSensorManager == null) {
-            lightSensorManager = new LightSensorManager(context(), lux -> {
-                try {
-                    JSONObject detail = new JSONObject();
-                    detail.put("lux", lux);
-                    dispatchEvent("luminosidade:mudou", detail);
-                } catch (Exception ignored) {
-                }
-            });
-        }
-        lightSensorManager.start();
     }
 
     private void unregisterSensorListeners() {
@@ -7834,9 +7844,6 @@ public class Html2ApkBridge extends CordovaPlugin {
                 sensorManager.unregisterListener(proximitySensorListener);
             }
         } catch (Exception ignored) {
-        }
-        if (lightSensorManager != null) {
-            lightSensorManager.stop();
         }
     }
 

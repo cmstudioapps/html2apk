@@ -922,6 +922,8 @@ function nativeFunctionLabHtml() {
         solicitarSobreposicao: { title: "solicitarPermissaoSobreposicao()", run: function () { return fn("solicitarPermissaoSobreposicao")(); } },
         abrirSobreposicao: { title: "abrirConfiguracaoSobreposicao()", run: function () { return fn("abrirConfiguracaoSobreposicao")(); } },
         abrirConfiguracoesDeeplink: { title: "abrirConfiguracoesDeeplink()", run: function () { return fn("abrirConfiguracoesDeeplink")(); } },
+        ouvirLuminosidade: { title: "ouvirLuminosidade()", run: function () { return fn("ouvirLuminosidade")(); } },
+        pararLuminosidade: { title: "pararLuminosidade()", run: function () { return fn("pararLuminosidade")(); } },
 
         fullscreenOn: { title: "fullscreen(true)", run: function () { return fn("fullscreen")(true); } },
         fullscreenOff: { title: "fullscreen(false)", run: function () { return fn("fullscreen")(false); } },
@@ -1047,6 +1049,7 @@ function nativeFunctionLabHtml() {
         { title: "Notificacoes", ids: ["notificar", "agendarNotificacao", "agendarNotificacoes", "cancelarNotificacao", "agendarLoopNotificacoes", "cancelarLoopNotificacoes", "pushInfo"] },
         { title: "Permissoes e configuracoes", ids: ["statusPermissoes", "permissaoNotificacao", "statusPermissaoNotificacoes", "permissaoCamera", "permissaoMicrofone", "statusMicrofone", "solicitarPermissaoContatos", "alarmeExato", "abrirAlarmeExato", "statusSobreposicao", "solicitarSobreposicao", "abrirSobreposicao", "abrirConfiguracoesDeeplink"] },
         { title: "Background e Worker", ids: ["ativarSegundoPlano", "desativarSegundoPlano"] },
+        { title: "Sensores (Luminosidade)", ids: ["ouvirLuminosidade", "pararLuminosidade"] },
         { title: "Tela e hardware", ids: ["fullscreenOn", "fullscreenOff", "telaAcordadaOn", "telaAcordadaOff", "brilhoTela", "corTema", "corBarrasSistema", "lanternaOn", "lanternaOff", "lanterna", "statusLanterna", "capturarTela", "tirarPrint", "volumeAtual", "definirVolume", "aumentarVolume", "diminuirVolume", "iniciarIconeFlutuante", "configurarIconeFlutuante", "definirOpacidadeIconeFlutuante", "pararIconeFlutuante", "abrirOverlay", "fecharOverlay", "solicitarCriacaoWidget", "atualizarWidget", "minimizarApp", "entrarPip", "fecharApp"] },
         { title: "Camera, QR Code e microfone", ids: ["tirarFoto", "capturarVideo", "escanearQRCode", "ouvirMic", "pararMic"] },
         { title: "Texto e voz", ids: ["ocr", "falar", "pararFala", "ouvir"] },

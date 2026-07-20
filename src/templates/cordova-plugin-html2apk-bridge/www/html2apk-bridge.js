@@ -1154,6 +1154,12 @@ var api = {
   statusMicrofone: function () {
     return call("microphoneStatus");
   },
+  ouvirLuminosidade: function () {
+    return call("ouvirLuminosidade");
+  },
+  pararLuminosidade: function () {
+    return call("pararLuminosidade");
+  },
   ouvirMic: function () {
     return call("startMic");
   },

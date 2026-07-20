@@ -919,6 +919,16 @@ window.addEventListener("aoClicarWidget", (event) => {
     // fazer algo...
   }
 });
+
+// A luminosidade é lida continuamente e precisa ser ativada manualmente pelo JS:
+// Html2Apk.ouvirLuminosidade();
+// Html2Apk.pararLuminosidade();
+window.addEventListener("html2apk:luminosidade:mudou", (event) => {
+  const lux = event.detail.lux;
+  if (lux < 10) {
+    console.log("Escuro, ativando modo noturno");
+  }
+});
 ```
 
 Overlay (Bolha Flutuante):
