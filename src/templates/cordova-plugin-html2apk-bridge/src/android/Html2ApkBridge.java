@@ -9035,6 +9035,8 @@ public class Html2ApkBridge extends CordovaPlugin {
                     pollNotificationEndpoint(endpoint);
                 }
             }, 5000, intervalMillis);
+        } catch (java.io.FileNotFoundException e) {
+            // Ignora silenciosamente, pois o arquivo app.json é opcional
         } catch (Exception e) {
             android.util.Log.e("Html2ApkBridge", "Notification Poller init failed: " + e.getMessage());
         }
